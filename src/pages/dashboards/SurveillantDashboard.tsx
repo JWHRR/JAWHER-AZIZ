@@ -57,7 +57,7 @@ export default function SurveillantDashboard() {
         setAbsenceDoneToday(map);
       }
 
-      const repasList = (resto.data ?? []).map((r: any) => r.repas);
+      const repasList = uniqueResto.map((r: any) => r.repas);
       if (repasList.length) {
         const { data: logs } = await supabase
           .from("restaurant_logs")

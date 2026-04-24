@@ -62,8 +62,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-subtle px-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="flex flex-col items-center mb-8">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow mb-4">
-            <Building2 className="h-7 w-7 text-primary-foreground" />
+          <div className="mb-6 flex justify-center">
+            <img src="/ipest-logo.png" alt="IPEST Logo" className="h-24 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" />
           </div>
           <h1 className="text-3xl font-bold">Foyer Manager</h1>
           <p className="text-muted-foreground mt-1">Gestion complète du foyer</p>

@@ -56,10 +56,8 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r">
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="h-9 w-9 rounded-lg bg-gradient-primary flex items-center justify-center shadow-md flex-shrink-0">
-            <Building2 className="h-5 w-5 text-primary-foreground" />
-          </div>
+        <div className="flex items-center gap-3 px-2 py-2">
+          <img src="/ipest-logo.png" alt="IPEST Logo" className="h-10 w-auto object-contain flex-shrink-0 drop-shadow-sm" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm leading-tight">Foyer Manager</span>

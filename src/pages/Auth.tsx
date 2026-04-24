@@ -72,56 +72,23 @@ export default function AuthPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Bienvenue</CardTitle>
-            <CardDescription>Connectez-vous ou créez votre compte</CardDescription>
+            <CardDescription>Connectez-vous à votre compte</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Connexion</TabsTrigger>
-                <TabsTrigger value="signup">Inscription</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="signin" className="mt-6">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email-in">Email</Label>
-                    <Input id="email-in" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@foyer.fr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pw-in">Mot de passe</Label>
-                    <Input id="pw-in" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Se connecter
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup" className="mt-6">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name-up">Nom complet</Label>
-                    <Input id="name-up" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jean Dupont" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email-up">Email</Label>
-                    <Input id="email-up" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@foyer.fr" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pw-up">Mot de passe</Label>
-                    <Input id="pw-up" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Créer mon compte
-                  </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Par défaut, le compte est créé en tant que Surveillant. Un administrateur peut modifier votre rôle.
-                  </p>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn} className="space-y-4 mt-2">
+              <div className="space-y-2">
+                <Label htmlFor="email-in">Email</Label>
+                <Input id="email-in" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@foyer.fr" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pw-in">Mot de passe</Label>
+                <Input id="pw-in" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Se connecter
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>

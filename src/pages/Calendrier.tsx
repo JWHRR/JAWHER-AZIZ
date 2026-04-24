@@ -16,7 +16,7 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   SLOT_LABELS, REPAS_LABELS, WEEKDAY_LABELS, WEEKDAYS_ORDER,
-  PermanenceSlot, RepasType, Weekday, dateToWeekday,
+  PermanenceSlot, RepasType, Weekday, dateToWeekday, WeekendPermanence
 } from "@/lib/types";
 
 interface TemplatePerm {
@@ -50,6 +50,7 @@ export default function Calendrier() {
   // Per-week overrides (existing one-off rows)
   const [overridePerms, setOverridePerms] = useState<any[]>([]);
   const [overrideRestos, setOverrideRestos] = useState<any[]>([]);
+  const [weekendPerm, setWeekendPerm] = useState<WeekendPermanence | null>(null);
 
   const [surveillants, setSurveillants] = useState<{ user_id: string; full_name: string }[]>([]);
 
@@ -101,19 +102,30 @@ export default function Calendrier() {
     // 3. One-off overrides for this week
     let pRes: any = { data: [] };
     let rRes: any = { data: [] };
+    let wpRes: any = { data: [] };
+    
     if (isAdmin) {
-      [pRes, rRes] = await Promise.all([
+      [pRes, rRes, wpRes] = await Promise.all([
         supabase.from("permanences").select("*, profiles!permanences_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
         supabase.from("restaurant_assignments").select("*, profiles!restaurant_assignments_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
+        supabase.from("weekend_permanences").select("*, profiles!weekend_permanences_surveillant_id_fkey(full_name)").eq("week_start_date", start),
       ]);
     } else if (user) {
-      [pRes, rRes] = await Promise.all([
+      [pRes, rRes, wpRes] = await Promise.all([
         supabase.from("permanences").select("*").eq("surveillant_id", user.id).gte("date", start).lte("date", end),
         supabase.from("restaurant_assignments").select("*").eq("surveillant_id", user.id).gte("date", start).lte("date", end),
+        supabase.from("weekend_permanences").select("*").eq("surveillant_id", user.id).eq("week_start_date", start),
       ]);
     }
     setOverridePerms(pRes.data ?? []);
     setOverrideRestos(rRes.data ?? []);
+    
+    if (wpRes.data && wpRes.data.length > 0) {
+      const wp = wpRes.data[0];
+      setWeekendPerm({ ...wp, full_name: wp.profiles?.full_name || nameById[wp.surveillant_id] });
+    } else {
+      setWeekendPerm(null);
+    }
 
     // 4. Load surveillant list for admin dialogs
     if (isAdmin) {
@@ -180,6 +192,26 @@ export default function Calendrier() {
   };
   const removeOverrideResto = async (id: string) => {
     const { error } = await supabase.from("restaurant_assignments").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    load();
+  };
+  
+  const assignWeekendPerm = async (survId: string) => {
+    if (!survId) return;
+    const start = format(weekStart, "yyyy-MM-dd");
+    const { error } = await supabase.from("weekend_permanences").insert({
+      surveillant_id: survId,
+      week_start_date: start,
+      created_by: user?.id ?? null,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Permanence de week-end assignée");
+    load();
+  };
+
+  const removeWeekendPerm = async (id: string) => {
+    if (!confirm("Retirer cette permanence de week-end ?")) return;
+    const { error } = await supabase.from("weekend_permanences").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     load();
   };
@@ -287,7 +319,48 @@ export default function Calendrier() {
               })}
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
+          
+          <Card className="mt-6 border-primary/20 bg-primary-soft/30 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-primary flex items-center justify-between">
+                <span>Permanence du Week-end</span>
+                {isAdmin && !weekendPerm && (
+                  <div className="flex items-center gap-2 text-sm font-normal">
+                    <Select onValueChange={assignWeekendPerm}>
+                      <SelectTrigger className="w-[200px] h-8 bg-background">
+                        <SelectValue placeholder="Assigner un surveillant..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {surveillants.map((s) => <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </CardTitle>
+              <CardDescription>Samedi 15h30–19h00 • Dimanche 08h00–12h00 / 14h00–19h00</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {weekendPerm ? (
+                <div className="flex items-center justify-between bg-background p-3 rounded-md border">
+                  <div className="font-medium flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                    {weekendPerm.full_name || "Surveillant assigné"}
+                  </div>
+                  {isAdmin && (
+                    <Button variant="ghost" size="sm" className="text-destructive h-8 px-2" onClick={() => removeWeekendPerm(weekendPerm.id)}>
+                      <Trash2 className="h-4 w-4 mr-1" /> Retirer
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground italic py-2">
+                  Aucun surveillant n'est assigné pour ce week-end.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <p className="text-xs text-muted-foreground mt-4">
             <Repeat className="h-3 w-3 inline mr-1" />
             Récurrent (planning hebdomadaire) — modifié dans l'onglet « Planning récurrent ».
           </p>

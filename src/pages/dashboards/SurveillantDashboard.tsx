@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -19,19 +19,23 @@ export default function SurveillantDashboard() {
   const [todayInspections, setTodayInspections] = useState<any[]>([]);
   const [absenceDoneToday, setAbsenceDoneToday] = useState<Record<string, boolean>>({});
   const [restoLogs, setRestoLogs] = useState<Record<string, boolean>>({});
+  const [isWeekendPerm, setIsWeekendPerm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     const today = format(new Date(), "yyyy-MM-dd");
     const wd = dateToWeekday(new Date());
     (async () => {
-      const [da, permTpl, permOv, restoTpl, restoOv, inspections] = await Promise.all([
+      const weekStartStr = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+      
+      const [da, permTpl, permOv, restoTpl, restoOv, inspections, wp] = await Promise.all([
         supabase.from("dortoir_assignments").select("*, dortoirs(*)").eq("surveillant_id", user.id),
         supabase.from("permanence_template").select("*").eq("surveillant_id", user.id).eq("weekday", wd),
         supabase.from("permanences").select("*").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("restaurant_template").select("*").eq("surveillant_id", user.id).eq("weekday", wd),
         supabase.from("restaurant_assignments").select("*").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("chambre_inspections").select("id").eq("surveillant_id", user.id).eq("date", today),
+        supabase.from("weekend_permanences").select("id").eq("surveillant_id", user.id).eq("week_start_date", weekStartStr),
       ]);
       
       setMyDortoirs(da.data ?? []);
@@ -43,6 +47,7 @@ export default function SurveillantDashboard() {
       setTodayResto(uniqueResto);
       
       setTodayInspections(inspections.data ?? []);
+      setIsWeekendPerm((wp.data ?? []).length > 0);
 
       const dortoirIds = (da.data ?? []).map((d: any) => d.dortoir_id);
       if (dortoirIds.length) {
@@ -209,6 +214,12 @@ export default function SurveillantDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            {isWeekendPerm && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 mb-2">
+                <span className="text-destructive font-bold">⚠️</span>
+                <span className="font-semibold text-destructive">Vous êtes de permanence ce week-end (Samedi 15h30-19h, Dimanche 08h-12h / 14h-19h).</span>
+              </div>
+            )}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft border border-warning/30">
               <span className="text-warning">⏰</span>
               <span>Pointage des absences à effectuer chaque soir.</span>

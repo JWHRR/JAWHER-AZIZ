@@ -53,3 +53,11 @@ export function dateToWeekday(d: Date): Weekday {
   const idx = (d.getDay() + 6) % 7;
   return WEEKDAYS_ORDER[idx];
 }
+
+export interface WeekendPermanence {
+  id: string;
+  surveillant_id: string;
+  week_start_date: string;
+  created_at: string;
+  full_name?: string;
+}

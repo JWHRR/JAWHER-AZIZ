@@ -200,11 +200,13 @@ export default function Restaurant() {
                         ))}
                       </div>
                     )}
-                    <Button size="sm" variant={myLog ? "outline" : "default"} className="w-full mt-2" onClick={() => openLog(r)}>
-                      {myLog ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Pointer</>}
-                    </Button>
+                    {(isUserAssigned || isAdmin) && (
+                      <Button size="sm" variant={myLog ? "outline" : "default"} className="w-full mt-2" onClick={() => openLog(r)}>
+                        {myLog ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Pointer</>}
+                      </Button>
+                    )}
                     {!isUserAssigned && !isAdmin && (
-                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné (saisie autorisée)</p>
+                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
                     )}
                   </div>
                 );

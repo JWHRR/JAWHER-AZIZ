@@ -125,7 +125,7 @@ export default function AdminDashboard() {
           missing.push({
             type: "RESTAURANT",
             surveillantName: nameById[e.s],
-            detail: `Pointage ${REPAS_LABELS[e.r as RepasType] ?? e.r}`,
+            detail: `Effectif ${REPAS_LABELS[e.r as RepasType] ?? e.r}`,
           });
         }
       });
@@ -217,7 +217,7 @@ export default function AdminDashboard() {
     { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent" },
     { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft" },
     { label: "Permanences du jour", value: stats.permanencesAujourdhui, icon: CalIcon, color: "text-primary", bg: "bg-primary-soft" },
-    { label: "Pointages restaurant", value: stats.pointagesAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
+    { label: "Effectifs restaurant", value: stats.pointagesAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
     { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent" },
     { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10" },
   ];

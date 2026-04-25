@@ -106,10 +106,10 @@ export default function Absences() {
       toast.error(error.message);
       return;
     }
-    toast.success(editing ? "Pointage mis à jour" : "Pointage enregistré");
+    toast.success(editing ? "Effectif mis à jour" : "Effectif enregistré");
     await supabase.from("activity_logs").insert({
       user_id: user.id,
-      action: editing ? "Modifié pointage absences" : "Créé pointage absences",
+      action: editing ? "Modifié effectif absences" : "Créé effectif absences",
       entity: "absences",
       entity_id: editing?.id ?? null,
     });
@@ -122,7 +122,7 @@ export default function Absences() {
     : myDortoirs.map((d) => ({ id: d.dortoir_id, code: d.dortoirs.code }));
 
   const exportEffectifWeekend = async () => {
-    // Effectif weekend = pointage of Thursday night for the selected week
+    // Effectif weekend = effectif of Thursday night for the selected week
     // We use the Thursday before/equal to the selected date.
     const sel = new Date(date);
     const dayJs = sel.getDay(); // 0=Sun..6=Sat
@@ -160,7 +160,7 @@ export default function Absences() {
 
     generateTablePdf({
       title: "Effectif Weekend",
-      subtitle: `Pointage du jeudi soir ${format(thursday, "d MMMM yyyy", { locale: fr })}`,
+      subtitle: `Effectif du jeudi soir ${format(thursday, "d MMMM yyyy", { locale: fr })}`,
       filename: `effectif_weekend_${thuStr}.pdf`,
       head: ["Dortoir", "Capacité", "Absents", "Présents", "Observations"],
       rows,
@@ -174,7 +174,7 @@ export default function Absences() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Absences</h1>
-          <p className="text-muted-foreground mt-1">Pointage quotidien par dortoir</p>
+          <p className="text-muted-foreground mt-1">Effectif quotidien par dortoir</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (
@@ -226,7 +226,7 @@ export default function Absences() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Modifier le pointage" : "Nouveau pointage"}</DialogTitle>
+            <DialogTitle>{editing ? "Modifier l'effectif" : "Nouvel effectif"}</DialogTitle>
             <DialogDescription>
               Dortoir {dortoirsToShow.find((d) => d.id === form.dortoir_id)?.code} · {format(new Date(date), "dd/MM/yyyy")}
             </DialogDescription>

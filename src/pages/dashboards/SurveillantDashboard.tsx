@@ -102,7 +102,7 @@ export default function SurveillantDashboard() {
             <CardTitle className="text-base flex items-center gap-2">
               <BedDouble className="h-4 w-4 text-primary" /> Mes dortoirs
             </CardTitle>
-            <CardDescription>Pointage absences quotidien</CardDescription>
+            <CardDescription>Effectif absences quotidien</CardDescription>
           </CardHeader>
           <CardContent>
             {myDortoirs.length === 0 ? (
@@ -113,7 +113,7 @@ export default function SurveillantDashboard() {
                   <li key={d.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                     <div>
                       <div className="font-semibold">Dortoir {d.dortoirs.code}</div>
-                      <div className="text-xs text-muted-foreground">Pointage du soir</div>
+                      <div className="text-xs text-muted-foreground">Effectif du soir</div>
                     </div>
                     <div className="flex items-center gap-2">
                       <DoneBadge done={absenceDoneToday[d.dortoir_id]} />
@@ -184,11 +184,11 @@ export default function SurveillantDashboard() {
             <CardTitle className="text-base flex items-center gap-2">
               <Utensils className="h-4 w-4 text-primary" /> Restaurant aujourd'hui
             </CardTitle>
-            <CardDescription>Pointage des élèves au restaurant</CardDescription>
+            <CardDescription>Effectif des élèves au restaurant</CardDescription>
           </CardHeader>
           <CardContent>
             {todayResto.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun pointage restaurant assigné aujourd'hui.</p>
+              <p className="text-sm text-muted-foreground">Aucun effectif restaurant assigné aujourd'hui.</p>
             ) : (
               <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {todayResto.map((r: any) => (
@@ -222,7 +222,7 @@ export default function SurveillantDashboard() {
             )}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft border border-warning/30">
               <span className="text-warning">⏰</span>
-              <span>Pointage des absences à effectuer chaque soir.</span>
+              <span>Effectif des absences à effectuer chaque soir.</span>
             </div>
             {format(new Date(), "EEEE", { locale: fr }) === "jeudi" && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary-soft border border-primary/30">

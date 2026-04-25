@@ -80,9 +80,9 @@ export default function Restaurant() {
       ({ error } = await supabase.from("restaurant_logs").insert(payload));
     }
     if (error) { toast.error(error.message); return; }
-    toast.success("Pointage enregistré");
+    toast.success("Effectif enregistré");
     await supabase.from("activity_logs").insert({
-      user_id: user.id, action: "Pointage restaurant", entity: "restaurant_logs",
+      user_id: user.id, action: "Effectif restaurant", entity: "restaurant_logs",
     });
     setOpen(false);
     load();
@@ -118,7 +118,7 @@ export default function Restaurant() {
     const total = (weekLogs ?? []).reduce((s: number, l: any) => s + (l.nombre_eleves || 0), 0);
 
     generateTablePdf({
-      title: "Pointage Restaurant — Semaine",
+      title: "Effectif Restaurant — Semaine",
       subtitle: `Du ${format(ws, "d MMM yyyy", { locale: fr })} au ${format(we, "d MMM yyyy", { locale: fr })}`,
       filename: `restaurant_${start}_${end}.pdf`,
       head: ["Date", "Repas", "Surveillant", "Nb élèves", "Observations"],
@@ -133,7 +133,7 @@ export default function Restaurant() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">Restaurant</h1>
-          <p className="text-muted-foreground mt-1">Pointage des élèves par service</p>
+          <p className="text-muted-foreground mt-1">Effectif des élèves par service</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (

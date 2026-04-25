@@ -274,7 +274,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Travail du jour</CardTitle>
+            <CardTitle className="text-base">Tâche(s) du jour</CardTitle>
             <CardDescription>
               {todayActivity.done.length} effectué(s) · {todayActivity.pending.length} en attente
             </CardDescription>

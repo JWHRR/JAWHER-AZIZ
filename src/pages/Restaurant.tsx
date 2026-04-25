@@ -36,31 +36,32 @@ export default function Restaurant() {
       const [y, m, d] = date.split("-").map(Number);
       const wd = dateToWeekday(new Date(y, m - 1, d));
 
-      // Use basic selects first to ensure we get data even if joins are tricky
-      const [a, l, t] = await Promise.all([
-        supabase
-          .from("restaurant_assignments")
-          .select("*, profiles:surveillant_id(full_name)")
-          .eq("date", date)
-          .order("repas"),
-        supabase
-          .from("restaurant_logs")
-          .select("*, profiles:surveillant_id(full_name)")
-          .eq("date", date)
-          .order("repas"),
-        supabase
-          .from("restaurant_template")
-          .select("*, profiles:surveillant_id(full_name)")
-          .eq("weekday", wd),
+      const [aRes, lRes, tRes] = await Promise.all([
+        supabase.from("restaurant_assignments").select("*").eq("date", date).order("repas"),
+        supabase.from("restaurant_logs").select("*").eq("date", date).order("repas"),
+        supabase.from("restaurant_template").select("*").eq("weekday", wd),
       ]);
 
-      if (a.error) console.error("Assignments error:", a.error);
-      if (l.error) console.error("Logs error:", l.error);
-      if (t.error) console.error("Template error:", t.error);
+      const allData = [...(aRes.data ?? []), ...(lRes.data ?? []), ...(tRes.data ?? [])];
+      const userIds = Array.from(new Set(allData.map((x: any) => x.surveillant_id)));
+      
+      let nameById: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+        nameById = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name || "—"]));
+      }
 
-      setAssignments(a.data ?? []);
-      setLogs(l.data ?? []);
-      setTemplates(t.data ?? []);
+      const mapWithProfile = (list: any[]) => list.map(item => ({
+        ...item,
+        profiles: { full_name: nameById[item.surveillant_id] || "—" }
+      }));
+
+      setAssignments(mapWithProfile(aRes.data ?? []));
+      setLogs(mapWithProfile(lRes.data ?? []));
+      setTemplates(mapWithProfile(tRes.data ?? []));
     } catch (err) {
       console.error("Load error:", err);
       toast.error("Erreur lors du chargement des données");

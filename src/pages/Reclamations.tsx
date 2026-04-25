@@ -149,55 +149,55 @@ export default function Reclamations() {
               <FileDown className="h-4 w-4 mr-1" /> PDF du jour
             </Button>
           )}
-        <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> Nouvelle</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nouvelle réclamation</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label>Titre *</Label>
-                <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé" />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-1" /> Nouvelle</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Nouvelle réclamation</DialogTitle></DialogHeader>
+              <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Lieu</Label>
-                  <Input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} placeholder="Salle, étage..." />
+                  <Label>Titre *</Label>
+                  <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Dortoir</Label>
-                  <Select value={form.dortoir_id || "none"} onValueChange={(v) => setForm({ ...form, dortoir_id: v === "none" ? "" : v })}>
+                  <Label>Description</Label>
+                  <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Lieu</Label>
+                    <Input value={form.lieu} onChange={(e) => setForm({ ...form, lieu: e.target.value })} placeholder="Salle, étage..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Dortoir</Label>
+                    <Select value={form.dortoir_id || "none"} onValueChange={(v) => setForm({ ...form, dortoir_id: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun</SelectItem>
+                        {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>Dortoir {d.code}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Priorité</Label>
+                  <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as ReclamationPriority })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun</SelectItem>
-                      {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>Dortoir {d.code}</SelectItem>)}
+                      {(Object.keys(PRIORITY_LABELS) as ReclamationPriority[]).map((p) => (
+                        <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Priorité</Label>
-                <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v as ReclamationPriority })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(PRIORITY_LABELS) as ReclamationPriority[]).map((p) => (
-                      <SelectItem key={p} value={p}>{PRIORITY_LABELS[p]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpenCreate(false)}>Annuler</Button>
-              <Button onClick={create}>Créer</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenCreate(false)}>Annuler</Button>
+                <Button onClick={create}>Créer</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

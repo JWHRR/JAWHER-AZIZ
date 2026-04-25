@@ -62,11 +62,13 @@ export default function Reclamations() {
 
   const create = async () => {
     if (!user || !form.titre.trim()) { toast.error("Titre requis"); return; }
+    const finalDortoirId = (form.dortoir_id === "none" || form.dortoir_id === "autre" || !form.dortoir_id) ? null : form.dortoir_id;
+    const finalLieu = form.dortoir_id === "autre" ? "Autre.." : null;
     const { error } = await supabase.from("reclamations").insert({
       titre: form.titre,
       description: form.description || null,
-      lieu: form.lieu || null,
-      dortoir_id: form.dortoir_id || null,
+      lieu: finalLieu,
+      dortoir_id: finalDortoirId,
       priority: form.priority,
       created_by: user.id,
     });
@@ -115,7 +117,7 @@ export default function Reclamations() {
     const buildRows = (rows: any[]) => rows.map((r) => [
       r.titre,
       r.description || "—",
-      r.dortoirs?.code || "—",
+      r.dortoirs?.code ? r.dortoirs.code : (r.lieu || "—"),
       PRIORITY_LABELS[r.priority as ReclamationPriority],
       r.creator?.full_name ?? "—",
     ]);
@@ -124,7 +126,7 @@ export default function Reclamations() {
       title: "Réclamations",
       subtitle: `Du jour (${todayItems.length}) + non terminées (${pendingItems.length}) — ${format(new Date(), "d MMMM yyyy", { locale: fr })}`,
       filename: `reclamations_${today}.pdf`,
-      head: ["Réclamation et chambre", "Description", "N° du dortoir", "Priorité", "Auteur"],
+      head: ["Réclamation", "Description", "N° du dortoir", "Priorité", "Auteur"],
       rows: [
         ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", ""]] : []),
         ...buildRows(todayItems),
@@ -156,8 +158,8 @@ export default function Reclamations() {
               <DialogHeader><DialogTitle>Nouvelle réclamation</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <Label>Réclamation et chambre *</Label>
-                  <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé - Chambre 102" />
+                  <Label>Réclamation *</Label>
+                  <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé" />
                 </div>
                 <div className="space-y-2">
                   <Label>Description (optionnelle)</Label>
@@ -166,11 +168,12 @@ export default function Reclamations() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>N° du dortoir</Label>
-                    <Select value={form.dortoir_id || "none"} onValueChange={(v) => setForm({ ...form, dortoir_id: v === "none" ? "" : v })}>
+                    <Select value={form.dortoir_id || "none"} onValueChange={(v) => setForm({ ...form, dortoir_id: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Aucun</SelectItem>
                         {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>{d.code}</SelectItem>)}
+                        <SelectItem value="autre">Autre..</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

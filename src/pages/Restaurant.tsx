@@ -30,31 +30,43 @@ export default function Restaurant() {
   const [form, setForm] = useState({ repas: "DEJEUNER" as RepasType, nombre_eleves: 0, observations: "" });
 
   const load = async () => {
+    if (!user) return;
     setLoading(true);
-    const [y, m, d] = date.split("-").map(Number);
-    const wd = dateToWeekday(new Date(y, m - 1, d));
+    try {
+      const [y, m, d] = date.split("-").map(Number);
+      const wd = dateToWeekday(new Date(y, m - 1, d));
 
-    const [a, l, t] = await Promise.all([
-      supabase
-        .from("restaurant_assignments")
-        .select("*, profiles!restaurant_assignments_surveillant_id_fkey(full_name)")
-        .eq("date", date)
-        .order("repas"),
-      supabase
-        .from("restaurant_logs")
-        .select("*, profiles!restaurant_logs_surveillant_id_fkey(full_name)")
-        .eq("date", date)
-        .order("repas"),
-      supabase
-        .from("restaurant_template")
-        .select("*, profiles!restaurant_template_surveillant_id_fkey(full_name)")
-        .eq("weekday", wd),
-    ]);
+      // Use basic selects first to ensure we get data even if joins are tricky
+      const [a, l, t] = await Promise.all([
+        supabase
+          .from("restaurant_assignments")
+          .select("*, profiles:surveillant_id(full_name)")
+          .eq("date", date)
+          .order("repas"),
+        supabase
+          .from("restaurant_logs")
+          .select("*, profiles:surveillant_id(full_name)")
+          .eq("date", date)
+          .order("repas"),
+        supabase
+          .from("restaurant_template")
+          .select("*, profiles:surveillant_id(full_name)")
+          .eq("weekday", wd),
+      ]);
 
-    setAssignments(a.data ?? []);
-    setLogs(l.data ?? []);
-    setTemplates(t.data ?? []);
-    setLoading(false);
+      if (a.error) console.error("Assignments error:", a.error);
+      if (l.error) console.error("Logs error:", l.error);
+      if (t.error) console.error("Template error:", t.error);
+
+      setAssignments(a.data ?? []);
+      setLogs(l.data ?? []);
+      setTemplates(t.data ?? []);
+    } catch (err) {
+      console.error("Load error:", err);
+      toast.error("Erreur lors du chargement des données");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user, date, isAdmin]);

@@ -61,7 +61,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm leading-tight">Internat IPEST</span>
-              <span className="text-xs text-muted-foreground leading-tight">Gestion de l'internat</span>
+              <span className="text-xs text-sidebar-foreground/70 leading-tight">Gestion de l'internat</span>
             </div>
           )}
         </div>

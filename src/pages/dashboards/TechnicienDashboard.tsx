@@ -35,9 +35,11 @@ export default function TechnicienDashboard() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-3xl font-bold">Bonjour {profile?.full_name?.split(" ")[0] || ""} 👋</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>
@@ -57,7 +59,7 @@ export default function TechnicienDashboard() {
         </div>
       </div>
 
-      <Card>
+      <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Wrench className="h-4 w-4 text-primary" /> Réclamations à traiter

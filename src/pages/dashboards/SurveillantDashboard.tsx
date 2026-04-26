@@ -89,15 +89,17 @@ export default function SurveillantDashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold">Bonjour {profile?.full_name?.split(" ")[0] || ""} 👋</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BedDouble className="h-4 w-4 text-primary" /> Mes dortoirs
@@ -128,7 +130,7 @@ export default function SurveillantDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-primary" /> Inspections de chambres
@@ -157,7 +159,7 @@ export default function SurveillantDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <CalIcon className="h-4 w-4 text-primary" /> Permanences aujourd'hui
@@ -179,7 +181,7 @@ export default function SurveillantDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Utensils className="h-4 w-4 text-primary" /> Restaurant aujourd'hui
@@ -207,7 +209,7 @@ export default function SurveillantDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-primary" /> Rappels

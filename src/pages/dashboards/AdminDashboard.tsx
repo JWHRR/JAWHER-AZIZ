@@ -224,29 +224,31 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="text-3xl font-bold">Bonjour {profile?.full_name?.split(" ")[0] || ""} 👋</h1>
-        <p className="text-muted-foreground mt-1">
+      <div className="mb-2">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">
           {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>
 
       {/* Warnings: missing tasks of yesterday */}
       {missingYesterday.length > 0 && (
-        <Card className="border-destructive bg-destructive/5">
+        <Card className="border-destructive/30 bg-gradient-to-br from-destructive/10 to-transparent shadow-sm backdrop-blur-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-4 w-4" />
+            <CardTitle className="text-base flex items-center gap-2 text-destructive font-bold">
+              <AlertTriangle className="h-5 w-5" />
               Tâches manquantes — hier ({format(subDays(new Date(), 1), "d MMM", { locale: fr })})
             </CardTitle>
-            <CardDescription>{missingYesterday.length} action(s) non effectuée(s)</CardDescription>
+            <CardDescription className="text-destructive/80 font-medium">{missingYesterday.length} action(s) non effectuée(s)</CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-1.5 max-h-64 overflow-y-auto">
+            <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
               {missingYesterday.map((m, i) => (
-                <li key={i} className="flex items-center justify-between text-sm border-b last:border-0 pb-1.5 last:pb-0">
-                  <span>
-                    <Badge variant="outline" className="mr-2 text-[10px]">{m.type}</Badge>
+                <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/50 border border-border/40 transition-all hover:bg-background/80 hover:shadow-sm">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Badge variant="outline" className="text-[10px] bg-background text-destructive border-destructive/20">{m.type}</Badge>
                     {m.surveillantName}
                   </span>
                   <span className="text-xs text-muted-foreground">{m.detail}</span>
@@ -272,7 +274,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Tâche(s) du jour</CardTitle>
             <CardDescription>
@@ -317,7 +319,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Réclamations</CardTitle>
             <CardDescription>État global</CardDescription>
@@ -332,7 +334,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-3 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Activité récente</CardTitle>
           </CardHeader>

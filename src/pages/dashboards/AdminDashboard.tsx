@@ -20,8 +20,9 @@ interface Stats {
   reclamationsEnAttente: number;
   reclamationsEnCours: number;
   reclamationsTerminees: number;
-  pointagesAujourdhui: number;
+  restaurantLogsAujourdhui: number;
   permanencesAujourdhui: number;
+  permanencesLogsAujourdhui: number;
   inspectionsAujourdhui: number;
 }
 
@@ -46,7 +47,7 @@ export default function AdminDashboard() {
 
     (async () => {
       // ---- Top stats
-      const [u, d, a, rPend, rProg, rDone, p, perm, ins, act] = await Promise.all([
+      const [u, d, a, rPend, rProg, rDone, p, perm, pLogs, ins, act] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("dortoirs").select("*", { count: "exact", head: true }),
         supabase.from("absences").select("nombre_absents").eq("date", today),
@@ -55,6 +56,7 @@ export default function AdminDashboard() {
         supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "TERMINEE"),
         supabase.from("restaurant_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
+        supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
       ]);
@@ -65,8 +67,9 @@ export default function AdminDashboard() {
         reclamationsEnAttente: rPend.count ?? 0,
         reclamationsEnCours: rProg.count ?? 0,
         reclamationsTerminees: rDone.count ?? 0,
-        pointagesAujourdhui: p.count ?? 0,
+        restaurantLogsAujourdhui: p.count ?? 0,
         permanencesAujourdhui: perm.count ?? 0,
+        permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
       });
       setRecent(act.data ?? []);
@@ -216,8 +219,9 @@ export default function AdminDashboard() {
     { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft" },
     { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent" },
     { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft" },
-    { label: "Permanences du jour", value: stats.permanencesAujourdhui, icon: CalIcon, color: "text-primary", bg: "bg-primary-soft" },
-    { label: "Effectifs restaurant", value: stats.pointagesAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
+    { label: "Permanences (Planning)", value: stats.permanencesAujourdhui, icon: CalIcon, color: "text-primary", bg: "bg-primary-soft" },
+    { label: "Permanences (Effectuées)", value: stats.permanencesLogsAujourdhui, icon: CheckCircle2, color: "text-primary", bg: "bg-primary-soft" },
+    { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
     { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent" },
     { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10" },
   ];

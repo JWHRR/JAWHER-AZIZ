@@ -184,7 +184,7 @@ export default function SurveillantDashboard() {
         <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" /> Pointage de présence
+              <Clock className="h-4 w-4 text-primary" /> Permanences
             </CardTitle>
             <CardDescription>Enregistrez vos heures de service</CardDescription>
           </CardHeader>
@@ -192,7 +192,7 @@ export default function SurveillantDashboard() {
             <div className="flex flex-col gap-3">
               <p className="text-sm text-muted-foreground">Pensez à pointer vos heures de début et de fin pour chaque permanence.</p>
               <Button asChild className="w-full">
-                <Link to="/pointage">Accéder au pointage</Link>
+                <Link to="/permanences">Accéder aux permanences</Link>
               </Button>
             </div>
           </CardContent>

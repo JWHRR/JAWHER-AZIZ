@@ -18,7 +18,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export default function Pointage() {
+export default function Permanences() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
   const [loading, setLoading] = useState(true);
@@ -99,7 +99,7 @@ export default function Pointage() {
     <div className="space-y-6 max-w-5xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Pointage Permanence</h1>
+          <h1 className="text-3xl font-bold">Permanences</h1>
           <p className="text-muted-foreground mt-1">Enregistrez vos heures de présence</p>
         </div>
         
@@ -121,7 +121,7 @@ export default function Pointage() {
             </PopoverContent>
           </Popover>
           <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Nouveau Pointage
+            <Plus className="h-4 w-4 mr-2" /> Nouvelle Permanence
           </Button>
         </div>
       </div>
@@ -144,10 +144,10 @@ export default function Pointage() {
           ) : logs.length === 0 ? (
             <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
               <CalIcon className="h-12 w-12 mx-auto text-muted-foreground opacity-20 mb-4" />
-              <p className="text-muted-foreground">Aucun pointage enregistré pour cette date.</p>
+              <p className="text-muted-foreground">Aucune permanence enregistrée pour cette date.</p>
               {!isAdmin && (
                 <Button variant="link" onClick={() => setOpen(true)} className="mt-2">
-                  Enregistrer un pointage maintenant
+                  Enregistrer une permanence maintenant
                 </Button>
               )}
             </div>
@@ -188,7 +188,7 @@ export default function Pointage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouveau Pointage</DialogTitle>
+            <DialogTitle>Nouvelle Permanence</DialogTitle>
             <DialogDescription>
               Enregistrez vos heures pour le {format(date, "dd MMMM yyyy", { locale: fr })}
             </DialogDescription>

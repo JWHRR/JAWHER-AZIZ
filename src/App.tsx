@@ -17,7 +17,7 @@ import Dortoirs from "./pages/Dortoirs.tsx";
 import Utilisateurs from "./pages/Utilisateurs.tsx";
 import Activite from "./pages/Activite.tsx";
 import Inspections from "./pages/Inspections.tsx";
-import Pointage from "./pages/Pointage.tsx";
+import Permanences from "./pages/Permanences.tsx";
 
 const queryClient = new QueryClient();
 
@@ -47,10 +47,10 @@ const App = () => (
               }
             />
             <Route
-              path="/pointage"
+              path="/permanences"
               element={
                 <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
-                  <AppLayout><Pointage /></AppLayout>
+                  <AppLayout><Permanences /></AppLayout>
                 </ProtectedRoute>
               }
             />

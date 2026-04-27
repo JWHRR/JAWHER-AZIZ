@@ -32,6 +32,7 @@ export default function Permanences() {
   const [logs, setLogs] = useState<PermanenceLog[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [isWeekendAssigned, setIsWeekendAssigned] = useState(false);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ 
     start_time: "08:00", 
@@ -45,18 +46,22 @@ export default function Permanences() {
     try {
       const dateStr = format(date, "yyyy-MM-dd");
       const wd = dateToWeekday(date);
+      // Week start date (Monday) for weekend check
+      const weekStart = format(new Date(date.getTime() - ((date.getDay() + 6) % 7) * 86400000), "yyyy-MM-dd");
 
       let logsQuery = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
       let assignQuery = supabase.from("permanences").select("*, profiles(full_name)").eq("date", dateStr);
       let tplQuery = supabase.from("permanence_template").select("*, profiles:profiles!permanence_template_surveillant_id_fkey(full_name)").eq("weekday", wd);
+      let wpQuery = supabase.from("weekend_permanences").select("*").eq("week_start_date", weekStart);
       
       if (!isAdmin) {
         logsQuery = logsQuery.eq("surveillant_id", user.id);
         assignQuery = assignQuery.eq("surveillant_id", user.id);
         tplQuery = tplQuery.eq("surveillant_id", user.id);
+        wpQuery = wpQuery.eq("surveillant_id", user.id);
       }
 
-      const [logsRes, assignRes, tplRes] = await Promise.all([logsQuery, assignQuery, tplQuery]);
+      const [logsRes, assignRes, tplRes, wpRes] = await Promise.all([logsQuery, assignQuery, tplQuery, wpQuery]);
       
       if (logsRes.error) throw logsRes.error;
       
@@ -75,6 +80,7 @@ export default function Permanences() {
 
       setAssignments(assignRes.data || []);
       setTemplates(tplRes.data || []);
+      setIsWeekendAssigned((wpRes.data ?? []).length > 0);
     } catch (err: any) {
       toast.error("Erreur lors du chargement: " + err.message);
     } finally {
@@ -84,12 +90,12 @@ export default function Permanences() {
 
   useEffect(() => { load(); }, [user, date, isAdmin]);
 
-  const confirmAssignment = (slot: PermanenceSlot) => {
-    const times = SLOT_TIMES[slot];
+  const confirmAssignment = (slot: string, customTimes?: { start: string, end: string }) => {
+    const times = customTimes || SLOT_TIMES[slot as PermanenceSlot];
     setForm({
       start_time: times.start,
       end_time: times.end,
-      observation: `Confirmation de la permanence : ${SLOT_LABELS[slot].split(" (")[0]}`
+      observation: `Confirmation de la permanence : ${slot}`
     });
     setOpen(true);
   };
@@ -167,34 +173,67 @@ export default function Permanences() {
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[...templates, ...assignments].length === 0 ? (
+              {[...templates, ...assignments].length === 0 && !isWeekendAssigned && (
                 <p className="text-sm text-muted-foreground italic col-span-2">Aucune permanence assignée pour aujourd'hui.</p>
-              ) : (
-                [...templates, ...assignments].map((a, i) => {
-                  const isDone = logs.some(l => 
-                    l.surveillant_id === a.surveillant_id && 
-                    // Simple check: if there's any log for this day, we consider it "started"
-                    // Better check: check if time ranges overlap or match slot
-                    l.start_time.startsWith(SLOT_TIMES[a.slot as PermanenceSlot].start.split(':')[0])
-                  );
-                  return (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                      <div>
-                        <div className="font-semibold">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0]}</div>
-                        <div className="text-xs text-muted-foreground">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[1].replace(")", "")}</div>
-                        {isAdmin && <div className="text-[10px] text-primary">{a.profiles?.full_name}</div>}
-                      </div>
-                      <Button 
-                        size="sm" 
-                        variant={isDone ? "outline" : "default"}
-                        disabled={isDone && !isAdmin}
-                        onClick={() => confirmAssignment(a.slot as PermanenceSlot)}
-                      >
-                        {isDone ? "Confirmé" : "Confirmer"}
-                      </Button>
+              )}
+              
+              {[...templates, ...assignments].map((a, i) => {
+                const isDone = logs.some(l => 
+                  l.surveillant_id === a.surveillant_id && 
+                  l.start_time.startsWith(SLOT_TIMES[a.slot as PermanenceSlot].start.split(':')[0])
+                );
+                return (
+                  <div key={`std-${i}`} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div>
+                      <div className="font-semibold">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0]}</div>
+                      <div className="text-xs text-muted-foreground">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[1].replace(")", "")}</div>
+                      {isAdmin && a.profiles?.full_name && <div className="text-[10px] text-primary">{a.profiles.full_name}</div>}
                     </div>
-                  );
-                })
+                    <Button 
+                      size="sm" 
+                      variant={isDone ? "outline" : "default"}
+                      disabled={isDone && !isAdmin}
+                      onClick={() => confirmAssignment(SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0])}
+                    >
+                      {isDone ? "Confirmé" : "Confirmer"}
+                    </Button>
+                  </div>
+                );
+              })}
+
+              {isWeekendAssigned && date.getDay() === 6 && ( // Saturday
+                <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
+                  <div>
+                    <div className="font-semibold text-primary">Week-end (Samedi)</div>
+                    <div className="text-xs text-muted-foreground">15:30 — 19:00</div>
+                  </div>
+                  <Button size="sm" onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" })}>
+                    Confirmer
+                  </Button>
+                </div>
+              )}
+
+              {isWeekendAssigned && date.getDay() === 0 && ( // Sunday
+                <>
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
+                    <div>
+                      <div className="font-semibold text-primary">Week-end (Dimanche Matin)</div>
+                      <div className="text-xs text-muted-foreground">08:00 — 12:00</div>
+                    </div>
+                    <Button size="sm" onClick={() => confirmAssignment("Week-end (Dimanche Matin)", { start: "08:00", end: "12:00" })}>
+                      Confirmer
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
+                    <div>
+                      <div className="font-semibold text-primary">Week-end (Dimanche Après-midi)</div>
+                      <div className="text-xs text-muted-foreground">14:00 — 19:00</div>
+                    </div>
+                    <Button size="sm" onClick={() => confirmAssignment("Week-end (Dimanche Après-midi)", { start: "14:00", end: "19:00" })}>
+                      Confirmer
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}

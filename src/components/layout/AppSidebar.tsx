@@ -36,6 +36,7 @@ interface NavItem {
 const items: NavItem[] = [
   { title: "Tableau de bord", url: "/", icon: LayoutDashboard, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
   { title: "Calendrier", url: "/calendrier", icon: Calendar, roles: ["ADMIN", "SURVEILLANT"] },
+  { title: "Pointage", url: "/pointage", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Absences", url: "/absences", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Inspections", url: "/inspections", icon: DoorOpen, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Restaurant", url: "/restaurant", icon: Utensils, roles: ["ADMIN", "SURVEILLANT"] },

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble } from "lucide-react";
+import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -178,6 +178,23 @@ export default function SurveillantDashboard() {
                 ))}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" /> Pointage de présence
+            </CardTitle>
+            <CardDescription>Enregistrez vos heures de service</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">Pensez à pointer vos heures de début et de fin pour chaque permanence.</p>
+              <Button asChild className="w-full">
+                <Link to="/pointage">Accéder au pointage</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

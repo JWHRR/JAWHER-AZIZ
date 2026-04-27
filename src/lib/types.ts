@@ -61,3 +61,14 @@ export interface WeekendPermanence {
   created_at: string;
   full_name?: string;
 }
+
+export interface PermanenceLog {
+  id: string;
+  surveillant_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  observation: string | null;
+  created_at: string;
+  full_name?: string;
+}

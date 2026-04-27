@@ -7,8 +7,14 @@ import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { SLOT_LABELS, REPAS_LABELS, dateToWeekday } from "@/lib/types";
+import { SLOT_LABELS, REPAS_LABELS, dateToWeekday, PermanenceSlot } from "@/lib/types";
 import { DoneBadge } from "@/components/StatusBadge";
+
+const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
+  MATIN: { start: "08:00", end: "13:00" },
+  APRES_MIDI: { start: "14:00", end: "19:00" },
+  NUIT: { start: "20:00", end: "23:00" },
+};
 
 export default function SurveillantDashboard() {
   const { user, profile } = useAuth();
@@ -19,6 +25,7 @@ export default function SurveillantDashboard() {
   const [todayInspections, setTodayInspections] = useState<any[]>([]);
   const [absenceDoneToday, setAbsenceDoneToday] = useState<Record<string, boolean>>({});
   const [restoLogs, setRestoLogs] = useState<Record<string, boolean>>({});
+  const [logsAssigned, setLogsAssigned] = useState<any[]>([]);
   const [isWeekendPerm, setIsWeekendPerm] = useState(false);
 
   useEffect(() => {
@@ -28,7 +35,7 @@ export default function SurveillantDashboard() {
     (async () => {
       const weekStartStr = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
       
-      const [da, permTpl, permOv, restoTpl, restoOv, inspections, wp] = await Promise.all([
+      const [da, permTpl, permOv, restoTpl, restoOv, inspections, wp, pLogs] = await Promise.all([
         supabase.from("dortoir_assignments").select("*, dortoirs(*)").eq("surveillant_id", user.id),
         supabase.from("permanence_template").select("*").eq("surveillant_id", user.id).eq("weekday", wd),
         supabase.from("permanences").select("*").eq("surveillant_id", user.id).eq("date", today),
@@ -36,10 +43,12 @@ export default function SurveillantDashboard() {
         supabase.from("restaurant_assignments").select("*").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("chambre_inspections").select("id").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("weekend_permanences").select("id").eq("surveillant_id", user.id).eq("week_start_date", weekStartStr),
+        supabase.from("permanence_logs").select("*").eq("surveillant_id", user.id).eq("date", today),
       ]);
       
       setMyDortoirs(da.data ?? []);
       setTodayPerms([...(permTpl.data ?? []), ...(permOv.data ?? [])]);
+      setLogsAssigned(pLogs.data ?? []);
       
       const allResto = [...(restoTpl.data ?? []), ...(restoOv.data ?? [])];
       // Deduplicate by repas type so we don't show the same meal twice
@@ -170,12 +179,23 @@ export default function SurveillantDashboard() {
               <p className="text-sm text-muted-foreground">Aucune permanence aujourd'hui.</p>
             ) : (
               <ul className="space-y-2">
-                {todayPerms.map((p: any) => (
-                  <li key={p.id} className="p-3 rounded-lg border bg-primary-soft">
-                    <div className="font-semibold text-primary">{SLOT_LABELS[p.slot as keyof typeof SLOT_LABELS]}</div>
-                    {p.notes && <div className="text-xs text-muted-foreground mt-1">{p.notes}</div>}
-                  </li>
-                ))}
+                {todayPerms.map((p: any) => {
+                  const isDone = logsAssigned.some(l => 
+                    l.start_time.startsWith(SLOT_TIMES[p.slot as keyof typeof SLOT_TIMES]?.start.split(':')[0] || "00")
+                  );
+                  return (
+                    <li key={p.id} className="p-3 rounded-lg border bg-primary-soft">
+                      <div className="font-semibold text-primary">{SLOT_LABELS[p.slot as keyof typeof SLOT_LABELS] || p.slot}</div>
+                      <div className="flex items-center justify-between mt-2">
+                        <DoneBadge done={isDone} />
+                        <Button asChild size="sm" variant={isDone ? "outline" : "default"}>
+                          <Link to="/permanences">{isDone ? "Voir" : "Confirmer"}</Link>
+                        </Button>
+                      </div>
+                      {p.notes && <div className="text-xs text-muted-foreground mt-1">{p.notes}</div>}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>

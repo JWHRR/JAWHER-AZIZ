@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,14 +9,20 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Loader2, Save, Plus, Clock, Calendar as CalIcon, Trash2 } from "lucide-react";
+import { Loader2, Save, Plus, Clock, Calendar as CalIcon, Trash2, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { PermanenceLog } from "@/lib/types";
+import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday } from "@/lib/types";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
+  MATIN: { start: "08:00", end: "13:00" },
+  APRES_MIDI: { start: "14:00", end: "19:00" },
+  NUIT: { start: "20:00", end: "23:00" },
+};
 
 export default function Permanences() {
   const { user, primaryRole } = useAuth();
@@ -24,6 +30,8 @@ export default function Permanences() {
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState<Date>(new Date());
   const [logs, setLogs] = useState<PermanenceLog[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ 
     start_time: "08:00", 
@@ -36,27 +44,37 @@ export default function Permanences() {
     setLoading(true);
     try {
       const dateStr = format(date, "yyyy-MM-dd");
-      let query = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
+      const wd = dateToWeekday(date);
+
+      let logsQuery = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
+      let assignQuery = supabase.from("permanences").select("*, profiles(full_name)").eq("date", dateStr);
+      let tplQuery = supabase.from("permanence_template").select("*, profiles:profiles!permanence_template_surveillant_id_fkey(full_name)").eq("weekday", wd);
       
       if (!isAdmin) {
-        query = query.eq("surveillant_id", user.id);
+        logsQuery = logsQuery.eq("surveillant_id", user.id);
+        assignQuery = assignQuery.eq("surveillant_id", user.id);
+        tplQuery = tplQuery.eq("surveillant_id", user.id);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const userIds = Array.from(new Set(data.map((x: any) => x.surveillant_id)));
+      const [logsRes, assignRes, tplRes] = await Promise.all([logsQuery, assignQuery, tplQuery]);
+      
+      if (logsRes.error) throw logsRes.error;
+      
+      const combinedLogs = logsRes.data || [];
+      if (combinedLogs.length > 0) {
+        const userIds = Array.from(new Set(combinedLogs.map((x: any) => x.surveillant_id)));
         const { data: profs } = await supabase
           .from("profiles")
           .select("user_id, full_name")
           .in("user_id", userIds);
-        
         const nameById = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name || "—"]));
-        setLogs(data.map(l => ({ ...l, full_name: nameById[l.surveillant_id] })));
+        setLogs(combinedLogs.map(l => ({ ...l, full_name: nameById[l.surveillant_id] })));
       } else {
         setLogs([]);
       }
+
+      setAssignments(assignRes.data || []);
+      setTemplates(tplRes.data || []);
     } catch (err: any) {
       toast.error("Erreur lors du chargement: " + err.message);
     } finally {
@@ -65,6 +83,16 @@ export default function Permanences() {
   };
 
   useEffect(() => { load(); }, [user, date, isAdmin]);
+
+  const confirmAssignment = (slot: PermanenceSlot) => {
+    const times = SLOT_TIMES[slot];
+    setForm({
+      start_time: times.start,
+      end_time: times.end,
+      observation: `Confirmation de la permanence : ${SLOT_LABELS[slot].split(" (")[0]}`
+    });
+    setOpen(true);
+  };
 
   const save = async () => {
     if (!user) return;
@@ -129,8 +157,55 @@ export default function Permanences() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            Permanences assignées ({format(date, "d MMMM", { locale: fr })})
+          </CardTitle>
+          <CardDescription>Confirmez votre présence pour les créneaux prévus</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[...templates, ...assignments].length === 0 ? (
+                <p className="text-sm text-muted-foreground italic col-span-2">Aucune permanence assignée pour aujourd'hui.</p>
+              ) : (
+                [...templates, ...assignments].map((a, i) => {
+                  const isDone = logs.some(l => 
+                    l.surveillant_id === a.surveillant_id && 
+                    // Simple check: if there's any log for this day, we consider it "started"
+                    // Better check: check if time ranges overlap or match slot
+                    l.start_time.startsWith(SLOT_TIMES[a.slot as PermanenceSlot].start.split(':')[0])
+                  );
+                  return (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <div>
+                        <div className="font-semibold">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0]}</div>
+                        <div className="text-xs text-muted-foreground">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[1].replace(")", "")}</div>
+                        {isAdmin && <div className="text-[10px] text-primary">{a.profiles?.full_name}</div>}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant={isDone ? "outline" : "default"}
+                        disabled={isDone && !isAdmin}
+                        onClick={() => confirmAssignment(a.slot as PermanenceSlot)}
+                      >
+                        {isDone ? "Confirmé" : "Confirmer"}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
-            Logs du {format(date, "d MMMM yyyy", { locale: fr })}
+            Historique des pointages du {format(date, "d MMMM yyyy", { locale: fr })}
           </CardTitle>
           <CardDescription>
             {isAdmin ? "Tous les pointages pour cette date" : "Vos pointages pour cette date"}

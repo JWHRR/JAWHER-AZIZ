@@ -33,7 +33,10 @@ CREATE POLICY "permlogs_update" ON public.permanence_logs
 
 CREATE POLICY "permlogs_delete" ON public.permanence_logs
   FOR DELETE TO authenticated
-  USING (public.has_role(auth.uid(), 'ADMIN'));
+  USING (
+    public.has_role(auth.uid(), 'ADMIN')
+    OR surveillant_id = auth.uid()
+  );
 
 -- Trigger for updated_at
 CREATE TRIGGER trg_permlogs_updated_at

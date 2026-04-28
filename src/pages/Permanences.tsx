@@ -50,9 +50,9 @@ export default function Permanences() {
       const weekStart = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
 
       let logsQuery = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
-      let assignQuery = supabase.from("permanences").select("*, profiles(full_name)").eq("date", dateStr);
-      let tplQuery = supabase.from("permanence_template").select("*, profiles:profiles!permanence_template_surveillant_id_fkey(full_name)").eq("weekday", wd);
-      let wpQuery = supabase.from("weekend_permanences").select("*").eq("week_start_date", weekStart);
+      let assignQuery = supabase.from("permanences").select("*, profiles!permanences_surveillant_id_fkey(full_name)").eq("date", dateStr);
+      let tplQuery = supabase.from("permanence_template").select("*").eq("weekday", wd);
+      let wpQuery = supabase.from("weekend_permanences").select("*, profiles!weekend_permanences_surveillant_id_fkey(full_name)").eq("week_start_date", weekStart);
       
       console.log("Permanences.tsx load():", { dateStr, wd, weekStart, user_id: user.id, isAdmin });
 
@@ -65,24 +65,37 @@ export default function Permanences() {
 
       const [logsRes, assignRes, tplRes, wpRes] = await Promise.all([logsQuery, assignQuery, tplQuery, wpQuery]);
       
-      if (logsRes.error) throw logsRes.error;
+      if (logsRes.error) console.error("Error fetching logs:", logsRes.error);
+      if (assignRes.error) console.error("Error fetching assignments:", assignRes.error);
+      if (tplRes.error) console.error("Error fetching templates:", tplRes.error);
+      if (wpRes.error) console.error("Error fetching weekend permanences:", wpRes.error);
       
       const combinedLogs = logsRes.data || [];
-      if (combinedLogs.length > 0) {
-        const userIds = Array.from(new Set(combinedLogs.map((x: any) => x.surveillant_id)));
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("user_id, full_name")
-          .in("user_id", userIds);
-        const nameById = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name || "—"]));
-        setLogs(combinedLogs.map(l => ({ ...l, full_name: nameById[l.surveillant_id] })));
-      } else {
-        setLogs([]);
+      const combinedAssigns = assignRes.data || [];
+      const combinedTemplates = tplRes.data || [];
+      const combinedWeekend = wpRes.data || [];
+
+      // Manual profile population because some tables reference auth.users directly
+      const userIds = Array.from(new Set([
+        ...combinedLogs.map((x: any) => x.surveillant_id),
+        ...combinedAssigns.map((x: any) => x.surveillant_id),
+        ...combinedTemplates.map((x: any) => x.surveillant_id),
+        ...combinedWeekend.map((x: any) => x.surveillant_id),
+      ]));
+
+      let nameById: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
+        nameById = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name || "(sans nom)"]));
       }
 
-      setAssignments(assignRes.data || []);
-      setTemplates(tplRes.data || []);
-      setIsWeekendAssigned((wpRes.data ?? []).length > 0);
+      // Attach profiles back
+      setLogs(combinedLogs.map((l: any) => ({ ...l, full_name: nameById[l.surveillant_id] })));
+      setAssignments(combinedAssigns.map((a: any) => ({ ...a, profiles: { full_name: nameById[a.surveillant_id] } })));
+      setTemplates(combinedTemplates.map((t: any) => ({ ...t, profiles: { full_name: nameById[t.surveillant_id] } })));
+      
+      // weekend assignments only check if current user is assigned
+      setIsWeekendAssigned(combinedWeekend.length > 0);
     } catch (err: any) {
       toast.error("Erreur lors du chargement: " + err.message);
     } finally {

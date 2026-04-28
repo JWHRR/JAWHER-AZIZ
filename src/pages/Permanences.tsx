@@ -154,9 +154,11 @@ export default function Permanences() {
               />
             </PopoverContent>
           </Popover>
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" /> Nouvelle Permanence
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> Nouvelle Permanence (Extra)
+            </Button>
+          )}
         </div>
       </div>
 
@@ -259,11 +261,6 @@ export default function Permanences() {
             <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
               <CalIcon className="h-12 w-12 mx-auto text-muted-foreground opacity-20 mb-4" />
               <p className="text-muted-foreground">Aucune permanence enregistrée pour cette date.</p>
-              {!isAdmin && (
-                <Button variant="link" onClick={() => setOpen(true)} className="mt-2">
-                  Enregistrer une permanence maintenant
-                </Button>
-              )}
             </div>
           ) : (
             <div className="space-y-4">

@@ -54,6 +54,8 @@ export default function Permanences() {
       let tplQuery = supabase.from("permanence_template").select("*, profiles:profiles!permanence_template_surveillant_id_fkey(full_name)").eq("weekday", wd);
       let wpQuery = supabase.from("weekend_permanences").select("*").eq("week_start_date", weekStart);
       
+      console.log("Permanences.tsx load():", { dateStr, wd, weekStart, user_id: user.id, isAdmin });
+
       if (!isAdmin) {
         logsQuery = logsQuery.eq("surveillant_id", user.id);
         assignQuery = assignQuery.eq("surveillant_id", user.id);
@@ -90,12 +92,14 @@ export default function Permanences() {
 
   useEffect(() => { load(); }, [user, date, isAdmin]);
 
-  const confirmAssignment = (slot: string, customTimes?: { start: string, end: string }) => {
-    const times = customTimes || SLOT_TIMES[slot as PermanenceSlot];
+  const confirmAssignment = (slotKey: string, customTimes?: { start: string, end: string }) => {
+    const times = customTimes || SLOT_TIMES[slotKey as PermanenceSlot];
+    const label = customTimes ? slotKey : SLOT_LABELS[slotKey as PermanenceSlot]?.split(" (")[0] || slotKey;
+    
     setForm({
       start_time: times.start,
       end_time: times.end,
-      observation: `Confirmation de la permanence : ${slot}`
+      observation: `Confirmation de la permanence : ${label}`
     });
     setOpen(true);
   };
@@ -209,7 +213,7 @@ export default function Permanences() {
                         size="sm" 
                         variant={myLog ? "outline" : "default"} 
                         className="w-full mt-2" 
-                        onClick={() => confirmAssignment(SLOT_LABELS[slot].split(" (")[0])}
+                        onClick={() => confirmAssignment(slot)}
                       >
                         {myLog ? "Confirmé" : "Confirmer"}
                       </Button>

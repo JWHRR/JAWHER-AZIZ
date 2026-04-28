@@ -41,7 +41,7 @@ const items: NavItem[] = [
   { title: "Inspections", url: "/inspections", icon: DoorOpen, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Restaurant", url: "/restaurant", icon: Utensils, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Réclamations", url: "/reclamations", icon: Wrench, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
-  { title: "Dortoirs", url: "/dortoirs", icon: BedDouble, roles: ["ADMIN"] },
+  { title: "Dortoirs", url: "/dortoirs", icon: BedDouble, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Utilisateurs", url: "/utilisateurs", icon: Users, roles: ["ADMIN"] },
   { title: "Activité", url: "/activite", icon: Activity, roles: ["ADMIN"] },
 ];

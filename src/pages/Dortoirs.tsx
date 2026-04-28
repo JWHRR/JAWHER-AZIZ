@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Loader2, Plus, X, BedDouble, DoorOpen, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Dortoirs() {
+  const { user, primaryRole } = useAuth();
+  const isAdmin = primaryRole === "ADMIN";
   const [loading, setLoading] = useState(true);
   const [dortoirs, setDortoirs] = useState<any[]>([]);
   const [assigns, setAssigns] = useState<any[]>([]);
@@ -23,12 +26,31 @@ export default function Dortoirs() {
   const [chForm, setChForm] = useState({ dortoir_id: "", numero: "", capacite: 0 });
 
   const load = async () => {
+    if (!user) return;
     setLoading(true);
+    
+    let dQuery = supabase.from("dortoirs").select("*").order("code");
+    let aQuery = supabase.from("dortoir_assignments").select("*, dortoirs(code)");
+    let chQuery = supabase.from("chambres").select("*").order("numero");
+
+    if (!isAdmin) {
+      const { data: myAssigns } = await supabase.from("dortoir_assignments").select("dortoir_id").eq("surveillant_id", user.id);
+      const myDortoirIds = (myAssigns ?? []).map(a => a.dortoir_id);
+      
+      if (myDortoirIds.length > 0) {
+        dQuery = dQuery.in("id", myDortoirIds);
+        aQuery = aQuery.in("dortoir_id", myDortoirIds);
+        chQuery = chQuery.in("dortoir_id", myDortoirIds);
+      } else {
+        setDortoirs([]); setAssigns([]); setChambres([]); setSurveillants([]); setLoading(false); return;
+      }
+    }
+
     const [d, a, ch, sRoles] = await Promise.all([
-      supabase.from("dortoirs").select("*").order("code"),
-      supabase.from("dortoir_assignments").select("*, dortoirs(code)"),
-      supabase.from("chambres").select("*").order("numero"),
-      supabase.from("user_roles").select("user_id").eq("role", "SURVEILLANT"),
+      dQuery,
+      aQuery,
+      chQuery,
+      isAdmin ? supabase.from("user_roles").select("user_id").eq("role", "SURVEILLANT") : Promise.resolve({ data: [] }),
     ]);
     const survIds = (sRoles.data ?? []).map((r: any) => r.user_id);
     const { data: survProfiles } = survIds.length
@@ -51,11 +73,13 @@ export default function Dortoirs() {
     setDortoirs(d.data ?? []);
     setAssigns(enrichedAssigns);
     setChambres(ch.data ?? []);
-    setSurveillants(
-      (survProfiles ?? [])
-        .filter((p: any) => p.is_active !== false)
-        .map((p: any) => ({ user_id: p.user_id, full_name: p.full_name || "(sans nom)" }))
-    );
+    if (isAdmin) {
+      setSurveillants(
+        (survProfiles ?? [])
+          .filter((p: any) => p.is_active !== false)
+          .map((p: any) => ({ user_id: p.user_id, full_name: p.full_name || "(sans nom)" }))
+      );
+    }
     setLoading(false);
   };
 
@@ -135,38 +159,40 @@ export default function Dortoirs() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" /> Affectation</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>Affecter un surveillant</DialogTitle></DialogHeader>
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Dortoir</Label>
-                  <Select value={form.dortoir_id} onValueChange={(v) => setForm({ ...form, dortoir_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>Dortoir {d.code}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+          {isAdmin && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button><Plus className="h-4 w-4 mr-1" /> Affectation</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Affecter un surveillant</DialogTitle></DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Dortoir</Label>
+                    <Select value={form.dortoir_id} onValueChange={(v) => setForm({ ...form, dortoir_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                      <SelectContent>
+                        {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>Dortoir {d.code}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Surveillant</Label>
+                    <Select value={form.surveillant_id} onValueChange={(v) => setForm({ ...form, surveillant_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                      <SelectContent>
+                        {surveillants.map((s) => <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Surveillant</Label>
-                  <Select value={form.surveillant_id} onValueChange={(v) => setForm({ ...form, surveillant_id: v })}>
-                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      {surveillants.map((s) => <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-                <Button onClick={create}>Assigner</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
+                  <Button onClick={create}>Assigner</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -199,9 +225,11 @@ export default function Dortoirs() {
                         {dortoirAssigns.map((a) => (
                           <li key={a.id} className="flex items-center justify-between text-sm p-2 rounded bg-muted/40">
                             <span>{a.surveillant_name || "—"}</span>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(a.id)}>
-                              <X className="h-3 w-3 text-destructive" />
-                            </Button>
+                            {isAdmin && (
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(a.id)}>
+                                <X className="h-3 w-3 text-destructive" />
+                              </Button>
+                            )}
                           </li>
                         ))}
                       </ul>

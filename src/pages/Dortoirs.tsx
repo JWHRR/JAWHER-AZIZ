@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Plus, X, BedDouble, DoorOpen, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Plus, X, BedDouble, DoorOpen, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Dortoirs() {
@@ -23,7 +24,7 @@ export default function Dortoirs() {
   const [form, setForm] = useState({ dortoir_id: "", surveillant_id: "" });
 
   const [openCh, setOpenCh] = useState(false);
-  const [chForm, setChForm] = useState({ dortoir_id: "", numero: "", capacite: 0 });
+  const [chForm, setChForm] = useState({ dortoir_id: "", numero: "", capacite: 0, etudiants: "" });
 
   const load = async () => {
     if (!user) return;
@@ -108,7 +109,7 @@ export default function Dortoirs() {
       return;
     }
     toast.success("Chambre ajoutée");
-    setOpenCh(false); setChForm({ dortoir_id: "", numero: "", capacite: 0 }); load();
+    setOpenCh(false); setChForm({ dortoir_id: "", numero: "", capacite: 0, etudiants: "" }); load();
   };
 
   const removeChambre = async (id: string) => {
@@ -151,6 +152,15 @@ export default function Dortoirs() {
                     <Label>Capacité</Label>
                     <Input type="number" min={0} value={chForm.capacite} onChange={(e) => setChForm({ ...chForm, capacite: Number(e.target.value) })} />
                   </div>
+                </div>
+                <div className="space-y-2 mt-2">
+                  <Label>Noms des étudiants (Optionnel)</Label>
+                  <Textarea 
+                    value={chForm.etudiants} 
+                    onChange={(e) => setChForm({ ...chForm, etudiants: e.target.value })} 
+                    placeholder="Ex: Ahmed Ben Ali, Youssef Mansour..." 
+                    rows={2}
+                  />
                 </div>
               </div>
               <DialogFooter>
@@ -240,14 +250,25 @@ export default function Dortoirs() {
                     {dortoirChambres.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">Aucune</p>
                     ) : (
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-col gap-2">
                         {dortoirChambres.map((c) => (
-                          <span key={c.id} className="text-xs px-2 py-1 rounded bg-accent flex items-center gap-1">
-                            #{c.numero}
-                            <button onClick={() => removeChambre(c.id)}>
-                              <Trash2 className="h-2.5 w-2.5 text-destructive hover:opacity-70" />
-                            </button>
-                          </span>
+                          <div key={c.id} className="text-xs p-2 rounded bg-accent/50 border border-border/50">
+                            <div className="flex items-center justify-between font-medium">
+                              <span className="flex items-center gap-1"><DoorOpen className="h-3 w-3" /> Chambre {c.numero}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted-foreground">{c.capacite} place(s)</span>
+                                <button onClick={() => removeChambre(c.id)}>
+                                  <Trash2 className="h-3 w-3 text-destructive hover:opacity-70" />
+                                </button>
+                              </div>
+                            </div>
+                            {c.etudiants && (
+                              <div className="mt-1.5 flex items-start gap-1 text-muted-foreground/90">
+                                <Users className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                <span className="break-words">{c.etudiants}</span>
+                              </div>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}

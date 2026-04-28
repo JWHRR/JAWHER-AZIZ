@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Loader2, Save, Plus, Clock, Calendar as CalIcon, Trash2, CheckCircle2 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday } from "@/lib/types";
@@ -47,7 +47,7 @@ export default function Permanences() {
       const dateStr = format(date, "yyyy-MM-dd");
       const wd = dateToWeekday(date);
       // Week start date (Monday) for weekend check
-      const weekStart = format(new Date(date.getTime() - ((date.getDay() + 6) % 7) * 86400000), "yyyy-MM-dd");
+      const weekStart = format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
 
       let logsQuery = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
       let assignQuery = supabase.from("permanences").select("*, profiles(full_name)").eq("date", dateStr);
@@ -174,66 +174,115 @@ export default function Permanences() {
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[...templates, ...assignments].length === 0 && !isWeekendAssigned && (
-                <p className="text-sm text-muted-foreground italic col-span-2">Aucune permanence assignée pour aujourd'hui.</p>
-              )}
-              
-              {[...templates, ...assignments].map((a, i) => {
-                const isDone = logs.some(l => 
-                  l.surveillant_id === a.surveillant_id && 
-                  l.start_time.startsWith(SLOT_TIMES[a.slot as PermanenceSlot].start.split(':')[0])
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(["MATIN", "APRES_MIDI", "NUIT"] as PermanenceSlot[]).map((slot) => {
+                const myAssigns = assignments.filter((a) => a.slot === slot);
+                const myTemplates = templates.filter((t) => t.slot === slot);
+                
+                // Any log that matches this slot's start time (simple heuristc)
+                const myLog = logs.find((l) => 
+                  l.surveillant_id === user?.id && 
+                  l.start_time.startsWith(SLOT_TIMES[slot].start.split(':')[0])
                 );
+                
+                const isUserAssigned = myAssigns.some((a) => a.surveillant_id === user?.id) || 
+                                       myTemplates.some((t) => t.surveillant_id === user?.id);
+                
+                const totalAssignedCount = myAssigns.length + myTemplates.length;
+
                 return (
-                  <div key={`std-${i}`} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                    <div>
-                      <div className="font-semibold">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0]}</div>
-                      <div className="text-xs text-muted-foreground">{SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[1].replace(")", "")}</div>
-                      {isAdmin && a.profiles?.full_name && <div className="text-[10px] text-primary">{a.profiles.full_name}</div>}
+                  <div key={slot} className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold">{SLOT_LABELS[slot].split(" (")[0]}</div>
+                      {isUserAssigned && <DoneBadge done={!!myLog} />}
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant={isDone ? "outline" : "default"}
-                      disabled={isDone && !isAdmin}
-                      onClick={() => confirmAssignment(SLOT_LABELS[a.slot as PermanenceSlot].split(" (")[0])}
-                    >
-                      {isDone ? "Confirmé" : "Confirmer"}
-                    </Button>
+                    <div className="text-xs text-muted-foreground mb-3">{SLOT_LABELS[slot].split(" (")[1]?.replace(")", "")}</div>
+                    
+                    {isAdmin && (
+                      <div className="text-xs text-muted-foreground mb-2">
+                        {totalAssignedCount === 0 ? "Personne assigné" : `${totalAssignedCount} surveillant(s)`}
+                      </div>
+                    )}
+                    
+                    {(isUserAssigned || isAdmin) && (
+                      <Button 
+                        size="sm" 
+                        variant={myLog ? "outline" : "default"} 
+                        className="w-full mt-2" 
+                        onClick={() => confirmAssignment(SLOT_LABELS[slot].split(" (")[0])}
+                      >
+                        {myLog ? "Confirmé" : "Confirmer"}
+                      </Button>
+                    )}
+                    {!isUserAssigned && !isAdmin && (
+                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
+                    )}
                   </div>
                 );
               })}
 
-              {isWeekendAssigned && date.getDay() === 6 && ( // Saturday
-                <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
-                  <div>
+              {/* Weekend Overrides / Additions */}
+              {date.getDay() === 6 && ( // Saturday
+                <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="font-semibold text-primary">Week-end (Samedi)</div>
-                    <div className="text-xs text-muted-foreground">15:30 — 19:00</div>
+                    {isWeekendAssigned && <DoneBadge done={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15"))} />}
                   </div>
-                  <Button size="sm" onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" })}>
-                    Confirmer
-                  </Button>
+                  <div className="text-xs text-muted-foreground mb-3">15:30 — 19:00</div>
+                  {(isWeekendAssigned || isAdmin) ? (
+                    <Button 
+                      size="sm" 
+                      className="w-full mt-2" 
+                      variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "outline" : "default"}
+                      onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" })}
+                    >
+                      {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
+                  )}
                 </div>
               )}
 
-              {isWeekendAssigned && date.getDay() === 0 && ( // Sunday
+              {date.getDay() === 0 && ( // Sunday
                 <>
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
-                    <div>
+                  <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-primary">Week-end (Dimanche Matin)</div>
-                      <div className="text-xs text-muted-foreground">08:00 — 12:00</div>
+                      {isWeekendAssigned && <DoneBadge done={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("08"))} />}
                     </div>
-                    <Button size="sm" onClick={() => confirmAssignment("Week-end (Dimanche Matin)", { start: "08:00", end: "12:00" })}>
-                      Confirmer
-                    </Button>
+                    <div className="text-xs text-muted-foreground mb-3">08:00 — 12:00</div>
+                    {(isWeekendAssigned || isAdmin) ? (
+                      <Button 
+                        size="sm" 
+                        className="w-full mt-2"
+                        variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("08")) ? "outline" : "default"}
+                        onClick={() => confirmAssignment("Week-end (Dimanche Matin)", { start: "08:00", end: "12:00" })}
+                      >
+                        {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("08")) ? "Confirmé" : "Confirmer"}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
-                    <div>
+                  <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-primary">Week-end (Dimanche Après-midi)</div>
-                      <div className="text-xs text-muted-foreground">14:00 — 19:00</div>
+                      {isWeekendAssigned && <DoneBadge done={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("14"))} />}
                     </div>
-                    <Button size="sm" onClick={() => confirmAssignment("Week-end (Dimanche Après-midi)", { start: "14:00", end: "19:00" })}>
-                      Confirmer
-                    </Button>
+                    <div className="text-xs text-muted-foreground mb-3">14:00 — 19:00</div>
+                    {(isWeekendAssigned || isAdmin) ? (
+                      <Button 
+                        size="sm" 
+                        className="w-full mt-2"
+                        variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("14")) ? "outline" : "default"}
+                        onClick={() => confirmAssignment("Week-end (Dimanche Après-midi)", { start: "14:00", end: "19:00" })}
+                      >
+                        {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("14")) ? "Confirmé" : "Confirmer"}
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
+                    )}
                   </div>
                 </>
               )}

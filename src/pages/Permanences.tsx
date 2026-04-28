@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday } from "@/lib/types";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DoneBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 
 const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {

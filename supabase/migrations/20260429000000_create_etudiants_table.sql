@@ -26,17 +26,10 @@ CREATE POLICY "etudiants_admin_all" ON public.etudiants
   USING (public.has_role(auth.uid(), 'ADMIN'))
   WITH CHECK (public.has_role(auth.uid(), 'ADMIN'));
 
--- Surveillants can view/manage etudiants if they are assigned to the dorm
+-- Everyone authenticated can view etudiants
 CREATE POLICY "etudiants_select_surv" ON public.etudiants
   FOR SELECT TO authenticated
-  USING (
-    public.has_role(auth.uid(), 'ADMIN') OR
-    EXISTS (
-      SELECT 1 FROM public.chambres c
-      JOIN public.dortoir_assignments da ON da.dortoir_id = c.dortoir_id
-      WHERE c.id = etudiants.chambre_id AND da.surveillant_id = auth.uid()
-    )
-  );
+  USING (true);
 
 CREATE POLICY "etudiants_insert_surv" ON public.etudiants
   FOR INSERT TO authenticated

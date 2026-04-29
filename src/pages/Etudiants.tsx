@@ -167,34 +167,42 @@ export default function Etudiants() {
                   <CardDescription>{studentsInDortoir.length} étudiant(s)</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Chambre</TableHead>
-                          <TableHead>Nom Complet</TableHead>
-                          <TableHead>Téléphone</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {studentsInDortoir.map((e) => (
-                          <TableRow key={e.id}>
-                            <TableCell className="font-medium">Chambre {e.chambre_numero}</TableCell>
-                            <TableCell>{e.nom_complet}</TableCell>
-                            <TableCell>{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(e)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-6">
+                    {Array.from(new Set(studentsInDortoir.map(e => e.chambre_numero))).sort().map((chambreNumero) => {
+                      const studentsInChambre = studentsInDortoir.filter(e => e.chambre_numero === chambreNumero);
+                      return (
+                        <div key={chambreNumero} className="rounded-md border">
+                          <div className="bg-muted/50 px-4 py-2 border-b font-semibold text-sm">
+                            Chambre {chambreNumero}
+                          </div>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Nom Complet</TableHead>
+                                <TableHead>Téléphone</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {studentsInChambre.map((e) => (
+                                <TableRow key={e.id}>
+                                  <TableCell>{e.nom_complet}</TableCell>
+                                  <TableCell>{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                                  <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(e)}>
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

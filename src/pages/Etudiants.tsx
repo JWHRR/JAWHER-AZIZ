@@ -42,27 +42,6 @@ export default function Etudiants() {
       `)
       .order("created_at", { ascending: false });
 
-    if (!isAdmin) {
-      // Get dortoirs assigned to surveillant
-      const { data: myAssigns } = await supabase.from("dortoir_assignments").select("dortoir_id").eq("surveillant_id", user.id);
-      const myDortoirIds = (myAssigns ?? []).map(a => a.dortoir_id);
-      
-      if (myDortoirIds.length > 0) {
-        // Unfortunately, deep filtering (in chambres.dortoir_id) isn't directly supported by PostgREST select filtering
-        // We have to filter client-side or use a database view.
-        // For simplicity, we fetch all and filter client side, or fetch chambres first.
-        const { data: myChambres } = await supabase.from("chambres").select("id").in("dortoir_id", myDortoirIds);
-        const myChambreIds = (myChambres ?? []).map(c => c.id);
-        if (myChambreIds.length > 0) {
-          query = query.in("chambre_id", myChambreIds);
-        } else {
-          setEtudiants([]); setLoading(false); return;
-        }
-      } else {
-        setEtudiants([]); setLoading(false); return;
-      }
-    }
-
     const { data, error } = await query;
     if (error) {
       toast.error(error.message);
@@ -165,53 +144,64 @@ export default function Etudiants() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Annuaire ({etudiants.length} étudiants)</CardTitle>
-          <CardDescription>
-            {isAdmin ? "Tous les étudiants de tous les dortoirs" : "Étudiants de vos dortoirs assignés"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : etudiants.length === 0 ? (
-            <div className="text-center p-8 text-muted-foreground italic">Aucun étudiant trouvé. Ajoutez-les via la gestion des chambres.</div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dortoir</TableHead>
-                    <TableHead>Chambre</TableHead>
-                    <TableHead>Nom Complet</TableHead>
-                    <TableHead>Téléphone</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {etudiants.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="font-medium">Dortoir {e.dortoir_code}</TableCell>
-                      <TableCell>Chambre {e.chambre_numero}</TableCell>
-                      <TableCell>{e.nom_complet}</TableCell>
-                      <TableCell>{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(e)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {loading ? (
+        <Card>
+          <CardContent className="flex justify-center p-12">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      ) : etudiants.length === 0 ? (
+        <Card>
+          <CardContent className="text-center p-12 text-muted-foreground italic">
+            Aucun étudiant trouvé. Ajoutez-les via la gestion des chambres.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-8">
+          {Array.from(new Set(etudiants.map(e => e.dortoir_code))).sort().map((dortoirCode) => {
+            const studentsInDortoir = etudiants.filter(e => e.dortoir_code === dortoirCode);
+            return (
+              <Card key={dortoirCode}>
+                <CardHeader className="pb-3 border-b">
+                  <CardTitle className="text-lg">Dortoir {dortoirCode}</CardTitle>
+                  <CardDescription>{studentsInDortoir.length} étudiant(s)</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Chambre</TableHead>
+                          <TableHead>Nom Complet</TableHead>
+                          <TableHead>Téléphone</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentsInDortoir.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="font-medium">Chambre {e.chambre_numero}</TableCell>
+                            <TableCell>{e.nom_complet}</TableCell>
+                            <TableCell>{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => openEditDialog(e)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent>

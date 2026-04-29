@@ -18,6 +18,7 @@ import Utilisateurs from "./pages/Utilisateurs.tsx";
 import Activite from "./pages/Activite.tsx";
 import Inspections from "./pages/Inspections.tsx";
 import Permanences from "./pages/Permanences.tsx";
+import Etudiants from "./pages/Etudiants.tsx";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,14 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
                   <AppLayout><Dortoirs /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/etudiants"
+              element={
+                <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
+                  <AppLayout><Etudiants /></AppLayout>
                 </ProtectedRoute>
               }
             />

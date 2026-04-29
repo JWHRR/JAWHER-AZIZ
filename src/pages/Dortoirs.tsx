@@ -18,13 +18,18 @@ export default function Dortoirs() {
   const [dortoirs, setDortoirs] = useState<any[]>([]);
   const [assigns, setAssigns] = useState<any[]>([]);
   const [chambres, setChambres] = useState<any[]>([]);
+  const [etudiants, setEtudiants] = useState<any[]>([]);
   const [surveillants, setSurveillants] = useState<{ user_id: string; full_name: string }[]>([]);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ dortoir_id: "", surveillant_id: "" });
 
   const [openCh, setOpenCh] = useState(false);
-  const [chForm, setChForm] = useState({ dortoir_id: "", numero: "", etudiants: "" });
+  const [chForm, setChForm] = useState({ 
+    dortoir_id: "", 
+    numero: "", 
+    etudiants: [{ nom_complet: "", telephone: "" }] 
+  });
 
   const load = async () => {
     if (!user) return;
@@ -33,6 +38,7 @@ export default function Dortoirs() {
     let dQuery = supabase.from("dortoirs").select("*").order("code");
     let aQuery = supabase.from("dortoir_assignments").select("*, dortoirs(code)");
     let chQuery = supabase.from("chambres").select("*").order("numero");
+    let etQuery = supabase.from("etudiants").select("*");
 
     if (!isAdmin) {
       const { data: myAssigns } = await supabase.from("dortoir_assignments").select("dortoir_id").eq("surveillant_id", user.id);
@@ -42,15 +48,25 @@ export default function Dortoirs() {
         dQuery = dQuery.in("id", myDortoirIds);
         aQuery = aQuery.in("dortoir_id", myDortoirIds);
         chQuery = chQuery.in("dortoir_id", myDortoirIds);
+        
+        // Find chambres for these dortoirs to filter etudiants
+        const { data: myChambres } = await supabase.from("chambres").select("id").in("dortoir_id", myDortoirIds);
+        const myChambreIds = (myChambres ?? []).map(c => c.id);
+        if (myChambreIds.length > 0) {
+          etQuery = etQuery.in("chambre_id", myChambreIds);
+        } else {
+          etQuery = supabase.from("etudiants").select("*").eq("id", "00000000-0000-0000-0000-000000000000"); // Return empty
+        }
       } else {
-        setDortoirs([]); setAssigns([]); setChambres([]); setSurveillants([]); setLoading(false); return;
+        setDortoirs([]); setAssigns([]); setChambres([]); setEtudiants([]); setSurveillants([]); setLoading(false); return;
       }
     }
 
-    const [d, a, ch, sRoles] = await Promise.all([
+    const [d, a, ch, etRes, sRoles] = await Promise.all([
       dQuery,
       aQuery,
       chQuery,
+      etQuery,
       isAdmin ? supabase.from("user_roles").select("user_id").eq("role", "SURVEILLANT") : Promise.resolve({ data: [] }),
     ]);
     const survIds = (sRoles.data ?? []).map((r: any) => r.user_id);
@@ -74,6 +90,7 @@ export default function Dortoirs() {
     setDortoirs(d.data ?? []);
     setAssigns(enrichedAssigns);
     setChambres(ch.data ?? []);
+    setEtudiants(etRes.data ?? []);
     if (isAdmin) {
       setSurveillants(
         (survProfiles ?? [])
@@ -102,14 +119,37 @@ export default function Dortoirs() {
 
   const createChambre = async () => {
     if (!chForm.dortoir_id || !chForm.numero) { toast.error("Numéro et dortoir requis"); return; }
-    const { error } = await supabase.from("chambres").insert(chForm);
+    
+    // Insert Chambre
+    const { data: newChambre, error } = await supabase.from("chambres").insert({
+      dortoir_id: chForm.dortoir_id,
+      numero: chForm.numero,
+    }).select().single();
+
     if (error) {
       if (error.code === "23505") toast.error("Ce numéro de chambre existe déjà dans ce dortoir.");
       else toast.error(error.message);
       return;
     }
+
+    // Insert Etudiants if provided
+    const validStudents = chForm.etudiants.filter(s => s.nom_complet.trim() !== "");
+    if (validStudents.length > 0 && newChambre) {
+      const studentsToInsert = validStudents.map(s => ({
+        chambre_id: newChambre.id,
+        nom_complet: s.nom_complet.trim(),
+        telephone: s.telephone.trim() || null,
+      }));
+      const { error: etError } = await supabase.from("etudiants").insert(studentsToInsert);
+      if (etError) {
+        toast.error("Erreur lors de l'ajout des étudiants: " + etError.message);
+      }
+    }
+
     toast.success("Chambre ajoutée");
-    setOpenCh(false); setChForm({ dortoir_id: "", numero: "", etudiants: "" }); load();
+    setOpenCh(false); 
+    setChForm({ dortoir_id: "", numero: "", etudiants: [{ nom_complet: "", telephone: "" }] }); 
+    load();
   };
 
   const removeChambre = async (id: string) => {
@@ -147,14 +187,55 @@ export default function Dortoirs() {
                   <Label>Numéro</Label>
                   <Input value={chForm.numero} onChange={(e) => setChForm({ ...chForm, numero: e.target.value })} placeholder="Ex : 101" />
                 </div>
-                <div className="space-y-2 mt-2">
-                  <Label>Noms des étudiants (Optionnel)</Label>
-                  <Textarea 
-                    value={chForm.etudiants} 
-                    onChange={(e) => setChForm({ ...chForm, etudiants: e.target.value })} 
-                    placeholder="Ex: Ahmed Ben Ali, Youssef Mansour..." 
-                    rows={2}
-                  />
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Étudiants</Label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setChForm({ ...chForm, etudiants: [...chForm.etudiants, { nom_complet: "", telephone: "" }] })}
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Ajouter
+                    </Button>
+                  </div>
+                  {chForm.etudiants.map((student, index) => (
+                    <div key={index} className="flex gap-2 items-start border p-2 rounded-md bg-muted/20">
+                      <div className="grid grid-cols-1 gap-2 flex-1">
+                        <Input 
+                          placeholder="Nom complet" 
+                          value={student.nom_complet}
+                          onChange={(e) => {
+                            const newE = [...chForm.etudiants];
+                            newE[index].nom_complet = e.target.value;
+                            setChForm({ ...chForm, etudiants: newE });
+                          }}
+                        />
+                        <Input 
+                          placeholder="Téléphone (Optionnel)" 
+                          value={student.telephone}
+                          onChange={(e) => {
+                            const newE = [...chForm.etudiants];
+                            newE[index].telephone = e.target.value;
+                            setChForm({ ...chForm, etudiants: newE });
+                          }}
+                        />
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive h-9 w-9 mt-0.5"
+                        onClick={() => {
+                          const newE = [...chForm.etudiants];
+                          newE.splice(index, 1);
+                          setChForm({ ...chForm, etudiants: newE });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
               <DialogFooter>
@@ -245,24 +326,32 @@ export default function Dortoirs() {
                       <p className="text-sm text-muted-foreground italic">Aucune</p>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {dortoirChambres.map((c) => (
-                          <div key={c.id} className="text-xs p-2 rounded bg-accent/50 border border-border/50">
-                            <div className="flex items-center justify-between font-medium">
-                              <span className="flex items-center gap-1"><DoorOpen className="h-3 w-3" /> Chambre {c.numero}</span>
-                              <div className="flex items-center gap-2">
-                                <button onClick={() => removeChambre(c.id)}>
-                                  <Trash2 className="h-3 w-3 text-destructive hover:opacity-70" />
-                                </button>
+                        {dortoirChambres.map((c) => {
+                          const chambreEtudiants = etudiants.filter(e => e.chambre_id === c.id);
+                          return (
+                            <div key={c.id} className="text-xs p-2 rounded bg-accent/50 border border-border/50">
+                              <div className="flex items-center justify-between font-medium">
+                                <span className="flex items-center gap-1"><DoorOpen className="h-3 w-3" /> Chambre {c.numero}</span>
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => removeChambre(c.id)}>
+                                    <Trash2 className="h-3 w-3 text-destructive hover:opacity-70" />
+                                  </button>
+                                </div>
                               </div>
+                              {chambreEtudiants.length > 0 && (
+                                <div className="mt-2 space-y-1">
+                                  {chambreEtudiants.map(etu => (
+                                    <div key={etu.id} className="flex items-center gap-1 text-muted-foreground/90 bg-background/50 px-2 py-1 rounded">
+                                      <Users className="h-3 w-3 flex-shrink-0" />
+                                      <span className="font-medium truncate">{etu.nom_complet}</span>
+                                      {etu.telephone && <span className="text-[10px] ml-auto">{etu.telephone}</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            {c.etudiants && (
-                              <div className="mt-1.5 flex items-start gap-1 text-muted-foreground/90">
-                                <Users className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                <span className="break-words">{c.etudiants}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

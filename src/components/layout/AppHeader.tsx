@@ -8,31 +8,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, Sun, Moon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 export function AppHeader() {
   const { profile, primaryRole, signOut, user } = useAuth();
   const navigate = useNavigate();
-
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    if (next) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,9 +41,6 @@ export function AppHeader() {
             {ROLE_LABELS[primaryRole]}
           </Badge>
         )}
-        <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-full hover:bg-primary/5 transition-colors">
-          {isDark ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-slate-700" />}
-        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2 px-2 py-1.5 h-auto hover:bg-primary/5 transition-colors rounded-full">

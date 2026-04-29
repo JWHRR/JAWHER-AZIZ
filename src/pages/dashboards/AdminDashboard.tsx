@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recent, setRecent] = useState<any[]>([]);
   const [missingYesterday, setMissingYesterday] = useState<MissingTask[]>([]);
-  const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[] }>({ done: [], pending: [] });
+  const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
   useEffect(() => {
     const today = format(new Date(), "yyyy-MM-dd");
@@ -154,6 +154,7 @@ export default function AdminDashboard() {
       // ---- Compute TODAY pending vs done at a glance
       const done: MissingTask[] = [];
       const pending: MissingTask[] = [];
+      const info: MissingTask[] = [];
 
       // Today absences
       const { data: tAbs } = await supabase
@@ -203,7 +204,35 @@ export default function AdminDashboard() {
         else pending.push(item);
       });
 
-      setTodayActivity({ done, pending });
+      // Today permanences
+      const { data: tplP } = await supabase
+        .from("permanence_template")
+        .select("surveillant_id, slot")
+        .eq("weekday", todayWd);
+      const { data: ovP } = await supabase
+        .from("permanences")
+        .select("surveillant_id, slot")
+        .eq("date", today);
+      
+      const expectedPerms = [
+        ...((tplP ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
+        ...((ovP ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
+      ];
+
+      // Deduplicate to avoid showing same permanence twice
+      const uniquePerms = Array.from(new Map(expectedPerms.map(p => [`${p.s}:${p.slot}`, p])).values());
+
+      uniquePerms.forEach((e) => {
+        const name = nameById[e.s];
+        if (!name) return;
+        info.push({
+          type: "PERMANENCE",
+          surveillantName: name,
+          detail: `Permanence ${SLOT_LABELS[e.slot as PermanenceSlot]?.split(" (")[0] ?? e.slot}`,
+        });
+      });
+
+      setTodayActivity({ done, pending, info });
     })();
   }, []);
 
@@ -317,7 +346,22 @@ export default function AdminDashboard() {
                 </ul>
               </div>
             )}
-            {todayActivity.done.length === 0 && todayActivity.pending.length === 0 && (
+            {todayActivity.info.length > 0 && (
+              <div>
+                <div className="text-xs font-semibold text-primary mb-1.5 uppercase tracking-wide flex items-center gap-1">
+                  <CalIcon className="h-3 w-3" /> Information
+                </div>
+                <ul className="space-y-1">
+                  {todayActivity.info.map((p, i) => (
+                    <li key={i} className="text-sm flex justify-between p-1.5 rounded bg-primary-soft">
+                      <span>{p.surveillantName}</span>
+                      <span className="text-xs text-muted-foreground">{p.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {todayActivity.done.length === 0 && todayActivity.pending.length === 0 && todayActivity.info.length === 0 && (
               <p className="text-sm text-muted-foreground italic">Aucune tâche prévue aujourd'hui.</p>
             )}
           </CardContent>

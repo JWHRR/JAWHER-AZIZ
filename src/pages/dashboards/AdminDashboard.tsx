@@ -248,8 +248,6 @@ export default function AdminDashboard() {
     { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft" },
     { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent" },
     { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft" },
-    { label: "Permanences (Planning)", value: stats.permanencesAujourdhui, icon: CalIcon, color: "text-primary", bg: "bg-primary-soft" },
-    { label: "Permanences (Effectuées)", value: stats.permanencesLogsAujourdhui, icon: CheckCircle2, color: "text-primary", bg: "bg-primary-soft" },
     { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
     { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent" },
     { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10" },

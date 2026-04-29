@@ -31,19 +31,23 @@ export default function Absences() {
   const [myDortoirs, setMyDortoirs] = useState<DortoirAssign[]>([]);
   const [allDortoirs, setAllDortoirs] = useState<{ id: string; code: string }[]>([]);
   const [absences, setAbsences] = useState<any[]>([]);
+  const [studentsData, setStudentsData] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState({ dortoir_id: "", nombre_absents: 0, noms_absents: "", observations: "" });
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
 
   const load = async () => {
     setLoading(true);
     if (isAdmin) {
-      const [dort, abs] = await Promise.all([
+      const [dort, abs, etud] = await Promise.all([
         supabase.from("dortoirs").select("id, code").order("code"),
         supabase.from("absences").select("*, dortoirs(code)").eq("date", date).order("created_at"),
+        supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
       ]);
       setAllDortoirs(dort.data ?? []);
       setAbsences(abs.data ?? []);
+      setStudentsData(etud.data ?? []);
     } else if (user) {
       const da = await supabase
         .from("dortoir_assignments")
@@ -53,13 +57,18 @@ export default function Absences() {
       setMyDortoirs(myList);
       const ids = myList.map((x) => x.dortoir_id);
       if (ids.length) {
-        const { data: abs } = await supabase
-          .from("absences")
-          .select("*, dortoirs(code)")
-          .eq("date", date)
-          .in("dortoir_id", ids);
-        setAbsences(abs ?? []);
-      } else setAbsences([]);
+        const [absRes, etudRes] = await Promise.all([
+          supabase.from("absences").select("*, dortoirs(code)").eq("date", date).in("dortoir_id", ids),
+          supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
+        ]);
+        setAbsences(absRes.data ?? []);
+        // Filter students to only those in the surveillant's dortoirs
+        const filteredEtud = (etudRes.data ?? []).filter((e: any) => ids.includes(e.chambres?.dortoir_id));
+        setStudentsData(filteredEtud);
+      } else {
+        setAbsences([]);
+        setStudentsData([]);
+      }
     }
     setLoading(false);
   };
@@ -79,11 +88,42 @@ export default function Absences() {
         noms_absents: existing.noms_absents ?? "",
         observations: existing.observations ?? "",
       });
+      // Try to pre-select students based on names
+      const existingNames = (existing.noms_absents ?? "").split("\n").map((n: string) => n.trim()).filter(Boolean);
+      const matchedIds = new Set<string>();
+      existingNames.forEach((n: string) => {
+        const found = studentsData.find(s => s.nom_complet === n && s.chambres?.dortoir_id === dortoir_id);
+        if (found) matchedIds.add(found.id);
+      });
+      setSelectedStudents(matchedIds);
     } else {
       setEditing(null);
       setForm({ dortoir_id, nombre_absents: 0, noms_absents: "", observations: "" });
+      setSelectedStudents(new Set());
     }
     setOpen(true);
+  };
+
+  const handleStudentToggle = (student: any) => {
+    const newSelected = new Set(selectedStudents);
+    if (newSelected.has(student.id)) {
+      newSelected.delete(student.id);
+    } else {
+      newSelected.add(student.id);
+    }
+    setSelectedStudents(newSelected);
+    
+    // Auto-update the text area and number
+    const names: string[] = [];
+    newSelected.forEach(id => {
+      const s = studentsData.find(x => x.id === id);
+      if (s) names.push(s.nom_complet);
+    });
+    setForm(prev => ({
+      ...prev,
+      noms_absents: names.join("\n"),
+      nombre_absents: newSelected.size
+    }));
   };
 
   const save = async () => {
@@ -232,25 +272,65 @@ export default function Absences() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nb">Nombre d'absents</Label>
-              <Input
-                id="nb"
-                type="number"
-                min={0}
-                value={form.nombre_absents}
-                onChange={(e) => setForm({ ...form, nombre_absents: Number(e.target.value) })}
-              />
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto border rounded-md p-3 bg-muted/20">
+              <Label>Sélectionner les absents</Label>
+              {(() => {
+                const dortoirStudents = studentsData.filter(s => s.chambres?.dortoir_id === form.dortoir_id);
+                if (dortoirStudents.length === 0) return <p className="text-xs text-muted-foreground italic">Aucun étudiant dans ce dortoir</p>;
+                
+                // Group by chambre
+                const byChambre: Record<string, any[]> = {};
+                dortoirStudents.forEach(s => {
+                  const ch = s.chambres?.numero || "Inconnue";
+                  if (!byChambre[ch]) byChambre[ch] = [];
+                  byChambre[ch].push(s);
+                });
+
+                return Object.entries(byChambre)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([chambreNum, students]) => (
+                  <div key={chambreNum} className="mb-4 last:mb-0">
+                    <div className="text-xs font-bold text-muted-foreground bg-muted/50 px-2 py-1 rounded mb-2">Chambre {chambreNum}</div>
+                    <div className="space-y-1.5 px-2">
+                      {students.map(s => (
+                        <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 p-1 rounded">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-gray-300"
+                            checked={selectedStudents.has(s.id)}
+                            onChange={() => handleStudentToggle(s)}
+                          />
+                          <span>{s.nom_complet}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="noms">Noms (optionnel)</Label>
-              <Textarea
-                id="noms"
-                rows={3}
-                value={form.noms_absents}
-                onChange={(e) => setForm({ ...form, noms_absents: e.target.value })}
-                placeholder="Un nom par ligne"
-              />
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nb">Nombre d'absents (Total)</Label>
+                <Input
+                  id="nb"
+                  type="number"
+                  min={0}
+                  value={form.nombre_absents}
+                  onChange={(e) => setForm({ ...form, nombre_absents: Number(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="noms">Noms saisis manuellement</Label>
+                <Textarea
+                  id="noms"
+                  rows={2}
+                  value={form.noms_absents}
+                  onChange={(e) => setForm({ ...form, noms_absents: e.target.value })}
+                  placeholder="Un nom par ligne"
+                  className="text-xs"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="obs">Observations</Label>

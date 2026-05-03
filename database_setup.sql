@@ -600,6 +600,7 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT false,
+  link TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

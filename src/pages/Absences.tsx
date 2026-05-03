@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -27,8 +28,14 @@ interface DortoirAssign {
 export default function Absences() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    setSearchParams({ date: newDate }, { replace: true });
+  };
   const [myDortoirs, setMyDortoirs] = useState<DortoirAssign[]>([]);
   const [allDortoirs, setAllDortoirs] = useState<{ id: string; code: string }[]>([]);
   const [absences, setAbsences] = useState<any[]>([]);
@@ -167,13 +174,15 @@ export default function Absences() {
       await supabase.from("notifications").insert({
         role: "ADMIN",
         title: "Alerte Absences Consécutives",
-        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives dans le dortoir ${dortoirsToShow.find(d => d.id === dortoir_id)?.code}.`
+        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives dans le dortoir ${dortoirsToShow.find(d => d.id === dortoir_id)?.code}.`,
+        link: `/absences?date=${date}`
       });
       // Notification to current user (surveillant)
       await supabase.from("notifications").insert({
         user_id: user.id,
         title: "Alerte Absences Consécutives",
-        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives.`
+        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives.`,
+        link: `/absences?date=${date}`
       });
       toast.warning(`${consecutiveAbsentees.length} étudiant(s) absent(s) 3 nuits consécutives!`);
     }
@@ -303,7 +312,7 @@ export default function Absences() {
             </Button>
           )}
           <Label htmlFor="date" className="text-sm">Date</Label>
-          <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
+          <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
         </div>
       </div>
 

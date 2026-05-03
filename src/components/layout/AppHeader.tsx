@@ -53,6 +53,13 @@ export function AppHeader() {
     navigate("/auth", { replace: true });
   };
 
+  const handleNotificationClick = async (n: any) => {
+    await markAsRead(n.id);
+    if (n.link) {
+      navigate(n.link);
+    }
+  };
+
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Utilisateur";
   const initials = displayName
     .split(" ")
@@ -90,7 +97,10 @@ export function AppHeader() {
               <div className="p-4 text-center text-sm text-muted-foreground">Aucune nouvelle notification</div>
             ) : (
               notifications.map((n) => (
-                <div key={n.id} className="p-3 border-b last:border-0 hover:bg-muted/50 transition-colors flex justify-between items-start gap-2">
+                <div key={n.id} 
+                  className={`p-3 border-b last:border-0 hover:bg-muted/50 transition-colors flex justify-between items-start gap-2 ${n.link ? 'cursor-pointer' : ''}`}
+                  onClick={() => { if (n.link) handleNotificationClick(n); }}
+                >
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">{n.title}</p>
                     <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
@@ -98,7 +108,7 @@ export function AppHeader() {
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: fr })}
                     </p>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0" onClick={() => markAsRead(n.id)}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0" onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}>
                     <Check className="h-4 w-4" />
                   </Button>
                 </div>

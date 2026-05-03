@@ -81,6 +81,14 @@ export default function Reclamations() {
       created_by: user.id,
     });
     if (error) { toast.error(error.message); return; }
+    
+    if (form.priority === "HAUTE") {
+      await supabase.from("notifications").insert([
+        { role: "ADMIN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" },
+        { role: "TECHNICIEN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" }
+      ]);
+    }
+
     toast.success("Réclamation créée");
     await supabase.from("activity_logs").insert({
       user_id: user.id, action: "Créé réclamation", entity: "reclamations",

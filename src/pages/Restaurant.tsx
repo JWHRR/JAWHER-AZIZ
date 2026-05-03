@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,8 +22,14 @@ import { generateTablePdf } from "@/lib/pdf";
 export default function Restaurant() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    setSearchParams({ date: newDate }, { replace: true });
+  };
   const [assignments, setAssignments] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
@@ -114,7 +121,8 @@ export default function Restaurant() {
       await supabase.from("notifications").insert({
         role: "ADMIN",
         title: `Problème signalé au ${REPAS_LABELS[form.repas]}`,
-        message: form.observations
+        message: form.observations,
+        link: `/restaurant?date=${date}`
       });
     }
     
@@ -195,7 +203,7 @@ export default function Restaurant() {
             </Button>
           )}
           <Label htmlFor="d" className="text-sm">Date</Label>
-          <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
+          <Input id="d" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
         </div>
       </div>
 

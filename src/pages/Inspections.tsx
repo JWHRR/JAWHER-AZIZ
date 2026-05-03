@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,8 +43,14 @@ interface Inspection {
 export default function Inspections() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+
+  const handleDateChange = (newDate: string) => {
+    setDate(newDate);
+    setSearchParams({ date: newDate }, { replace: true });
+  };
 
   const [chambres, setChambres] = useState<Chambre[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -170,7 +177,8 @@ export default function Inspections() {
       await supabase.from("notifications").insert({
         role: "ADMIN",
         title: `Problème signalé (Ch. ${chInfo?.numero})`,
-        message: `${form.degats ? "[Dégâts constatés] " : ""}${form.observations}`
+        message: `${form.degats ? "[Dégâts constatés] " : ""}${form.observations}`,
+        link: `/inspections?date=${date}`
       });
     }
 
@@ -204,7 +212,7 @@ export default function Inspections() {
         </div>
         <div className="flex items-center gap-2">
           <Label htmlFor="d" className="text-sm">Date</Label>
-          <Input id="d" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
+          <Input id="d" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
           {!isAdmin && isToday && (
             <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre assignée" : "Ajouter une inspection"}>
               <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection

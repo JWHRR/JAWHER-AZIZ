@@ -38,6 +38,7 @@ const items: NavItem[] = [
   { title: "Calendrier", url: "/calendrier", icon: Calendar, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Permanences", url: "/permanences", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Absences", url: "/absences", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
+  { title: "Effectif Weekend", url: "/weekend", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Inspections", url: "/inspections", icon: DoorOpen, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Restaurant", url: "/restaurant", icon: Utensils, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Réclamations", url: "/reclamations", icon: Wrench, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },

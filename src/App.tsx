@@ -19,6 +19,7 @@ import Activite from "./pages/Activite.tsx";
 import Inspections from "./pages/Inspections.tsx";
 import Permanences from "./pages/Permanences.tsx";
 import Etudiants from "./pages/Etudiants.tsx";
+import Weekend from "./pages/Weekend.tsx";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,14 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
                   <AppLayout><Absences /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/weekend"
+              element={
+                <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
+                  <AppLayout><Weekend /></AppLayout>
                 </ProtectedRoute>
               }
             />

@@ -16,6 +16,7 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
 import { generateTablePdf } from "@/lib/pdf";
+import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
 
 interface DortoirAssign {
   id: string;
@@ -126,6 +127,44 @@ export default function Absences() {
     }));
   };
 
+  const checkThreeConsecutiveAbsences = async (dortoir_id: string, currentNames: string[], currentDateStr: string) => {
+    if (!currentNames.length) return;
+    
+    // Get last two days
+    const current = new Date(currentDateStr);
+    const prev1 = format(subDays(current, 1), "yyyy-MM-dd");
+    const prev2 = format(subDays(current, 2), "yyyy-MM-dd");
+
+    const { data: pastAbs } = await supabase
+      .from("absences")
+      .select("date, noms_absents")
+      .eq("dortoir_id", dortoir_id)
+      .in("date", [prev1, prev2]);
+      
+    if (!pastAbs || pastAbs.length < 2) return;
+
+    const names1 = (pastAbs.find(a => a.date === prev1)?.noms_absents || "").split("\n").map(n => n.trim()).filter(Boolean);
+    const names2 = (pastAbs.find(a => a.date === prev2)?.noms_absents || "").split("\n").map(n => n.trim()).filter(Boolean);
+
+    const consecutiveAbsentees = currentNames.filter(name => names1.includes(name) && names2.includes(name));
+
+    if (consecutiveAbsentees.length > 0) {
+      // Send notification to Admin
+      await supabase.from("notifications").insert({
+        role: "ADMIN",
+        title: "Alerte Absences Consécutives",
+        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives dans le dortoir ${dortoirsToShow.find(d => d.id === dortoir_id)?.code}.`
+      });
+      // Notification to current user (surveillant)
+      await supabase.from("notifications").insert({
+        user_id: user.id,
+        title: "Alerte Absences Consécutives",
+        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives.`
+      });
+      toast.warning(`${consecutiveAbsentees.length} étudiant(s) absent(s) 3 nuits consécutives!`);
+    }
+  };
+
   const save = async () => {
     if (!user) return;
     const payload = {
@@ -136,16 +175,22 @@ export default function Absences() {
       noms_absents: form.noms_absents || null,
       observations: form.observations || null,
     };
+    
     let error;
     if (editing) {
       ({ error } = await supabase.from("absences").update(payload).eq("id", editing.id));
     } else {
       ({ error } = await supabase.from("absences").insert(payload));
     }
+    
     if (error) {
       toast.error(error.message);
       return;
     }
+
+    const namesList = (form.noms_absents || "").split("\n").map(n => n.trim()).filter(Boolean);
+    await checkThreeConsecutiveAbsences(form.dortoir_id, namesList, date);
+
     toast.success(editing ? "Effectif mis à jour" : "Effectif enregistré");
     await supabase.from("activity_logs").insert({
       user_id: user.id,
@@ -161,53 +206,7 @@ export default function Absences() {
     ? allDortoirs
     : myDortoirs.map((d) => ({ id: d.dortoir_id, code: d.dortoirs.code }));
 
-  const exportEffectifWeekend = async () => {
-    // Effectif weekend = effectif of Thursday night for the selected week
-    // We use the Thursday before/equal to the selected date.
-    const sel = new Date(date);
-    const dayJs = sel.getDay(); // 0=Sun..6=Sat
-    // distance to previous Thursday (4)
-    const distance = (dayJs - 4 + 7) % 7;
-    const thursday = subDays(sel, distance);
-    const thuStr = format(thursday, "yyyy-MM-dd");
 
-    const [{ data: dortoirsAll }, { data: thuAbs }] = await Promise.all([
-      supabase.from("dortoirs").select("id, code, capacite").order("code"),
-      supabase.from("absences").select("dortoir_id, nombre_absents, observations").eq("date", thuStr),
-    ]);
-
-    const absByDortoir: Record<string, { absents: number; obs: string | null }> = {};
-    (thuAbs ?? []).forEach((a: any) => {
-      absByDortoir[a.dortoir_id] = { absents: a.nombre_absents || 0, obs: a.observations };
-    });
-
-    let totalCapacite = 0;
-    let totalPresents = 0;
-    const rows = (dortoirsAll ?? []).map((d: any) => {
-      const rec = absByDortoir[d.id];
-      const absents = rec?.absents ?? 0;
-      const presents = Math.max(0, (d.capacite || 0) - absents);
-      totalCapacite += d.capacite || 0;
-      totalPresents += presents;
-      return [
-        `D. ${d.code}`,
-        d.capacite ?? 0,
-        absents,
-        presents,
-        rec?.obs ?? "",
-      ];
-    });
-
-    generateTablePdf({
-      title: "Effectif Weekend",
-      subtitle: `Effectif du jeudi soir ${format(thursday, "d MMMM yyyy", { locale: fr })}`,
-      filename: `effectif_weekend_${thuStr}.pdf`,
-      head: ["Dortoir", "Capacité", "Absents", "Présents", "Observations"],
-      rows,
-      foot: [["TOTAL", String(totalCapacite), String(totalCapacite - totalPresents), String(totalPresents), ""]],
-    });
-    toast.success("PDF généré");
-  };
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -217,11 +216,7 @@ export default function Absences() {
           <p className="text-muted-foreground mt-1">Effectif quotidien par dortoir</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={exportEffectifWeekend}>
-              <FileDown className="h-4 w-4 mr-1" /> Effectif weekend (PDF)
-            </Button>
-          )}
+          {isAdmin && <WeeklyAbsenceHistory />}
           <Label htmlFor="date" className="text-sm">Date</Label>
           <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
         </div>

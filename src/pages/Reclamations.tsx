@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Plus, Search, Trash2, FileDown } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -35,7 +36,12 @@ export default function Reclamations() {
     lieu: "",
     dortoir_id: "",
     priority: "NORMALE" as ReclamationPriority,
+    type: "Autre",
   });
+  
+  const [openExport, setOpenExport] = useState(false);
+  const RECLAMATION_TYPES = ["Électricité", "Plomberie", "Menuiserie", "Autre"];
+  const [exportTypes, setExportTypes] = useState<Set<string>>(new Set(RECLAMATION_TYPES));
 
   const load = async () => {
     setLoading(true);
@@ -70,6 +76,7 @@ export default function Reclamations() {
       lieu: finalLieu,
       dortoir_id: finalDortoirId,
       priority: form.priority,
+      type: form.type,
       created_by: user.id,
     });
     if (error) { toast.error(error.message); return; }
@@ -78,7 +85,7 @@ export default function Reclamations() {
       user_id: user.id, action: "Créé réclamation", entity: "reclamations",
     });
     setOpenCreate(false);
-    setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE" });
+    setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE", type: "Autre" });
     load();
   };
 
@@ -110,11 +117,17 @@ export default function Reclamations() {
   });
 
   const exportTodayPdf = () => {
+    if (exportTypes.size === 0) {
+      toast.error("Veuillez sélectionner au moins un type.");
+      return;
+    }
+
     const today = format(new Date(), "yyyy-MM-dd");
-    const todayItems = items.filter((r) => r.created_at.startsWith(today));
-    const pendingItems = items.filter((r) => r.status !== "TERMINEE");
+    const todayItems = items.filter((r) => r.created_at.startsWith(today) && exportTypes.has(r.type || "Autre"));
+    const pendingItems = items.filter((r) => r.status !== "TERMINEE" && exportTypes.has(r.type || "Autre"));
 
     const buildRows = (rows: any[]) => rows.map((r) => [
+      r.type || "Autre",
       r.titre,
       r.description || "—",
       r.dortoirs?.code ? r.dortoirs.code : (r.lieu || "—"),
@@ -124,17 +137,25 @@ export default function Reclamations() {
 
     generateTablePdf({
       title: "Réclamations",
-      subtitle: `Du jour (${todayItems.length}) + non terminées (${pendingItems.length}) — ${format(new Date(), "d MMMM yyyy", { locale: fr })}`,
+      subtitle: `Filtres: ${Array.from(exportTypes).join(", ")} | Du jour (${todayItems.length}) + non terminées (${pendingItems.length}) — ${format(new Date(), "d MMMM yyyy", { locale: fr })}`,
       filename: `reclamations_${today}.pdf`,
-      head: ["Réclamation", "Description", "N° du dortoir", "Priorité", "Auteur"],
+      head: ["Type", "Réclamation", "Description", "N° du dortoir", "Priorité", "Auteur"],
       rows: [
-        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", ""]] : []),
+        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", "", ""]] : []),
         ...buildRows(todayItems),
-        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", ""]] : []),
+        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", "", ""]] : []),
         ...buildRows(pendingItems),
       ],
     });
     toast.success("PDF généré");
+    setOpenExport(false);
+  };
+
+  const toggleExportType = (t: string) => {
+    const newTypes = new Set(exportTypes);
+    if (newTypes.has(t)) newTypes.delete(t);
+    else newTypes.add(t);
+    setExportTypes(newTypes);
   };
 
   return (
@@ -146,9 +167,33 @@ export default function Reclamations() {
         </div>
         <div className="flex gap-2">
           {(isAdmin || canEditStatus) && (
-            <Button variant="outline" onClick={exportTodayPdf}>
-              <FileDown className="h-4 w-4 mr-1" /> PDF du jour
-            </Button>
+            <Dialog open={openExport} onOpenChange={setOpenExport}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Exporter PDF</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader><DialogTitle>Exporter les réclamations</DialogTitle></DialogHeader>
+                <div className="space-y-4 py-2">
+                  <Label>Filtrer par type</Label>
+                  <div className="space-y-2">
+                    {RECLAMATION_TYPES.map((t) => (
+                      <div key={t} className="flex items-center gap-2">
+                        <Checkbox 
+                          id={`exp-${t}`} 
+                          checked={exportTypes.has(t)} 
+                          onCheckedChange={() => toggleExportType(t)} 
+                        />
+                        <Label htmlFor={`exp-${t}`} className="cursor-pointer">{t}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpenExport(false)}>Annuler</Button>
+                  <Button onClick={exportTodayPdf}>Générer PDF</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
           <Dialog open={openCreate} onOpenChange={setOpenCreate}>
             <DialogTrigger asChild>
@@ -160,6 +205,15 @@ export default function Reclamations() {
                 <div className="space-y-2">
                   <Label>Réclamation *</Label>
                   <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Type de réclamation</Label>
+                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {RECLAMATION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Description (optionnelle)</Label>
@@ -227,6 +281,7 @@ export default function Reclamations() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <h3 className="font-semibold">{r.titre}</h3>
+                          <Badge variant="outline">{r.type || "Autre"}</Badge>
                           <StatusBadge status={r.status} />
                           <PriorityBadge priority={r.priority} />
                         </div>

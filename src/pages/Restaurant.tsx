@@ -14,7 +14,8 @@ import { addDays, endOfWeek, format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
-import { DoneBadge } from "@/components/StatusBadge";
+import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateTablePdf } from "@/lib/pdf";
 
 export default function Restaurant() {
@@ -27,7 +28,7 @@ export default function Restaurant() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState({ repas: "DEJEUNER" as RepasType, nombre_eleves: 0, observations: "" });
+  const [form, setForm] = useState({ repas: "DEJEUNER" as RepasType, nombre_eleves: 0, status: "RAS", observations: "" });
 
   const load = async () => {
     if (!user) return;
@@ -76,10 +77,16 @@ export default function Restaurant() {
     const existing = logs.find((l) => l.repas === repas && l.surveillant_id === user?.id);
     if (existing) {
       setEditing(existing);
-      setForm({ repas, nombre_eleves: existing.nombre_eleves, observations: existing.observations ?? "" });
+      const isProblem = existing.observations && existing.observations !== "RAS" && existing.observations.trim() !== "";
+      setForm({ 
+        repas, 
+        nombre_eleves: existing.nombre_eleves, 
+        status: isProblem ? "PROBLEM" : "RAS",
+        observations: isProblem ? existing.observations : "" 
+      });
     } else {
       setEditing(null);
-      setForm({ repas, nombre_eleves: 0, observations: "" });
+      setForm({ repas, nombre_eleves: 0, status: "RAS", observations: "" });
     }
     setOpen(true);
   };
@@ -93,7 +100,7 @@ export default function Restaurant() {
       date,
       repas: form.repas,
       nombre_eleves: Number(form.nombre_eleves) || 0,
-      observations: form.observations || null,
+      observations: form.status === "RAS" ? "RAS" : form.observations,
     };
     let error;
     if (editing) {
@@ -102,6 +109,15 @@ export default function Restaurant() {
       ({ error } = await supabase.from("restaurant_logs").insert(payload));
     }
     if (error) { toast.error(error.message); return; }
+    
+    if (form.status === "PROBLEM" && form.observations) {
+      await supabase.from("notifications").insert({
+        role: "ADMIN",
+        title: `Problème signalé au ${REPAS_LABELS[form.repas]}`,
+        message: form.observations
+      });
+    }
+    
     toast.success("Effectif enregistré");
     await supabase.from("activity_logs").insert({
       user_id: user.id, action: "Effectif restaurant", entity: "restaurant_logs",
@@ -150,6 +166,21 @@ export default function Restaurant() {
     toast.success("PDF généré");
   };
 
+  const getTaskStatus = (r: RepasType, hasLog: boolean) => {
+    if (hasLog) return { label: "Terminé", color: "bg-green-500 hover:bg-green-600 text-white" };
+    
+    const now = new Date();
+    const targetDate = new Date(date);
+    
+    // Simple logic: if date is past -> Missed. If today -> In progress. If future -> In progress/waiting.
+    // We can refine this with hours, but basic logic suffices.
+    const isToday = now.toDateString() === targetDate.toDateString();
+    const isPast = targetDate < now && !isToday;
+    
+    if (isPast) return { label: "Manqué", color: "bg-red-500 hover:bg-red-600 text-white" };
+    return { label: "En cours", color: "bg-yellow-500 hover:bg-yellow-600 text-white" };
+  };
+
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -192,28 +223,41 @@ export default function Restaurant() {
                 
                 const totalAssignedCount = myAssigns.length + myTemplates.length;
 
+                const assignedUsers = [...myAssigns, ...myTemplates].map(x => x.profiles?.full_name).filter(Boolean);
+                const assignedNames = Array.from(new Set(assignedUsers)).join(", ");
+
                 return (
                   <div key={r} className="p-4 rounded-lg border bg-card">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold">{REPAS_LABELS[r]}</div>
-                      {isUserAssigned && <DoneBadge done={!!myLog} />}
+                      {!isAdmin && isUserAssigned && (
+                        <Badge className={myLog ? "bg-green-500 text-white hover:bg-green-600" : "bg-yellow-500 text-white hover:bg-yellow-600"}>
+                          {myLog ? "Terminé" : "En cours"}
+                        </Badge>
+                      )}
+                      {isAdmin && (
+                        <Badge className={getTaskStatus(r, myLogs.length > 0).color}>
+                          {getTaskStatus(r, myLogs.length > 0).label}
+                        </Badge>
+                      )}
                     </div>
                     {isAdmin && (
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {totalAssignedCount === 0 ? "Personne assigné" : `${totalAssignedCount} surveillant(s)`}
+                      <div className="text-sm text-muted-foreground mb-3">
+                        <span className="font-medium text-foreground">Assigné à: </span>
+                        {totalAssignedCount === 0 ? "Personne" : assignedNames}
                       </div>
                     )}
                     {myLogs.length > 0 && (
-                      <div className="text-sm space-y-1 mb-2">
+                      <div className="text-sm space-y-1 mb-3">
                         {myLogs.map((l) => (
-                          <div key={l.id} className="flex justify-between">
-                            <span>{l.profiles?.full_name ?? "Vous"}</span>
-                            <span className="font-semibold">{l.nombre_eleves} él.</span>
+                          <div key={l.id} className="flex justify-between items-center bg-muted/30 p-2 rounded">
+                            <span className="truncate pr-2">{l.profiles?.full_name ?? "Vous"}</span>
+                            <span className="font-semibold bg-background px-2 py-0.5 rounded shadow-sm">{l.nombre_eleves} él.</span>
                           </div>
                         ))}
                       </div>
                     )}
-                    {(isUserAssigned || isAdmin) && (
+                    {isUserAssigned && !isAdmin && (
                       <Button size="sm" variant={myLog ? "outline" : "default"} className="w-full mt-2" onClick={() => openLog(r)}>
                         {myLog ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Pointer</>}
                       </Button>
@@ -241,11 +285,27 @@ export default function Restaurant() {
               <Input id="nb" type="number" min={0} value={form.nombre_eleves}
                 onChange={(e) => setForm({ ...form, nombre_eleves: Number(e.target.value) })} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="obs">Observations</Label>
-              <Textarea id="obs" rows={3} value={form.observations}
-                onChange={(e) => setForm({ ...form, observations: e.target.value })} />
+            <div className="space-y-3">
+              <Label>Statut du service</Label>
+              <RadioGroup value={form.status} onValueChange={(v) => setForm({ ...form, status: v })} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="RAS" id="ras" />
+                  <Label htmlFor="ras" className="font-normal cursor-pointer">RAS (Rien à signaler)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="PROBLEM" id="prob" />
+                  <Label htmlFor="prob" className="font-normal cursor-pointer">Problème</Label>
+                </div>
+              </RadioGroup>
             </div>
+            {form.status === "PROBLEM" && (
+              <div className="space-y-2 animate-fade-in">
+                <Label htmlFor="obs">Description du problème</Label>
+                <Textarea id="obs" rows={3} value={form.observations}
+                  placeholder="Décrivez le problème rencontré..."
+                  onChange={(e) => setForm({ ...form, observations: e.target.value })} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>

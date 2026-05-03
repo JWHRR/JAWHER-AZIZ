@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -54,6 +55,7 @@ export default function Inspections() {
     proprete: 5,
     ordre: 5,
     degats: false,
+    status: "RAS",
     observations: "",
   });
 
@@ -138,13 +140,16 @@ export default function Inspections() {
   );
 
   const openNew = () => {
-    setForm({ chambre_id: "", proprete: 5, ordre: 5, degats: false, observations: "" });
+    setForm({ chambre_id: "", proprete: 5, ordre: 5, degats: false, status: "RAS", observations: "" });
     setOpen(true);
   };
 
   const save = async () => {
     if (!user) return;
     if (!form.chambre_id) { toast.error("Choisir une chambre"); return; }
+    
+    const obsToSave = form.status === "RAS" ? "RAS" : form.observations;
+    
     const { error } = await supabase.from("chambre_inspections").insert({
       chambre_id: form.chambre_id,
       surveillant_id: user.id,
@@ -152,13 +157,23 @@ export default function Inspections() {
       proprete: form.proprete,
       ordre: form.ordre,
       degats: form.degats,
-      observations: form.observations || null,
+      observations: obsToSave || null,
     });
     if (error) {
       if (error.code === "23505") toast.error("Cette chambre a déjà été inspectée à cette date.");
       else toast.error(error.message);
       return;
     }
+    
+    if (form.status === "PROBLEM" || form.degats) {
+      const chInfo = chambres.find(c => c.id === form.chambre_id);
+      await supabase.from("notifications").insert({
+        role: "ADMIN",
+        title: `Problème signalé (Ch. ${chInfo?.numero})`,
+        message: `${form.degats ? "[Dégâts constatés] " : ""}${form.observations}`
+      });
+    }
+
     toast.success("Inspection enregistrée");
     await supabase.from("activity_logs").insert({
       user_id: user.id, action: "Inspection chambre", entity: "chambre_inspections",
@@ -333,10 +348,25 @@ export default function Inspections() {
               <Checkbox id="deg" checked={form.degats} onCheckedChange={(v) => setForm({ ...form, degats: !!v })} />
               <Label htmlFor="deg" className="text-sm cursor-pointer">Dégâts constatés</Label>
             </div>
-            <div className="space-y-2">
-              <Label>Observations</Label>
-              <Textarea rows={3} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} />
+            <div className="space-y-3">
+              <Label>Statut</Label>
+              <RadioGroup value={form.status} onValueChange={(v) => setForm({ ...form, status: v })} className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="RAS" id="ras" />
+                  <Label htmlFor="ras" className="font-normal cursor-pointer">RAS</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="PROBLEM" id="prob" />
+                  <Label htmlFor="prob" className="font-normal cursor-pointer">Problème</Label>
+                </div>
+              </RadioGroup>
             </div>
+            {(form.status === "PROBLEM" || form.degats) && (
+              <div className="space-y-2 animate-fade-in">
+                <Label>Description du problème / dégât</Label>
+                <Textarea rows={3} value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} placeholder="Détails du problème..." />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>

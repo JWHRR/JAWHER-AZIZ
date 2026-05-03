@@ -1,4 +1,4 @@
-﻿
+
 -- =========================================================
 -- ENUMS
 -- =========================================================
@@ -589,3 +589,51 @@ CREATE TRIGGER trg_chambinsp_updated
 CREATE INDEX IF NOT EXISTS idx_chambinsp_date ON public.chambre_inspections(date);
 CREATE INDEX IF NOT EXISTS idx_chambinsp_surv ON public.chambre_inspections(surveillant_id);
 CREATE INDEX IF NOT EXISTS idx_chambres_dortoir ON public.chambres(dortoir_id);
+
+-- =========================================================
+-- NOTIFICATIONS
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  role public.app_role,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  is_read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "notifications_select"
+ON public.notifications FOR SELECT
+TO authenticated
+USING (
+  (user_id = auth.uid()) OR 
+  (role IS NOT NULL AND public.has_role(auth.uid(), role)) OR
+  (public.has_role(auth.uid(), 'ADMIN'))
+);
+
+CREATE POLICY "notifications_update"
+ON public.notifications FOR UPDATE
+TO authenticated
+USING (
+  (user_id = auth.uid()) OR 
+  (role IS NOT NULL AND public.has_role(auth.uid(), role)) OR
+  (public.has_role(auth.uid(), 'ADMIN'))
+);
+
+CREATE POLICY "notifications_insert"
+ON public.notifications FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+CREATE POLICY "notifications_delete"
+ON public.notifications FOR DELETE
+TO authenticated
+USING (public.has_role(auth.uid(), 'ADMIN'));
+
+-- =========================================================
+-- UPDATE RECLAMATIONS
+-- =========================================================
+ALTER TABLE public.reclamations ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'Autre';

@@ -10,8 +10,8 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Eye, FileDown } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { Loader2, Plus, Save, Eye, FileDown, CalendarDays } from "lucide-react";
+import { format, subDays, isThursday, isFriday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
@@ -38,17 +38,29 @@ export default function Absences() {
   const [form, setForm] = useState({ dortoir_id: "", nombre_absents: 0, noms_absents: "", observations: "" });
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
 
+  // Weekend State
+  const [weekendEffectifs, setWeekendEffectifs] = useState<any[]>([]);
+  const [weekendOpen, setWeekendOpen] = useState(false);
+  const [weekendForm, setWeekendForm] = useState({ dortoir_id: "", nombre_presents: 0 });
+  const [editingWeekend, setEditingWeekend] = useState<any | null>(null);
+
   const load = async () => {
     setLoading(true);
+    const isThu = isThursday(new Date(date));
+    const isFri = isFriday(new Date(date));
+    const thuDate = isThu ? date : (isFri ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : null);
+
     if (isAdmin) {
-      const [dort, abs, etud] = await Promise.all([
+      const [dort, abs, etud, we] = await Promise.all([
         supabase.from("dortoirs").select("id, code").order("code"),
         supabase.from("absences").select("*, dortoirs(code)").eq("date", date).order("created_at"),
-        supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
+        supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)"),
+        thuDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", thuDate).order("created_at") : Promise.resolve({ data: null })
       ]);
       setAllDortoirs(dort.data ?? []);
       setAbsences(abs.data ?? []);
       setStudentsData(etud.data ?? []);
+      setWeekendEffectifs(we.data ?? []);
     } else if (user) {
       const da = await supabase
         .from("dortoir_assignments")
@@ -58,17 +70,19 @@ export default function Absences() {
       setMyDortoirs(myList);
       const ids = myList.map((x) => x.dortoir_id);
       if (ids.length) {
-        const [absRes, etudRes] = await Promise.all([
+        const [absRes, etudRes, weRes] = await Promise.all([
           supabase.from("absences").select("*, dortoirs(code)").eq("date", date).in("dortoir_id", ids),
-          supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
+          supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)"),
+          thuDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", thuDate).in("dortoir_id", ids) : Promise.resolve({ data: null })
         ]);
         setAbsences(absRes.data ?? []);
-        // Filter students to only those in the surveillant's dortoirs
         const filteredEtud = (etudRes.data ?? []).filter((e: any) => ids.includes(e.chambres?.dortoir_id));
         setStudentsData(filteredEtud);
+        setWeekendEffectifs(weRes.data ?? []);
       } else {
         setAbsences([]);
         setStudentsData([]);
+        setWeekendEffectifs([]);
       }
     }
     setLoading(false);
@@ -202,6 +216,72 @@ export default function Absences() {
     load();
   };
 
+  const openWeekend = (dortoir_id: string) => {
+    const existing = weekendEffectifs.find(w => w.dortoir_id === dortoir_id);
+    if (existing) {
+      setEditingWeekend(existing);
+      setWeekendForm({ dortoir_id, nombre_presents: existing.nombre_presents });
+    } else {
+      setEditingWeekend(null);
+      setWeekendForm({ dortoir_id, nombre_presents: 0 });
+    }
+    setWeekendOpen(true);
+  };
+
+  const saveWeekend = async () => {
+    if (!user) return;
+    const isThu = isThursday(new Date(date));
+    const thuDate = isThu ? date : format(subDays(new Date(date), 1), "yyyy-MM-dd");
+    
+    const payload = {
+      dortoir_id: weekendForm.dortoir_id,
+      surveillant_id: editingWeekend?.surveillant_id ?? user.id,
+      semaine_du: thuDate,
+      nombre_presents: Number(weekendForm.nombre_presents) || 0,
+    };
+    
+    let error;
+    if (editingWeekend) {
+      ({ error } = await supabase.from("weekend_effectifs").update(payload).eq("id", editingWeekend.id));
+    } else {
+      ({ error } = await supabase.from("weekend_effectifs").insert(payload));
+    }
+    
+    if (error) { toast.error(error.message); return; }
+    toast.success("Effectif weekend enregistré");
+    setWeekendOpen(false);
+    load();
+  };
+
+  const exportWeekendPdf = () => {
+    const isFri = isFriday(new Date(date));
+    if (!isFri) return;
+    const thuDate = format(subDays(new Date(date), 1), "yyyy-MM-dd");
+    
+    const dortoirsList = isAdmin ? allDortoirs : myDortoirs.map(d => d.dortoirs);
+    let totalCapacite = 0;
+    let totalPresents = 0;
+    
+    const rows = (dortoirsList ?? []).map((d: any) => {
+      const rec = weekendEffectifs.find((w) => w.dortoir_id === d.id);
+      const presents = rec?.nombre_presents ?? 0;
+      // Fetching capacite wasn't requested strictly, but the previous Weekend page used it. 
+      // Admin request says: "Effectif weekend per dormitory. Total sum of all dormitories combined."
+      totalPresents += presents;
+      return [`D. ${d.code}`, presents];
+    });
+
+    generateTablePdf({
+      title: "Effectif Weekend",
+      subtitle: `Exporté le vendredi ${format(new Date(date), "d MMMM yyyy", { locale: fr })} (Saisie du jeudi)`,
+      filename: `effectif_weekend_${thuDate}.pdf`,
+      head: ["Dortoir", "Présents ce weekend"],
+      rows,
+      foot: [["TOTAL PRÉSENTS", String(totalPresents)]],
+    });
+    toast.success("PDF généré");
+  };
+
   const dortoirsToShow = isAdmin
     ? allDortoirs
     : myDortoirs.map((d) => ({ id: d.dortoir_id, code: d.dortoirs.code }));
@@ -217,6 +297,11 @@ export default function Absences() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && <WeeklyAbsenceHistory />}
+          {isAdmin && isFriday(new Date(date)) && (
+            <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="border-primary text-primary">
+              <FileDown className="h-4 w-4 mr-1" /> Effectif weekend (PDF)
+            </Button>
+          )}
           <Label htmlFor="date" className="text-sm">Date</Label>
           <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-auto" />
         </div>
@@ -258,6 +343,46 @@ export default function Absences() {
         </CardContent>
       </Card>
 
+      {/* SECTION EFFECTIF WEEKEND (ONLY THURSDAY FOR SURVEILLANTS) */}
+      {!isAdmin && isThursday(new Date(date)) && (
+        <Card className="border-primary">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" /> Effectif Weekend
+            </CardTitle>
+            <CardDescription>Saisie requise uniquement le Jeudi</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {dortoirsToShow.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+            ) : (
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {dortoirsToShow.map((d) => {
+                  const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
+                  return (
+                    <li key={d.id} className="p-4 rounded-lg border bg-card">
+                      <div className="flex items-center justify-between">
+                        <div className="font-semibold">Dortoir {d.code}</div>
+                        <DoneBadge done={!!we} />
+                      </div>
+                      {we && (
+                        <div className="text-sm text-muted-foreground mt-2 font-medium">
+                          {we.nombre_presents} présent(s) ce weekend
+                        </div>
+                      )}
+                      <Button size="sm" variant={we ? "outline" : "default"} className="mt-3 w-full" onClick={() => openWeekend(d.id)}>
+                        {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* DIALOG ABSENCES */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
@@ -340,6 +465,38 @@ export default function Absences() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
             <Button onClick={save}><Save className="h-4 w-4 mr-1" /> Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG EFFECTIF WEEKEND */}
+      <Dialog open={weekendOpen} onOpenChange={setWeekendOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Effectif Weekend</DialogTitle>
+            <DialogDescription>
+              Dortoir {dortoirsToShow.find((d) => d.id === weekendForm.dortoir_id)?.code}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nombre TOTAL d'étudiants PRÉSENTS ce weekend</Label>
+              <Input
+                type="number"
+                min={0}
+                value={weekendForm.nombre_presents}
+                onChange={(e) => setWeekendForm({ ...weekendForm, nombre_presents: Number(e.target.value) })}
+                placeholder="Saisissez uniquement un nombre..."
+                className="text-lg font-bold"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground italic">
+              Aucune liste nominative n'est requise. Seul le nombre total compte.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWeekendOpen(false)}>Annuler</Button>
+            <Button onClick={saveWeekend}><Save className="h-4 w-4 mr-1" /> Enregistrer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

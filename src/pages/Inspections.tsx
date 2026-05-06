@@ -91,7 +91,24 @@ export default function Inspections() {
         chambreData = (data ?? []).map((c: any) => ({ ...c, dortoir_code: c.dortoirs?.code }));
       }
     }
-    setChambres(chambreData);
+    const { data: etudiants } = await supabase.from("etudiants").select("id, nom_complet, chambre_id");
+    const { data: absences } = await supabase.from("absences").select("noms_absents").eq("date", date);
+
+    const allAbsentNames = (absences || [])
+      .map(a => a.noms_absents || "")
+      .join("\n")
+      .split("\n")
+      .map(n => n.trim())
+      .filter(Boolean);
+
+    const validChambreData = chambreData.filter(c => {
+      const studentsInRoom = (etudiants || []).filter(e => e.chambre_id === c.id);
+      if (studentsInRoom.length === 0) return false;
+      const allAbsent = studentsInRoom.every(e => allAbsentNames.includes(e.nom_complet));
+      return !allAbsent;
+    });
+
+    setChambres(validChambreData);
 
     // Today's inspections
     const insQuery = supabase

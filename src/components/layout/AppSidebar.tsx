@@ -62,8 +62,8 @@ export function AppSidebar() {
           <img src="/ipest-logo.png" alt="IPEST Logo" className="h-10 w-auto object-contain flex-shrink-0 drop-shadow-sm" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm leading-tight">Internat IPEST</span>
-              <span className="text-xs text-sidebar-foreground/70 leading-tight">Gestion de l'internat</span>
+              <span className="font-black text-sm leading-tight">IPEST</span>
+              <span className="text-xs text-sidebar-foreground/70 leading-tight font-bold">Direction Internat</span>
             </div>
           )}
         </div>

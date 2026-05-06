@@ -172,43 +172,42 @@ export default function Etudiants() {
                   <CardTitle className="text-lg">Dortoir {dortoirCode}</CardTitle>
                   <CardDescription>{studentsInDortoir.length} étudiant(s)</CardDescription>
                 </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-6">
-                    {Array.from(new Set(studentsInDortoir.map(e => e.chambre_numero))).sort().map((chambreNumero) => {
-                      const studentsInChambre = studentsInDortoir.filter(e => e.chambre_numero === chambreNumero);
-                      return (
-                        <div key={chambreNumero} className="rounded-md border">
-                          <div className="bg-muted/50 px-4 py-2 border-b font-semibold text-sm">
-                            Chambre {chambreNumero}
-                          </div>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Nom Complet</TableHead>
-                                <TableHead>Téléphone</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {studentsInChambre.map((e) => (
-                                <TableRow key={e.id}>
-                                  <TableCell>{e.nom_complet}</TableCell>
-                                  <TableCell>{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                                  <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(e)}>
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      );
-                    })}
+                <CardContent className="p-0 sm:p-4">
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-muted/50">
+                        <TableRow>
+                          <TableHead className="w-[100px]">Chambre</TableHead>
+                          <TableHead>Nom Complet</TableHead>
+                          <TableHead>Téléphone</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentsInDortoir.map((e) => (
+                          <TableRow key={e.id}>
+                            <TableCell className="font-medium py-2">{e.chambre_numero}</TableCell>
+                            <TableCell className="py-2">{e.nom_complet}</TableCell>
+                            <TableCell className="py-2">{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                            <TableCell className="text-right py-2">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(e)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {studentsInDortoir.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                              Aucun étudiant dans ce dortoir.
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>

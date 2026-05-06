@@ -129,7 +129,7 @@ export default function SurveillantDashboard() {
                     <div className="flex items-center gap-2">
                       <DoneBadge done={absenceDoneToday[d.dortoir_id]} />
                       <Button asChild size="sm" variant={absenceDoneToday[d.dortoir_id] ? "outline" : "default"}>
-                        <Link to="/absences">{absenceDoneToday[d.dortoir_id] ? "Voir" : "Pointer"}</Link>
+                        <Link to="/absences">{absenceDoneToday[d.dortoir_id] ? "Voir" : "Tournée & Inspection"}</Link>
                       </Button>
                     </div>
                   </li>

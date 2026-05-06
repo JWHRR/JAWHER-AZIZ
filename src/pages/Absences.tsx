@@ -342,7 +342,7 @@ export default function Absences() {
                       </div>
                     )}
                     <Button size="sm" variant={a ? "outline" : "default"} className="mt-3 w-full" onClick={() => openNew(d.id)}>
-                      {a ? <><Eye className="h-3.5 w-3.5 mr-1" /> Voir / modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Pointer</>}
+                      {a ? <><Eye className="h-3.5 w-3.5 mr-1" /> Voir / modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Tournée & Inspection</>}
                     </Button>
                   </li>
                 );

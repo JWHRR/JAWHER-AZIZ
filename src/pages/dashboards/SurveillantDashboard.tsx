@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock } from "lucide-react";
+import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Star } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -98,13 +98,36 @@ export default function SurveillantDashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-4xl font-extrabold tracking-tight">
-          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
-        </h1>
-        <p className="text-muted-foreground mt-2 text-lg">
-          {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
-        </p>
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold tracking-tight">
+            Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+          </h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+          </p>
+        </div>
+
+        <Card className="w-full md:w-80 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20 shadow-sm relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 p-1 bg-primary/10 rounded-bl-lg">
+            <span className="text-[10px] font-bold text-primary uppercase px-2">Bêta</span>
+          </div>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Star className="h-4 w-4 text-primary fill-primary" />
+                Score Performance
+              </div>
+              <span className="text-2xl font-black text-primary leading-none">100<span className="text-sm text-muted-foreground font-normal">/100</span></span>
+            </div>
+            <div className="h-2 w-full bg-secondary rounded-full mb-2 overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: "100%" }} />
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-tight">
+              Ce score reflète votre assiduité. Des points seront déduits en cas de tâches manquées (inspections, tournées, restaurant).
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

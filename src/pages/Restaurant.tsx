@@ -267,16 +267,16 @@ export default function Restaurant() {
                           <div key={l.id} className="flex flex-col bg-muted/30 p-2 rounded border border-border/50">
                             <div className="flex justify-between items-center">
                               <span className="truncate pr-2 text-muted-foreground">
-                                {isAdmin ? "Effectif saisi" : (l.profiles?.full_name ?? "Vous")}
+                                {isAdmin ? "Effectif" : (l.profiles?.full_name ?? "Vous")}
                               </span>
                               <span className="font-semibold bg-background px-2 py-0.5 rounded shadow-sm border border-border/50">{l.nombre_eleves} él.</span>
                             </div>
                             {isAdmin && (
                               <div className="text-xs mt-1.5 pt-1.5 border-t border-border/50">
                                 {l.observations && l.observations !== "RAS" ? (
-                                  <span className="text-destructive font-medium">Note: {l.observations}</span>
+                                  <span className="text-destructive font-medium">Déroulement du service: {l.observations}</span>
                                 ) : (
-                                  <span className="text-muted-foreground italic">Rien à signaler</span>
+                                  <span className="text-muted-foreground italic">Déroulement du service: Rien à signaler</span>
                                 )}
                               </div>
                             )}

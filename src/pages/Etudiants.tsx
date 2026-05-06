@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users, FileDown, Edit, Trash2 } from "lucide-react";
+import { Loader2, Users, FileDown, Edit, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -22,6 +22,7 @@ export default function Etudiants() {
   
   const [openEdit, setOpenEdit] = useState(false);
   const [editForm, setEditForm] = useState({ id: "", nom_complet: "", telephone: "" });
+  const [selectedDortoir, setSelectedDortoir] = useState<string | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -156,12 +157,17 @@ export default function Etudiants() {
             Aucun étudiant trouvé. Ajoutez-les via la gestion des chambres.
           </CardContent>
         </Card>
-      ) : (
-        <div className="space-y-8">
-          {Array.from(new Set(etudiants.map(e => e.dortoir_code))).sort().map((dortoirCode) => {
+      ) : selectedDortoir ? (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => setSelectedDortoir(null)} className="mb-2">
+            <ArrowLeft className="h-4 w-4 mr-2" /> Retour aux dortoirs
+          </Button>
+          
+          {(() => {
+            const dortoirCode = selectedDortoir;
             const studentsInDortoir = etudiants.filter(e => e.dortoir_code === dortoirCode);
             return (
-              <Card key={dortoirCode}>
+              <Card>
                 <CardHeader className="pb-3 border-b">
                   <CardTitle className="text-lg">Dortoir {dortoirCode}</CardTitle>
                   <CardDescription>{studentsInDortoir.length} étudiant(s)</CardDescription>
@@ -205,6 +211,20 @@ export default function Etudiants() {
                     })}
                   </div>
                 </CardContent>
+              </Card>
+            );
+          })()}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {Array.from(new Set(etudiants.map(e => e.dortoir_code))).sort().map((dortoirCode) => {
+            const count = etudiants.filter(e => e.dortoir_code === dortoirCode).length;
+            return (
+              <Card key={dortoirCode} className="cursor-pointer hover:border-primary transition-colors" onClick={() => setSelectedDortoir(dortoirCode)}>
+                <CardHeader>
+                  <CardTitle className="text-xl">Dortoir {dortoirCode}</CardTitle>
+                  <CardDescription>{count} étudiant(s)</CardDescription>
+                </CardHeader>
               </Card>
             );
           })}

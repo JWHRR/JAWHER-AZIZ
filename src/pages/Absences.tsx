@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Save, Eye, FileDown, CalendarDays } from "lucide-react";
-import { format, subDays, isThursday, isFriday } from "date-fns";
+import { format, subDays, isFriday, isSaturday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
@@ -53,16 +53,16 @@ export default function Absences() {
 
   const load = async () => {
     setLoading(true);
-    const isThu = isThursday(new Date(date));
     const isFri = isFriday(new Date(date));
-    const thuDate = isThu ? date : (isFri ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : null);
+    const isSat = isSaturday(new Date(date));
+    const friDate = isFri ? date : (isSat ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : null);
 
     if (isAdmin) {
       const [dort, abs, etud, we] = await Promise.all([
         supabase.from("dortoirs").select("id, code").order("code"),
         supabase.from("absences").select("*, dortoirs(code)").eq("date", date).order("created_at"),
         supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)"),
-        thuDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", thuDate).order("created_at") : Promise.resolve({ data: null })
+        friDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", friDate).order("created_at") : Promise.resolve({ data: null })
       ]);
       setAllDortoirs(dort.data ?? []);
       setAbsences(abs.data ?? []);
@@ -80,7 +80,7 @@ export default function Absences() {
         const [absRes, etudRes, weRes] = await Promise.all([
           supabase.from("absences").select("*, dortoirs(code)").eq("date", date).in("dortoir_id", ids),
           supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)"),
-          thuDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", thuDate).in("dortoir_id", ids) : Promise.resolve({ data: null })
+          friDate ? supabase.from("weekend_effectifs").select("*, dortoirs(code)").eq("semaine_du", friDate).in("dortoir_id", ids) : Promise.resolve({ data: null })
         ]);
         setAbsences(absRes.data ?? []);
         const filteredEtud = (etudRes.data ?? []).filter((e: any) => ids.includes(e.chambres?.dortoir_id));
@@ -239,13 +239,13 @@ export default function Absences() {
 
   const saveWeekend = async () => {
     if (!user) return;
-    const isThu = isThursday(new Date(date));
-    const thuDate = isThu ? date : format(subDays(new Date(date), 1), "yyyy-MM-dd");
+    const isFri = isFriday(new Date(date));
+    const friDate = isFri ? date : format(subDays(new Date(date), 1), "yyyy-MM-dd");
     
     const payload = {
       dortoir_id: weekendForm.dortoir_id,
       surveillant_id: editingWeekend?.surveillant_id ?? user.id,
-      semaine_du: thuDate,
+      semaine_du: friDate,
       nombre_presents: Number(weekendForm.nombre_presents) || 0,
     };
     
@@ -264,8 +264,9 @@ export default function Absences() {
 
   const exportWeekendPdf = () => {
     const isFri = isFriday(new Date(date));
-    if (!isFri) return;
-    const thuDate = format(subDays(new Date(date), 1), "yyyy-MM-dd");
+    const isSat = isSaturday(new Date(date));
+    if (!isFri && !isSat) return;
+    const friDate = isFri ? date : format(subDays(new Date(date), 1), "yyyy-MM-dd");
     
     const dortoirsList = isAdmin ? allDortoirs : myDortoirs.map(d => d.dortoirs);
     let totalCapacite = 0;
@@ -274,16 +275,14 @@ export default function Absences() {
     const rows = (dortoirsList ?? []).map((d: any) => {
       const rec = weekendEffectifs.find((w) => w.dortoir_id === d.id);
       const presents = rec?.nombre_presents ?? 0;
-      // Fetching capacite wasn't requested strictly, but the previous Weekend page used it. 
-      // Admin request says: "Effectif weekend per dormitory. Total sum of all dormitories combined."
       totalPresents += presents;
       return [`D. ${d.code}`, presents];
     });
 
     generateTablePdf({
       title: "Effectif Weekend",
-      subtitle: `Exporté le vendredi ${format(new Date(date), "d MMMM yyyy", { locale: fr })} (Saisie du jeudi)`,
-      filename: `effectif_weekend_${thuDate}.pdf`,
+      subtitle: `Exporté le ${format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })} (Saisie du vendredi)`,
+      filename: `effectif_weekend_${friDate}.pdf`,
       head: ["Dortoir", "Présents ce weekend"],
       rows,
       foot: [["TOTAL PRÉSENTS", String(totalPresents)]],
@@ -352,14 +351,14 @@ export default function Absences() {
         </CardContent>
       </Card>
 
-      {/* SECTION EFFECTIF WEEKEND (ONLY THURSDAY FOR SURVEILLANTS) */}
-      {!isAdmin && isThursday(new Date(date)) && (
+      {/* SECTION EFFECTIF WEEKEND (ONLY FRIDAY FOR SURVEILLANTS) */}
+      {!isAdmin && isFriday(new Date(date)) && (
         <Card className="border-primary">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" /> Effectif Weekend
             </CardTitle>
-            <CardDescription>Saisie requise uniquement le Jeudi</CardDescription>
+            <CardDescription>Saisie requise uniquement le Vendredi</CardDescription>
           </CardHeader>
           <CardContent>
             {dortoirsToShow.length === 0 ? (

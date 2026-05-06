@@ -33,11 +33,25 @@ export function AppHeader() {
       .order("created_at", { ascending: false })
       .limit(10);
     if (data) {
-      setNotifications(data);
+      setNotifications((prev) => {
+        // Trigger OS notification for new unread items
+        if (prev.length > 0) {
+          const newNotifs = data.filter((n) => !prev.find((old) => old.id === n.id));
+          newNotifs.forEach((n) => {
+            if ("Notification" in window && Notification.permission === "granted") {
+              new Notification(n.title, { body: n.message, icon: "/ipest-logo.png" });
+            }
+          });
+        }
+        return data;
+      });
     }
   };
 
   useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000); // refresh every minute
     return () => clearInterval(interval);

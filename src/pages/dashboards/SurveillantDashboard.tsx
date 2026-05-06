@@ -236,7 +236,7 @@ export default function SurveillantDashboard() {
                     <div className="flex items-center justify-between mt-2">
                       <DoneBadge done={restoLogs[r.repas]} />
                       <Button asChild size="sm" variant={restoLogs[r.repas] ? "outline" : "default"}>
-                        <Link to="/restaurant">{restoLogs[r.repas] ? "Voir" : "Pointer"}</Link>
+                        <Link to="/restaurant">{restoLogs[r.repas] ? "Voir" : "Suivi & validation"}</Link>
                       </Button>
                     </div>
                   </li>

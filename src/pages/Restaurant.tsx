@@ -273,7 +273,7 @@ export default function Restaurant() {
                     )}
                     {isUserAssigned && !isAdmin && (
                       <Button size="sm" variant={myLog ? "outline" : "default"} className="w-full mt-2" onClick={() => openLog(r)}>
-                        {myLog ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Pointer</>}
+                        {myLog ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Suivi & validation</>}
                       </Button>
                     )}
                     {!isUserAssigned && !isAdmin && (

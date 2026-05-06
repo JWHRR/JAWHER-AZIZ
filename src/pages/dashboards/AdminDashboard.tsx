@@ -245,12 +245,12 @@ export default function AdminDashboard() {
   }
 
   const cards = [
-    { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft" },
-    { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent" },
-    { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft" },
-    { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft" },
-    { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent" },
-    { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10" },
+    { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs" },
+    { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs" },
+    { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/absences" },
+    { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant" },
+    { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/inspections" },
+    { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations" },
   ];
 
   return (
@@ -292,7 +292,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="stat-card">
+          <Link key={c.label} to={c.link} className="stat-card block transition-transform hover:-translate-y-1 hover:shadow-md cursor-pointer">
             <div className="flex items-center justify-between mb-3">
               <div className={`h-10 w-10 rounded-lg ${c.bg} flex items-center justify-center`}>
                 <c.icon className={`h-5 w-5 ${c.color}`} />
@@ -300,7 +300,7 @@ export default function AdminDashboard() {
             </div>
             <div className="text-3xl font-bold">{c.value}</div>
             <div className="text-sm text-muted-foreground mt-1">{c.label}</div>
-          </div>
+          </Link>
         ))}
       </div>
 

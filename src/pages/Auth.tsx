@@ -65,8 +65,8 @@ export default function AuthPage() {
           <div className="mb-6 flex justify-center">
             <img src="/ipest-logo.png" alt="IPEST Logo" className="h-24 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300" />
           </div>
-          <h1 className="text-3xl font-black text-center tracking-wide">IPEST</h1>
-          <p className="text-muted-foreground mt-1 font-bold text-center">Direction Internat</p>
+          <h1 className="text-4xl font-black text-center tracking-widest mb-1 text-primary drop-shadow-sm">IPEST</h1>
+          <p className="text-sm font-extrabold text-foreground text-center uppercase tracking-widest">Direction de l'internat</p>
         </div>
 
         <Card className="shadow-lg">

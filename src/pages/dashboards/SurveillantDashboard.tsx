@@ -108,20 +108,24 @@ export default function SurveillantDashboard() {
           </p>
         </div>
 
-        <Card className="w-full md:w-80 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20 shadow-sm relative overflow-hidden shrink-0">
-          <div className="absolute top-0 right-0 p-1 bg-primary/10 rounded-bl-lg">
-            <span className="text-[10px] font-bold text-primary uppercase px-2">Bêta</span>
+        <Card className="w-full md:w-80 bg-gradient-to-br from-yellow-500/10 via-background to-background border-yellow-500/30 shadow-sm relative overflow-hidden shrink-0">
+          <div className="absolute top-0 right-0 p-1 bg-yellow-500/10 rounded-bl-lg">
+            <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-500 uppercase px-2">Bêta</span>
           </div>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <Star className="h-4 w-4 text-primary fill-primary" />
-                Score Performance
+            <div className="flex flex-col gap-1 mb-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-foreground">Score Performance</span>
+                <span className="text-2xl font-black text-yellow-500 leading-none">100<span className="text-sm text-muted-foreground font-normal">/100</span></span>
               </div>
-              <span className="text-2xl font-black text-primary leading-none">100<span className="text-sm text-muted-foreground font-normal">/100</span></span>
+              <div className="flex items-center gap-0.5">
+                {[...Array(10)].map((_, i) => (
+                  <Star key={i} className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                ))}
+              </div>
             </div>
             <div className="h-2 w-full bg-secondary rounded-full mb-2 overflow-hidden">
-              <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: "100%" }} />
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]" style={{ width: "100%" }} />
             </div>
             <p className="text-[11px] text-muted-foreground leading-tight">
               Ce score reflète votre assiduité. Des points seront déduits en cas de tâches manquées (inspections, tournées, restaurant).

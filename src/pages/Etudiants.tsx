@@ -23,10 +23,19 @@ export default function Etudiants() {
   const [openEdit, setOpenEdit] = useState(false);
   const [editForm, setEditForm] = useState({ id: "", nom_complet: "", telephone: "" });
   const [selectedDortoir, setSelectedDortoir] = useState<string | null>(null);
+  const [assignedDortoirs, setAssignedDortoirs] = useState<string[]>([]);
 
   const load = async () => {
     if (!user) return;
     setLoading(true);
+
+    if (!isAdmin) {
+      const { data } = await supabase
+        .from("dortoir_assignments")
+        .select("dortoirs(code)")
+        .eq("surveillant_id", user.id);
+      setAssignedDortoirs((data || []).map((d: any) => d.dortoirs?.code).filter(Boolean));
+    }
     
     // We need to fetch etudiants with chambre number and dortoir code
     let query = supabase
@@ -166,6 +175,8 @@ export default function Etudiants() {
           {(() => {
             const dortoirCode = selectedDortoir;
             const studentsInDortoir = etudiants.filter(e => e.dortoir_code === dortoirCode);
+            const canEdit = isAdmin || assignedDortoirs.includes(dortoirCode);
+
             return (
               <Card>
                 <CardHeader className="pb-3 border-b">
@@ -180,7 +191,7 @@ export default function Etudiants() {
                           <TableHead className="w-[100px]">Chambre</TableHead>
                           <TableHead>Nom Complet</TableHead>
                           <TableHead>Téléphone</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          {canEdit && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -189,19 +200,21 @@ export default function Etudiants() {
                             <TableCell className="font-medium py-2">{e.chambre_numero}</TableCell>
                             <TableCell className="py-2">{e.nom_complet}</TableCell>
                             <TableCell className="py-2">{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                            <TableCell className="text-right py-2">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(e)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
+                            {canEdit && (
+                              <TableCell className="text-right py-2">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(e)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                         {studentsInDortoir.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                            <TableCell colSpan={canEdit ? 4 : 3} className="h-24 text-center text-muted-foreground">
                               Aucun étudiant dans ce dortoir.
                             </TableCell>
                           </TableRow>

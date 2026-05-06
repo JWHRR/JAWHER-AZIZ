@@ -61,9 +61,9 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 px-2 py-2">
           <img src="/ipest-logo.png" alt="IPEST Logo" className="h-10 w-auto object-contain flex-shrink-0 drop-shadow-sm" />
           {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-black text-sm leading-tight">IPEST</span>
-              <span className="text-xs text-sidebar-foreground/70 leading-tight font-bold">Direction Internat</span>
+            <div className="flex flex-col min-w-0 items-center justify-center">
+              <span className="font-black text-sm leading-tight text-center tracking-wide">IPEST</span>
+              <span className="text-xs text-sidebar-foreground/70 leading-tight font-bold text-center">Direction Internat</span>
             </div>
           )}
         </div>

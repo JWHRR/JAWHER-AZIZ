@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { getBusinessDate } from "@/lib/time";
 
 export default function TechnicienDashboard() {
   const { profile } = useAuth();
@@ -40,7 +41,7 @@ export default function TechnicienDashboard() {
           Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>
 

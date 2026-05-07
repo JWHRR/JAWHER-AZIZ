@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SLOT_LABELS, REPAS_LABELS, dateToWeekday, PermanenceSlot } from "@/lib/types";
 import { DoneBadge } from "@/components/StatusBadge";
+import { getBusinessDate } from "@/lib/time";
 
 const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
   MATIN: { start: "08:00", end: "13:00" },
@@ -30,10 +31,11 @@ export default function SurveillantDashboard() {
 
   useEffect(() => {
     if (!user) return;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const wd = dateToWeekday(new Date());
+    const businessDate = getBusinessDate();
+    const today = format(businessDate, "yyyy-MM-dd");
+    const wd = dateToWeekday(businessDate);
     (async () => {
-      const weekStartStr = format(startOfWeek(new Date(), { weekStartsOn: 1 }), "yyyy-MM-dd");
+      const weekStartStr = format(startOfWeek(businessDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
       
       const [da, permTpl, permOv, restoTpl, restoOv, inspections, wp, pLogs] = await Promise.all([
         supabase.from("dortoir_assignments").select("*, dortoirs(*)").eq("surveillant_id", user.id),
@@ -104,7 +106,7 @@ export default function SurveillantDashboard() {
             Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">
-            {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+            {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
           </p>
         </div>
 
@@ -290,7 +292,7 @@ export default function SurveillantDashboard() {
               <span className="text-warning">⏰</span>
               <span>Effectif des absences à effectuer chaque soir.</span>
             </div>
-            {format(new Date(), "EEEE", { locale: fr }) === "jeudi" && (
+            {format(getBusinessDate(), "EEEE", { locale: fr }) === "jeudi" && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary-soft border border-primary/30">
                 <span className="text-primary">📋</span>
                 <span>Aujourd'hui jeudi : effectif weekend à recenser.</span>

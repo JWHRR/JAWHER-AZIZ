@@ -14,6 +14,7 @@ import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday } from "@/lib/types";
+import { getBusinessDate } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DoneBadge } from "@/components/StatusBadge";
@@ -29,7 +30,7 @@ export default function Permanences() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState<Date>(new Date());
+  const [date, setDate] = useState<Date>(getBusinessDate());
   const [logs, setLogs] = useState<PermanenceLog[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);

@@ -12,6 +12,7 @@ import { fr } from "date-fns/locale";
 import { dateToWeekday, SLOT_LABELS, REPAS_LABELS, PermanenceSlot, RepasType } from "@/lib/types";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { getBusinessDate } from "@/lib/time";
 
 interface Stats {
   totalUsers: number;
@@ -40,10 +41,11 @@ export default function AdminDashboard() {
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
   useEffect(() => {
-    const today = format(new Date(), "yyyy-MM-dd");
-    const yesterday = format(subDays(new Date(), 1), "yyyy-MM-dd");
-    const todayWd = dateToWeekday(new Date());
-    const yesterdayWd = dateToWeekday(subDays(new Date(), 1));
+    const businessDate = getBusinessDate();
+    const today = format(businessDate, "yyyy-MM-dd");
+    const yesterday = format(subDays(businessDate, 1), "yyyy-MM-dd");
+    const todayWd = dateToWeekday(businessDate);
+    const yesterdayWd = dateToWeekday(subDays(businessDate, 1));
 
     (async () => {
       // ---- Top stats
@@ -260,7 +262,7 @@ export default function AdminDashboard() {
           Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
         <p className="text-muted-foreground mt-2 text-lg">
-          {format(new Date(), "EEEE d MMMM yyyy", { locale: fr })}
+          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>
 
@@ -270,7 +272,7 @@ export default function AdminDashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-destructive font-bold">
               <AlertTriangle className="h-5 w-5" />
-              Tâches manquantes — hier ({format(subDays(new Date(), 1), "d MMM", { locale: fr })})
+              Tâches manquantes — hier ({format(subDays(getBusinessDate(), 1), "d MMM", { locale: fr })})
             </CardTitle>
             <CardDescription className="text-destructive/80 font-medium">{missingYesterday.length} action(s) non effectuée(s)</CardDescription>
           </CardHeader>

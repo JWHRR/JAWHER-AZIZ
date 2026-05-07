@@ -18,6 +18,7 @@ import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star } from "lucide-react
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { getBusinessDate } from "@/lib/time";
 
 interface Chambre {
   id: string;
@@ -45,7 +46,7 @@ export default function Inspections() {
   const isAdmin = primaryRole === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
@@ -215,7 +216,7 @@ export default function Inspections() {
     </span>
   );
 
-  const isToday = date === format(new Date(), "yyyy-MM-dd");
+  const isToday = date === format(getBusinessDate(), "yyyy-MM-dd");
   const remainingChambres = chambres.filter((c) => !inspectedChambreIds.has(c.id));
 
   return (

@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
 import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
+import { getBusinessDate } from "@/lib/time";
 
 interface DortoirAssign {
   id: string;
@@ -30,7 +31,7 @@ export default function Absences() {
   const isAdmin = primaryRole === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);

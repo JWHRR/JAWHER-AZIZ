@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Search, Trash2, FileDown } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, FileDown, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -31,6 +31,7 @@ export default function Reclamations() {
   const [tab, setTab] = useState<ReclamationStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     titre: "",
     description: "",
@@ -67,35 +68,66 @@ export default function Reclamations() {
 
   useEffect(() => { load(); }, []);
 
-  const create = async () => {
+  const save = async () => {
     if (!user || !form.titre.trim()) { toast.error("Titre requis"); return; }
     const finalDortoirId = (form.dortoir_id === "none" || form.dortoir_id === "autre" || !form.dortoir_id) ? null : form.dortoir_id;
     const finalLieu = form.dortoir_id === "autre" ? "Autre.." : null;
-    const { error } = await supabase.from("reclamations").insert({
+
+    const payload = {
       titre: form.titre,
       description: form.description || null,
       lieu: finalLieu,
       dortoir_id: finalDortoirId,
       priority: form.priority,
       type: form.type,
-      created_by: user.id,
-    });
-    if (error) { toast.error(error.message); return; }
-    
-    if (form.priority === "HAUTE") {
-      await supabase.from("notifications").insert([
-        { role: "ADMIN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" },
-        { role: "TECHNICIEN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" }
-      ]);
+    };
+
+    if (editingId) {
+      const { error } = await supabase.from("reclamations").update(payload).eq("id", editingId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Réclamation mise à jour");
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Modifié réclamation", entity: "reclamations", entity_id: editingId,
+      });
+    } else {
+      const { error } = await supabase.from("reclamations").insert({ ...payload, created_by: user.id });
+      if (error) { toast.error(error.message); return; }
+      
+      if (form.priority === "HAUTE") {
+        await supabase.from("notifications").insert([
+          { role: "ADMIN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" },
+          { role: "TECHNICIEN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" }
+        ]);
+      }
+      toast.success("Réclamation créée");
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Créé réclamation", entity: "reclamations",
+      });
     }
 
-    toast.success("Réclamation créée");
-    await supabase.from("activity_logs").insert({
-      user_id: user.id, action: "Créé réclamation", entity: "reclamations",
-    });
     setOpenCreate(false);
+    setEditingId(null);
     setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE", type: "Autre" });
     load();
+  };
+
+  const openNew = () => {
+    setEditingId(null);
+    setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE", type: "Autre" });
+    setOpenCreate(true);
+  };
+
+  const openEdit = (r: any) => {
+    setEditingId(r.id);
+    setForm({
+      titre: r.titre,
+      description: r.description || "",
+      lieu: r.lieu || "",
+      dortoir_id: r.dortoir_id || "none",
+      priority: r.priority as ReclamationPriority,
+      type: r.type || "Autre",
+    });
+    setOpenCreate(true);
   };
 
   const updateStatus = async (id: string, status: ReclamationStatus) => {
@@ -204,12 +236,12 @@ export default function Reclamations() {
               </DialogContent>
             </Dialog>
           )}
-          <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+          <Dialog open={openCreate} onOpenChange={(val) => { setOpenCreate(val); if (!val) setEditingId(null); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-1" /> Nouvelle</Button>
+              <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Nouvelle</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>Nouvelle réclamation</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingId ? "Modifier réclamation" : "Nouvelle réclamation"}</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Réclamation *</Label>
@@ -254,8 +286,8 @@ export default function Reclamations() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setOpenCreate(false)}>Annuler</Button>
-                <Button onClick={create}>Créer</Button>
+                <Button variant="outline" onClick={() => { setOpenCreate(false); setEditingId(null); }}>Annuler</Button>
+                <Button onClick={save}>{editingId ? "Enregistrer" : "Créer"}</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -312,6 +344,11 @@ export default function Reclamations() {
                               ))}
                             </SelectContent>
                           </Select>
+                        )}
+                        {(isAdmin || r.created_by === user?.id) && (
+                          <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
+                            <Pencil className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                         )}
                         {isAdmin && (
                           <Button size="icon" variant="ghost" onClick={() => remove(r.id)}>

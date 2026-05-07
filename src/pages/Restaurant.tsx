@@ -18,13 +18,14 @@ import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateTablePdf } from "@/lib/pdf";
+import { getBusinessDate } from "@/lib/time";
 
 export default function Restaurant() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(searchParams.get("date") || format(new Date(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);

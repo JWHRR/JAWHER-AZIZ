@@ -14,7 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star } from "lucide-react";
+import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star, Pencil, Trash2 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -58,6 +58,7 @@ export default function Inspections() {
   const [recentInspections, setRecentInspections] = useState<Inspection[]>([]);
 
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     chambre_id: "",
     proprete: 5,
@@ -165,8 +166,31 @@ export default function Inspections() {
   );
 
   const openNew = () => {
+    setEditingId(null);
     setForm({ chambre_id: "", proprete: 5, ordre: 5, degats: false, status: "RAS", observations: "" });
     setOpen(true);
+  };
+
+  const openEdit = (i: Inspection) => {
+    setEditingId(i.id);
+    const hasProblem = i.degats || (i.observations && i.observations !== "RAS");
+    setForm({
+      chambre_id: i.chambre_id,
+      proprete: i.proprete,
+      ordre: i.ordre,
+      degats: i.degats,
+      status: hasProblem ? "PROBLEM" : "RAS",
+      observations: hasProblem && i.observations ? i.observations : "",
+    });
+    setOpen(true);
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm("Supprimer cette inspection ?")) return;
+    const { error } = await supabase.from("chambre_inspections").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Inspection supprimée");
+    load();
   };
 
   const save = async () => {
@@ -175,36 +199,50 @@ export default function Inspections() {
     
     const obsToSave = form.status === "RAS" ? "RAS" : form.observations;
     
-    const { error } = await supabase.from("chambre_inspections").insert({
+    const payload = {
       chambre_id: form.chambre_id,
-      surveillant_id: user.id,
       date,
       proprete: form.proprete,
       ordre: form.ordre,
       degats: form.degats,
       observations: obsToSave || null,
-    });
-    if (error) {
-      if (error.code === "23505") toast.error("Cette chambre a déjà été inspectée à cette date.");
-      else toast.error(error.message);
-      return;
+    };
+
+    if (editingId) {
+      const { error } = await supabase.from("chambre_inspections").update(payload).eq("id", editingId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Inspection mise à jour");
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Modifié inspection", entity: "chambre_inspections", entity_id: editingId,
+      });
+    } else {
+      const { error } = await supabase.from("chambre_inspections").insert({
+        ...payload,
+        surveillant_id: user.id,
+      });
+      if (error) {
+        if (error.code === "23505") toast.error("Cette chambre a déjà été inspectée à cette date.");
+        else toast.error(error.message);
+        return;
+      }
+      toast.success("Inspection enregistrée");
+      await supabase.from("activity_logs").insert({
+        user_id: user.id, action: "Inspection chambre", entity: "chambre_inspections",
+      });
+
+      if (form.status === "PROBLEM" || form.degats) {
+        const chInfo = chambres.find(c => c.id === form.chambre_id);
+        await supabase.from("notifications").insert({
+          role: "ADMIN",
+          title: `Problème signalé (Ch. ${chInfo?.numero})`,
+          message: `${form.degats ? "[Dégâts constatés] " : ""}${form.observations}`,
+          link: `/inspections?date=${date}`
+        });
+      }
     }
     
-    if (form.status === "PROBLEM" || form.degats) {
-      const chInfo = chambres.find(c => c.id === form.chambre_id);
-      await supabase.from("notifications").insert({
-        role: "ADMIN",
-        title: `Problème signalé (Ch. ${chInfo?.numero})`,
-        message: `${form.degats ? "[Dégâts constatés] " : ""}${form.observations}`,
-        link: `/inspections?date=${date}`
-      });
-    }
-
-    toast.success("Inspection enregistrée");
-    await supabase.from("activity_logs").insert({
-      user_id: user.id, action: "Inspection chambre", entity: "chambre_inspections",
-    });
     setOpen(false);
+    setEditingId(null);
     load();
   };
 
@@ -217,6 +255,7 @@ export default function Inspections() {
   );
 
   const isToday = date === format(getBusinessDate(), "yyyy-MM-dd");
+  const availableChambres = chambres.filter((c) => !inspectedChambreIds.has(c.id) || c.id === form.chambre_id);
   const remainingChambres = chambres.filter((c) => !inspectedChambreIds.has(c.id));
 
   return (
@@ -289,9 +328,23 @@ export default function Inspections() {
                           <div className="text-sm mt-1 text-muted-foreground">{i.observations}</div>
                         )}
                       </div>
-                      <div className="flex flex-col gap-1 text-xs shrink-0">
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Propreté</span><Stars n={i.proprete} /></div>
-                        <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Ordre</span><Stars n={i.ordre} /></div>
+                      <div className="flex items-center gap-4 shrink-0">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Propreté</span><Stars n={i.proprete} /></div>
+                          <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Ordre</span><Stars n={i.ordre} /></div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {(isAdmin || i.surveillant_id === user?.id) && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(i)}>
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(i.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -328,21 +381,21 @@ export default function Inspections() {
         </>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(val) => { setOpen(val); if (!val) setEditingId(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvelle inspection</DialogTitle>
+            <DialogTitle>{editingId ? "Modifier l'inspection" : "Nouvelle inspection"}</DialogTitle>
             <DialogDescription>{format(new Date(date), "EEEE d MMMM", { locale: fr })}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Chambre</Label>
-              <Select value={form.chambre_id} onValueChange={(v) => setForm({ ...form, chambre_id: v })}>
+              <Select value={form.chambre_id} onValueChange={(v) => setForm({ ...form, chambre_id: v })} disabled={!!editingId}>
                 <SelectTrigger><SelectValue placeholder="Choisir une chambre..." /></SelectTrigger>
                 <SelectContent>
-                  {remainingChambres.length === 0 ? (
+                  {availableChambres.length === 0 ? (
                     <div className="px-2 py-3 text-xs text-muted-foreground">Toutes les chambres sont déjà inspectées aujourd'hui.</div>
-                  ) : remainingChambres.map((c) => (
+                  ) : availableChambres.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       Chambre {c.numero} · Dortoir {c.dortoir_code}
                     </SelectItem>

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Plus, Save, Eye, FileDown, CalendarDays } from "lucide-react";
-import { format, subDays, isFriday, isSaturday } from "date-fns";
+import { format, subDays, isFriday, isSaturday, isSunday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
@@ -56,7 +56,8 @@ export default function Absences() {
     setLoading(true);
     const isFri = isFriday(new Date(date));
     const isSat = isSaturday(new Date(date));
-    const friDate = isFri ? date : (isSat ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : null);
+    const isSun = isSunday(new Date(date));
+    const friDate = isFri ? date : (isSat ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : (isSun ? format(subDays(new Date(date), 2), "yyyy-MM-dd") : null));
 
     if (isAdmin) {
       const [dort, abs, etud, we] = await Promise.all([
@@ -306,7 +307,7 @@ export default function Absences() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && <WeeklyAbsenceHistory />}
-          {isAdmin && isFriday(new Date(date)) && (
+          {(isFriday(new Date(date)) || isSaturday(new Date(date)) || isSunday(new Date(date))) && (
             <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="border-primary text-primary">
               <FileDown className="h-4 w-4 mr-1" /> Effectif weekend (PDF)
             </Button>
@@ -352,8 +353,8 @@ export default function Absences() {
         </CardContent>
       </Card>
 
-      {/* SECTION EFFECTIF WEEKEND (ONLY FRIDAY FOR SURVEILLANTS) */}
-      {!isAdmin && isFriday(new Date(date)) && (
+      {/* SECTION EFFECTIF WEEKEND */}
+      {!isAdmin && (isFriday(new Date(date)) || isSaturday(new Date(date)) || isSunday(new Date(date))) && (
         <Card className="border-primary">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">

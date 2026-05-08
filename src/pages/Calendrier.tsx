@@ -14,10 +14,10 @@ import { Loader2, Plus, ChevronLeft, ChevronRight, Trash2, Repeat } from "lucide
 import { addDays, format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import {
   SLOT_LABELS, REPAS_LABELS, WEEKDAY_LABELS, WEEKDAYS_ORDER,
   PermanenceSlot, RepasType, Weekday, dateToWeekday, WeekendPermanence
 } from "@/lib/types";
+import { getBusinessDate } from "@/lib/time";
 
 interface TemplatePerm {
   id: string;
@@ -41,7 +41,7 @@ export default function Calendrier() {
   const [tab, setTab] = useState<"week" | "template">("week");
 
   // Week view state
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [weekStart, setWeekStart] = useState(startOfWeek(getBusinessDate(), { weekStartsOn: 1 }));
   const [loading, setLoading] = useState(true);
 
   // Templates (recurring)
@@ -266,7 +266,7 @@ export default function Calendrier() {
               {days.map((d) => {
                 const { fromTpl: pTpl, fromOverride: pOv } = dayPerms(d);
                 const { fromTpl: rTpl, fromOverride: rOv } = dayRestos(d);
-                const isToday = format(d, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+                const isToday = format(d, "yyyy-MM-dd") === format(getBusinessDate(), "yyyy-MM-dd");
                 const empty = pTpl.length + pOv.length + rTpl.length + rOv.length === 0;
                 return (
                   <Card key={d.toISOString()} className={isToday ? "border-primary shadow-md" : ""}>

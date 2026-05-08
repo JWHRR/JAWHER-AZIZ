@@ -6,6 +6,7 @@ import { generateTablePdf } from "@/lib/pdf";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { getBusinessDate } from "@/lib/time";
 
 export function WeeklyAbsenceHistory() {
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,7 @@ export function WeeklyAbsenceHistory() {
     setLoading(true);
     try {
       // Get previous week's Monday and Sunday
-      const now = new Date();
+      const now = getBusinessDate();
       const lastWeekDate = subDays(now, 7);
       const startDate = startOfWeek(lastWeekDate, { weekStartsOn: 1 }); // Monday
       const endDate = endOfWeek(lastWeekDate, { weekStartsOn: 1 }); // Sunday

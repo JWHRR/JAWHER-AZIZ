@@ -205,7 +205,6 @@ export default function Calendrier() {
     const { error } = await supabase.from("weekend_permanences").insert({
       surveillant_id: survId,
       week_start_date: start,
-      created_by: user?.id ?? null,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Permanence de week-end affectée");

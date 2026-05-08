@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save, Plus, Clock, Calendar as CalIcon, Trash2, CheckCircle2 } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -30,11 +30,14 @@ export default function Permanences() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [isWeekendAssigned, setIsWeekendAssigned] = useState(false);
+  const [weekendSurvId, setWeekendSurvId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [surveillants, setSurveillants] = useState<{ user_id: string; full_name: string }[]>([]);
   const [form, setForm] = useState({ 
     start_time: "08:00", 
     end_time: "13:00", 
-    observation: "" 
+    observation: "",
+    surveillant_id: ""
   });
 
   const load = async () => {
@@ -58,6 +61,13 @@ export default function Permanences() {
         assignQuery = assignQuery.eq("surveillant_id", user.id);
         tplQuery = tplQuery.eq("surveillant_id", user.id);
         wpQuery = wpQuery.eq("surveillant_id", user.id);
+      } else {
+        const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "SURVEILLANT");
+        const sIds = (roles ?? []).map((r: any) => r.user_id);
+        if (sIds.length) {
+          const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", sIds);
+          setSurveillants(profs ?? []);
+        }
       }
 
       const [logsRes, assignRes, tplRes, wpRes] = await Promise.all([logsQuery, assignQuery, tplQuery, wpQuery]);
@@ -93,6 +103,7 @@ export default function Permanences() {
       
       // weekend assignments only check if current user is assigned
       setIsWeekendAssigned(combinedWeekend.length > 0);
+      setWeekendSurvId(combinedWeekend[0]?.surveillant_id || null);
     } catch (err: any) {
       toast.error("Erreur lors du chargement: " + err.message);
     } finally {
@@ -102,22 +113,30 @@ export default function Permanences() {
 
   useEffect(() => { load(); }, [user, date, isAdmin]);
 
-  const confirmAssignment = (slotKey: string, customTimes?: { start: string, end: string }) => {
+  const confirmAssignment = (slotKey: string, customTimes?: { start: string, end: string }, defaultSurvId?: string) => {
     const times = customTimes || SLOT_TIMES[slotKey as PermanenceSlot];
     const label = customTimes ? slotKey : SLOT_LABELS[slotKey as PermanenceSlot]?.split(" (")[0] || slotKey;
     
     setForm({
       start_time: times.start,
       end_time: times.end,
-      observation: `Confirmation de la permanence : ${label}`
+      observation: `Confirmation de la permanence : ${label}`,
+      surveillant_id: defaultSurvId || ""
     });
     setOpen(true);
   };
 
   const save = async () => {
     if (!user) return;
+    
+    const targetSurveillantId = isAdmin && form.surveillant_id ? form.surveillant_id : user.id;
+    if (!targetSurveillantId) {
+      toast.error("Veuillez sélectionner un surveillant");
+      return;
+    }
+
     const payload = {
-      surveillant_id: user.id,
+      surveillant_id: targetSurveillantId,
       date: format(date, "yyyy-MM-dd"),
       start_time: form.start_time,
       end_time: form.end_time,
@@ -249,10 +268,10 @@ export default function Permanences() {
                     <Button 
                       size="sm" 
                       className="w-full mt-2" 
-                      variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "outline" : "default"}
-                      onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" })}
+                      variant={logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "outline" : "default"}
+                      onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" }, weekendSurvId || undefined)}
                     >
-                      {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
+                      {logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
                     </Button>
                   ) : (
                     <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
@@ -272,10 +291,10 @@ export default function Permanences() {
                       <Button 
                         size="sm" 
                         className="w-full mt-2"
-                        variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("09")) ? "outline" : "default"}
-                        onClick={() => confirmAssignment("Week-end (Dimanche Matin)", { start: "09:30", end: "12:30" })}
+                        variant={logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("09")) ? "outline" : "default"}
+                        onClick={() => confirmAssignment("Week-end (Dimanche Matin)", { start: "09:30", end: "12:30" }, weekendSurvId || undefined)}
                       >
-                        {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("09")) ? "Confirmé" : "Confirmer"}
+                        {logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("09")) ? "Confirmé" : "Confirmer"}
                       </Button>
                     ) : (
                       <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
@@ -291,10 +310,10 @@ export default function Permanences() {
                       <Button 
                         size="sm" 
                         className="w-full mt-2"
-                        variant={logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "outline" : "default"}
-                        onClick={() => confirmAssignment("Week-end (Dimanche Après-midi)", { start: "15:30", end: "18:30" })}
+                        variant={logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "outline" : "default"}
+                        onClick={() => confirmAssignment("Week-end (Dimanche Après-midi)", { start: "15:30", end: "18:30" }, weekendSurvId || undefined)}
                       >
-                        {logs.some(l => l.surveillant_id === user?.id && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
+                        {logs.some(l => (isAdmin || l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
                       </Button>
                     ) : (
                       <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
@@ -370,6 +389,17 @@ export default function Permanences() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="surv">Surveillant concerné</Label>
+                <Select value={form.surveillant_id} onValueChange={(v) => setForm({...form, surveillant_id: v})}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner le surveillant..." /></SelectTrigger>
+                  <SelectContent>
+                    {surveillants.map(s => <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start">Heure de début</Label>

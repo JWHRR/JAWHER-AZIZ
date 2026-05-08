@@ -109,7 +109,7 @@ export default function Calendrier() {
       [pRes, rRes, wpRes] = await Promise.all([
         supabase.from("permanences").select("*, profiles!permanences_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
         supabase.from("restaurant_assignments").select("*, profiles!restaurant_assignments_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
-        supabase.from("weekend_permanences").select("*, profiles!weekend_permanences_surveillant_id_fkey(full_name)").eq("week_start_date", start),
+        supabase.from("weekend_permanences").select("*").eq("week_start_date", start),
       ]);
     } else if (user) {
       [pRes, rRes, wpRes] = await Promise.all([

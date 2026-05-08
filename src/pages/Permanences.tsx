@@ -54,7 +54,7 @@ export default function Permanences() {
       let logsQuery = supabase.from("permanence_logs").select("*").eq("date", dateStr).order("start_time");
       let assignQuery = supabase.from("permanences").select("*, profiles!permanences_surveillant_id_fkey(full_name)").eq("date", dateStr);
       let tplQuery = supabase.from("permanence_template").select("*").eq("weekday", wd);
-      let wpQuery = supabase.from("weekend_permanences").select("*, profiles!weekend_permanences_surveillant_id_fkey(full_name)").eq("week_start_date", weekStart);
+      let wpQuery = supabase.from("weekend_permanences").select("*").eq("week_start_date", weekStart);
       
       console.log("Permanences.tsx load():", { dateStr, wd, weekStart, user_id: user.id, isAdmin });
 

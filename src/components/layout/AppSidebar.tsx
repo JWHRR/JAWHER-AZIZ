@@ -7,7 +7,7 @@ import {
   Utensils,
   Wrench,
   Building2,
-  Activity,
+
   BedDouble,
   DoorOpen,
 } from "lucide-react";
@@ -44,7 +44,7 @@ const items: NavItem[] = [
   { title: "Dortoirs", url: "/dortoirs", icon: BedDouble, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Liste des Étudiants", url: "/etudiants", icon: Users, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Utilisateurs", url: "/utilisateurs", icon: Users, roles: ["ADMIN"] },
-  { title: "Activité", url: "/activite", icon: Activity, roles: ["ADMIN"] },
+
 ];
 
 export function AppSidebar() {

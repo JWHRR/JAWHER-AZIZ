@@ -15,7 +15,7 @@ import Restaurant from "./pages/Restaurant.tsx";
 import Reclamations from "./pages/Reclamations.tsx";
 import Dortoirs from "./pages/Dortoirs.tsx";
 import Utilisateurs from "./pages/Utilisateurs.tsx";
-import Activite from "./pages/Activite.tsx";
+
 import Inspections from "./pages/Inspections.tsx";
 import Permanences from "./pages/Permanences.tsx";
 import Etudiants from "./pages/Etudiants.tsx";
@@ -111,14 +111,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/activite"
-              element={
-                <ProtectedRoute roles={["ADMIN"]}>
-                  <AppLayout><Activite /></AppLayout>
-                </ProtectedRoute>
-              }
-            />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

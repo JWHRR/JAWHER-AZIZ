@@ -186,11 +186,13 @@ export default function Calendrier() {
     load();
   };
   const removeOverridePerm = async (id: string) => {
+    if (!confirm("Supprimer cette permanence exceptionnelle ?")) return;
     const { error } = await supabase.from("permanences").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     load();
   };
   const removeOverrideResto = async (id: string) => {
+    if (!confirm("Supprimer ce service exceptionnel ?")) return;
     const { error } = await supabase.from("restaurant_assignments").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     load();

@@ -112,6 +112,7 @@ export default function Dortoirs() {
   };
 
   const remove = async (id: string) => {
+    if (!confirm("Retirer ce surveillant de ce dortoir ?")) return;
     const { error } = await supabase.from("dortoir_assignments").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     load();

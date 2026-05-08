@@ -12,6 +12,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Search, Trash2, FileDown, Pencil } from "lucide-react";
 import { format } from "date-fns";
@@ -314,52 +315,77 @@ export default function Reclamations() {
           ) : filtered.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Aucune réclamation.</CardContent></Card>
           ) : (
-            <div className="space-y-3">
-              {filtered.map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="pt-4">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{r.titre}</h3>
-                          <Badge variant="outline">{r.type || "Autre"}</Badge>
-                          <StatusBadge status={r.status} />
-                          <PriorityBadge priority={r.priority} />
+            <div className="rounded-md border bg-card overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Réclamation</TableHead>
+                    <TableHead>Emplacement</TableHead>
+                    <TableHead>Auteur & Date</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Priorité</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold">{r.titre}</span>
+                            <Badge variant="outline">{r.type || "Autre"}</Badge>
+                          </div>
+                          {r.description && <span className="text-sm text-muted-foreground">{r.description}</span>}
                         </div>
-                        {r.description && <p className="text-sm text-muted-foreground mb-2">{r.description}</p>}
-                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                          {r.lieu && <span>📍 {r.lieu}</span>}
-                          {r.dortoirs?.code && <span>🛏 Dortoir {r.dortoirs.code}</span>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm text-muted-foreground gap-0.5 whitespace-nowrap">
+                          {r.dortoirs?.code ? <span>🛏 Dortoir {r.dortoirs.code}</span> : null}
+                          {r.lieu ? <span>📍 {r.lieu}</span> : null}
+                          {(!r.dortoirs?.code && !r.lieu) && <span>—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col text-sm text-muted-foreground gap-0.5 whitespace-nowrap">
                           <span>👤 {r.creator?.full_name ?? "—"}</span>
                           <span>🕐 {format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {canEditStatus && (
-                          <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as ReclamationStatus)}>
-                            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {(Object.keys(STATUS_LABELS) as ReclamationStatus[]).map((s) => (
-                                <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                        {(isAdmin || r.created_by === user?.id) && (
-                          <Button size="icon" variant="ghost" onClick={() => openEdit(r)}>
-                            <Pencil className="h-4 w-4 text-muted-foreground" />
-                          </Button>
-                        )}
-                        {isAdmin && (
-                          <Button size="icon" variant="ghost" onClick={() => remove(r.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={r.status} />
+                      </TableCell>
+                      <TableCell>
+                        <PriorityBadge priority={r.priority} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {canEditStatus && (
+                            <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as ReclamationStatus)}>
+                              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {(Object.keys(STATUS_LABELS) as ReclamationStatus[]).map((s) => (
+                                  <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {(isAdmin || r.created_by === user?.id) && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(r)}>
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(r.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </TabsContent>

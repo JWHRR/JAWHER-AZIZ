@@ -354,7 +354,7 @@ export default function Absences() {
       </Card>
 
       {/* SECTION EFFECTIF WEEKEND */}
-      {!isAdmin && (isFriday(new Date(date)) || isSaturday(new Date(date)) || isSunday(new Date(date))) && (
+      {!isAdmin && isFriday(new Date(date)) && (
         <Card className="border-primary">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">

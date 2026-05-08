@@ -292,10 +292,10 @@ export default function SurveillantDashboard() {
               <span className="text-warning">⏰</span>
               <span>Effectif des absences à effectuer chaque soir.</span>
             </div>
-            {["vendredi", "samedi", "dimanche"].includes(format(getBusinessDate(), "EEEE", { locale: fr })) && (
+            {format(getBusinessDate(), "EEEE", { locale: fr }) === "vendredi" && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-primary-soft border border-primary/30">
                 <span className="text-primary">📋</span>
-                <span>Aujourd'hui {format(getBusinessDate(), "EEEE", { locale: fr })} : effectif weekend à recenser / consulter.</span>
+                <span>Aujourd'hui vendredi : effectif weekend à recenser.</span>
               </div>
             )}
           </CardContent>

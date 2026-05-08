@@ -14,6 +14,7 @@ import { Loader2, Plus, ChevronLeft, ChevronRight, Trash2, Repeat } from "lucide
 import { addDays, format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import {
   SLOT_LABELS, REPAS_LABELS, WEEKDAY_LABELS, WEEKDAYS_ORDER,
   PermanenceSlot, RepasType, Weekday, dateToWeekday, WeekendPermanence
 } from "@/lib/types";

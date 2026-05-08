@@ -13,18 +13,13 @@ import { Loader2, Save, Plus, Clock, Calendar as CalIcon, Trash2, CheckCircle2 }
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday } from "@/lib/types";
+import { PermanenceLog, PermanenceSlot, SLOT_LABELS, dateToWeekday, SLOT_TIMES } from "@/lib/types";
 import { getBusinessDate } from "@/lib/time";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DoneBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 
-const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
-  MATIN: { start: "08:00", end: "13:00" },
-  APRES_MIDI: { start: "14:00", end: "19:00" },
-  NUIT: { start: "20:00", end: "23:00" },
-};
 
 export default function Permanences() {
   const { user, primaryRole } = useAuth();

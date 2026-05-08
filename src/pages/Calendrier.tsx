@@ -16,9 +16,10 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import {
   SLOT_LABELS, REPAS_LABELS, WEEKDAY_LABELS, WEEKDAYS_ORDER,
-  PermanenceSlot, RepasType, Weekday, dateToWeekday, WeekendPermanence
+  PermanenceSlot, RepasType, Weekday, dateToWeekday, WeekendPermanence, SLOT_TIMES
 } from "@/lib/types";
 import { getBusinessDate } from "@/lib/time";
+import { DoneBadge } from "@/components/StatusBadge";
 
 interface TemplatePerm {
   id: string;
@@ -52,6 +53,7 @@ export default function Calendrier() {
   const [overridePerms, setOverridePerms] = useState<any[]>([]);
   const [overrideRestos, setOverrideRestos] = useState<any[]>([]);
   const [weekendPerm, setWeekendPerm] = useState<WeekendPermanence | null>(null);
+  const [weekLogs, setWeekLogs] = useState<any[]>([]);
 
   const [surveillants, setSurveillants] = useState<{ user_id: string; full_name: string }[]>([]);
 
@@ -104,22 +106,26 @@ export default function Calendrier() {
     let pRes: any = { data: [] };
     let rRes: any = { data: [] };
     let wpRes: any = { data: [] };
+    let logsRes: any = { data: [] };
     
     if (isAdmin) {
-      [pRes, rRes, wpRes] = await Promise.all([
+      [pRes, rRes, wpRes, logsRes] = await Promise.all([
         supabase.from("permanences").select("*, profiles!permanences_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
         supabase.from("restaurant_assignments").select("*, profiles!restaurant_assignments_surveillant_id_fkey(full_name)").gte("date", start).lte("date", end),
         supabase.from("weekend_permanences").select("*").eq("week_start_date", start),
+        supabase.from("permanence_logs").select("*").gte("date", start).lte("date", end),
       ]);
     } else if (user) {
-      [pRes, rRes, wpRes] = await Promise.all([
+      [pRes, rRes, wpRes, logsRes] = await Promise.all([
         supabase.from("permanences").select("*").eq("surveillant_id", user.id).gte("date", start).lte("date", end),
         supabase.from("restaurant_assignments").select("*").eq("surveillant_id", user.id).gte("date", start).lte("date", end),
         supabase.from("weekend_permanences").select("*").eq("surveillant_id", user.id).eq("week_start_date", start),
+        supabase.from("permanence_logs").select("*").eq("surveillant_id", user.id).gte("date", start).lte("date", end),
       ]);
     }
     setOverridePerms(pRes.data ?? []);
     setOverrideRestos(rRes.data ?? []);
+    setWeekLogs(logsRes.data ?? []);
     
     if (wpRes.data && wpRes.data.length > 0) {
       const wp = wpRes.data[0];
@@ -281,16 +287,19 @@ export default function Calendrier() {
                     <CardContent className="space-y-1.5 pt-0">
                       {pTpl.map((p) => (
                         <div key={`tp-${p.id}`} className="text-xs p-2 rounded bg-primary-soft border border-primary/20">
-                          <div className="font-medium text-primary flex items-center gap-1">
-                            <Repeat className="h-3 w-3" />
-                            {SLOT_LABELS[p.slot].split(" (")[0]}
+                          <div className="font-medium text-primary flex items-center justify-between gap-1">
+                            <span className="flex items-center gap-1"><Repeat className="h-3 w-3" />{SLOT_LABELS[p.slot].split(" (")[0]}</span>
+                            <DoneBadge done={weekLogs.some(l => l.surveillant_id === p.surveillant_id && l.date === format(d, "yyyy-MM-dd") && l.start_time === SLOT_TIMES[p.slot].start)} />
                           </div>
                           {isAdmin && <div className="text-muted-foreground truncate">{p.full_name}</div>}
                         </div>
                       ))}
                       {pOv.map((p: any) => (
                         <div key={`po-${p.id}`} className="text-xs p-2 rounded bg-accent border border-accent-foreground/10">
-                          <div className="font-medium">{SLOT_LABELS[p.slot as PermanenceSlot].split(" (")[0]} <span className="text-[10px] text-muted-foreground">(extra)</span></div>
+                          <div className="font-medium flex items-center justify-between gap-1">
+                            <span>{SLOT_LABELS[p.slot as PermanenceSlot].split(" (")[0]} <span className="text-[10px] text-muted-foreground">(extra)</span></span>
+                            <DoneBadge done={weekLogs.some(l => l.surveillant_id === p.surveillant_id && l.date === format(d, "yyyy-MM-dd") && l.start_time === SLOT_TIMES[p.slot as PermanenceSlot].start)} />
+                          </div>
                           {isAdmin && <div className="text-muted-foreground truncate">{p.profiles?.full_name}</div>}
                           {isAdmin && (
                             <button onClick={() => removeOverridePerm(p.id)} className="text-destructive text-[10px] hover:underline">Suppr.</button>
@@ -339,20 +348,36 @@ export default function Calendrier() {
                   </div>
                 )}
               </CardTitle>
-              <CardDescription>Samedi 15h30–19h00 • Dimanche 08h00–12h00 / 14h00–19h00</CardDescription>
+              <CardDescription>Samedi 15h30–19h00 • Dimanche 09h30–12h30 / 15h30–18h30</CardDescription>
             </CardHeader>
             <CardContent>
               {weekendPerm ? (
-                <div className="flex items-center justify-between bg-background p-3 rounded-md border">
-                  <div className="font-medium flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
-                    {weekendPerm.full_name || "Surveillant affecté"}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between bg-background p-3 rounded-md border">
+                    <div className="font-medium flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse"></div>
+                      {weekendPerm.full_name || "Surveillant affecté"}
+                    </div>
+                    {isAdmin && (
+                      <Button variant="ghost" size="sm" className="text-destructive h-8 px-2" onClick={() => removeWeekendPerm(weekendPerm.id)}>
+                        <Trash2 className="h-4 w-4 mr-1" /> Retirer
+                      </Button>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <Button variant="ghost" size="sm" className="text-destructive h-8 px-2" onClick={() => removeWeekendPerm(weekendPerm.id)}>
-                      <Trash2 className="h-4 w-4 mr-1" /> Retirer
-                    </Button>
-                  )}
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <div className="flex items-center gap-1 border rounded px-2 py-1 bg-background">
+                      <span>Sam. Aprèm</span>
+                      <DoneBadge done={weekLogs.some(l => l.surveillant_id === weekendPerm.surveillant_id && l.date === format(addDays(weekStart, 5), "yyyy-MM-dd") && l.start_time.startsWith("15"))} />
+                    </div>
+                    <div className="flex items-center gap-1 border rounded px-2 py-1 bg-background">
+                      <span>Dim. Matin</span>
+                      <DoneBadge done={weekLogs.some(l => l.surveillant_id === weekendPerm.surveillant_id && l.date === format(addDays(weekStart, 6), "yyyy-MM-dd") && l.start_time.startsWith("09"))} />
+                    </div>
+                    <div className="flex items-center gap-1 border rounded px-2 py-1 bg-background">
+                      <span>Dim. Aprèm</span>
+                      <DoneBadge done={weekLogs.some(l => l.surveillant_id === weekendPerm.surveillant_id && l.date === format(addDays(weekStart, 6), "yyyy-MM-dd") && l.start_time.startsWith("15"))} />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground italic py-2">

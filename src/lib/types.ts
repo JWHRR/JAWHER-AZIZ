@@ -11,6 +11,12 @@ export const SLOT_LABELS: Record<PermanenceSlot, string> = {
   NUIT: "Nuit (20h–23h)",
 };
 
+export const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
+  MATIN: { start: "08:00", end: "13:00" },
+  APRES_MIDI: { start: "14:00", end: "19:00" },
+  NUIT: { start: "20:00", end: "23:00" },
+};
+
 export const REPAS_LABELS: Record<RepasType, string> = {
   PETIT_DEJEUNER: "Petit-déjeuner",
   DEJEUNER: "Déjeuner",

@@ -285,7 +285,7 @@ export default function SurveillantDashboard() {
             {isWeekendPerm && (
               <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 mb-2">
                 <span className="text-destructive font-bold">⚠️</span>
-                <span className="font-semibold text-destructive">Vous êtes de permanence ce week-end (Samedi 15h30-19h, Dimanche 08h-12h / 14h-19h).</span>
+                <span className="font-semibold text-destructive">Vous êtes de permanence ce week-end (Samedi 15h30-19h, Dimanche 09h30-12h30 / 15h30-18h30).</span>
               </div>
             )}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-warning-soft border border-warning/30">

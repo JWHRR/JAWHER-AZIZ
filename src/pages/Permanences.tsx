@@ -215,84 +215,79 @@ export default function Permanences() {
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(["MATIN", "APRES_MIDI", "NUIT"] as PermanenceSlot[])
-                .filter(slot => !isRedundantSlot(date, slot))
-                .map((slot) => {
-                const myAssigns = assignments.filter((a) => a.slot === slot);
-                const myTemplates = templates.filter((t) => t.slot === slot);
-                
-                // For surveillants: check their own log
-                // For admins: check if there's any log from ANY of the assigned surveillants for this slot
-                const assignedIds = [...myAssigns, ...myTemplates].map(x => x.surveillant_id);
-                const myLog = logs.find((l) => 
-                  (isAdmin ? assignedIds.includes(l.surveillant_id) : l.surveillant_id === user?.id) && 
-                  l.start_time.startsWith(SLOT_TIMES[slot].start.split(':')[0])
-                );
-                
-                const isUserAssigned = myAssigns.some((a) => a.surveillant_id === user?.id) || 
-                                       myTemplates.some((t) => t.surveillant_id === user?.id);
-                
-                const totalAssignedCount = myAssigns.length + myTemplates.length;
-                const assignedUsers = [...myAssigns, ...myTemplates].map(x => x.profiles?.full_name).filter(Boolean);
-                const assignedNames = Array.from(new Set(assignedUsers)).join(", ");
+              {(() => {
+                const renderStandardSlot = (slot: PermanenceSlot) => {
+                  const myAssigns = assignments.filter((a) => a.slot === slot);
+                  const myTemplates = templates.filter((t) => t.slot === slot);
+                  
+                  const assignedIds = [...myAssigns, ...myTemplates].map(x => x.surveillant_id);
+                  const myLog = logs.find((l) => 
+                    (isAdmin ? assignedIds.includes(l.surveillant_id) : l.surveillant_id === user?.id) && 
+                    l.start_time.startsWith(SLOT_TIMES[slot].start.split(':')[0])
+                  );
+                  
+                  const isUserAssigned = myAssigns.some((a) => a.surveillant_id === user?.id) || 
+                                         myTemplates.some((t) => t.surveillant_id === user?.id);
+                  
+                  const totalAssignedCount = myAssigns.length + myTemplates.length;
+                  const assignedUsers = [...myAssigns, ...myTemplates].map(x => x.profiles?.full_name).filter(Boolean);
+                  const assignedNames = Array.from(new Set(assignedUsers)).join(", ");
 
-                return (
-                  <div key={slot} className="p-4 rounded-lg border bg-card">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold">{SLOT_LABELS[slot].split(" (")[0]}</div>
-                      {(isUserAssigned || (isAdmin && totalAssignedCount > 0)) && <DoneBadge done={!!myLog} />}
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-3">{SLOT_LABELS[slot].split(" (")[1]?.replace(")", "")}</div>
-                    
-                    {isAdmin && (
-                      <div className="text-xs text-muted-foreground mb-2">
-                        {totalAssignedCount === 0 ? "Personne affecté" : <span className="font-medium text-foreground">Affecté à: {assignedNames}</span>}
+                  return (
+                    <div key={slot} className="p-4 rounded-lg border bg-card">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold">{SLOT_LABELS[slot].split(" (")[0]}</div>
+                        {(isUserAssigned || (isAdmin && totalAssignedCount > 0)) && <DoneBadge done={!!myLog} />}
                       </div>
-                    )}
-                    
-                    {(isUserAssigned || isAdmin) && (
+                      <div className="text-xs text-muted-foreground mb-3">{SLOT_LABELS[slot].split(" (")[1]?.replace(")", "")}</div>
+                      
+                      {isAdmin && (
+                        <div className="text-xs text-muted-foreground mb-2">
+                          {totalAssignedCount === 0 ? "Personne affecté" : <span className="font-medium text-foreground">Affecté à: {assignedNames}</span>}
+                        </div>
+                      )}
+                      
+                      {(isUserAssigned || isAdmin) && (
+                        <Button 
+                          size="sm" 
+                          variant={myLog ? "outline" : "default"} 
+                          className="w-full mt-2" 
+                          onClick={() => confirmAssignment(slot)}
+                        >
+                          {myLog ? "Confirmé" : "Confirmer"}
+                        </Button>
+                      )}
+                      {!isUserAssigned && !isAdmin && (
+                        <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
+                      )}
+                    </div>
+                  );
+                };
+
+                const renderWeekendSamedi = () => (
+                  <div key="WE_SAM" className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-primary">Week-end (Samedi)</div>
+                      {isWeekendAssigned && <DoneBadge done={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15"))} />}
+                    </div>
+                    <div className="text-xs text-muted-foreground mb-3">15:30 — 19:00</div>
+                    {(isWeekendAssigned || isAdmin) ? (
                       <Button 
                         size="sm" 
-                        variant={myLog ? "outline" : "default"} 
                         className="w-full mt-2" 
-                        onClick={() => confirmAssignment(slot)}
+                        variant={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "outline" : "default"}
+                        onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" }, weekendSurvId || undefined)}
                       >
-                        {myLog ? "Confirmé" : "Confirmer"}
+                        {logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
                       </Button>
-                    )}
-                    {!isUserAssigned && !isAdmin && (
-                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
                     )}
                   </div>
                 );
-              })}
 
-              {/* Weekend Overrides / Additions */}
-              {date.getDay() === 6 && ( // Saturday
-                <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-primary">Week-end (Samedi)</div>
-                    {isWeekendAssigned && <DoneBadge done={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15"))} />}
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-3">15:30 — 19:00</div>
-                  {(isWeekendAssigned || isAdmin) ? (
-                    <Button 
-                      size="sm" 
-                      className="w-full mt-2" 
-                      variant={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "outline" : "default"}
-                      onClick={() => confirmAssignment("Week-end (Samedi)", { start: "15:30", end: "19:00" }, weekendSurvId || undefined)}
-                    >
-                      {logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15")) ? "Confirmé" : "Confirmer"}
-                    </Button>
-                  ) : (
-                    <p className="text-xs text-muted-foreground mt-2 italic text-center">Non assigné</p>
-                  )}
-                </div>
-              )}
-
-              {date.getDay() === 0 && ( // Sunday
-                <>
-                  <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                const renderWeekendDimMatin = () => (
+                  <div key="WE_DIM_MATIN" className="p-4 rounded-lg border bg-primary/5 border-primary/20">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-primary">Week-end (Dimanche Matin)</div>
                       {isWeekendAssigned && <DoneBadge done={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("09"))} />}
@@ -311,7 +306,10 @@ export default function Permanences() {
                       <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
                     )}
                   </div>
-                  <div className="p-4 rounded-lg border bg-primary/5 border-primary/20">
+                );
+
+                const renderWeekendDimApresMidi = () => (
+                  <div key="WE_DIM_APREM" className="p-4 rounded-lg border bg-primary/5 border-primary/20">
                     <div className="flex items-center justify-between mb-2">
                       <div className="font-semibold text-primary">Week-end (Dimanche Après-midi)</div>
                       {isWeekendAssigned && <DoneBadge done={logs.some(l => (isAdmin ? l.surveillant_id === weekendSurvId : l.surveillant_id === user?.id) && l.start_time.startsWith("15"))} />}
@@ -330,8 +328,34 @@ export default function Permanences() {
                       <p className="text-xs text-muted-foreground mt-2 italic text-center">Non affecté</p>
                     )}
                   </div>
-                </>
-              )}
+                );
+
+                if (date.getDay() === 6) {
+                  return (
+                    <>
+                      {renderStandardSlot("MATIN")}
+                      {renderWeekendSamedi()}
+                      {renderStandardSlot("NUIT")}
+                    </>
+                  );
+                } else if (date.getDay() === 0) {
+                  return (
+                    <>
+                      {renderWeekendDimMatin()}
+                      {renderWeekendDimApresMidi()}
+                      {renderStandardSlot("NUIT")}
+                    </>
+                  );
+                } else {
+                  return (
+                    <>
+                      {renderStandardSlot("MATIN")}
+                      {renderStandardSlot("APRES_MIDI")}
+                      {renderStandardSlot("NUIT")}
+                    </>
+                  );
+                }
+              })()}
             </div>
           )}
         </CardContent>

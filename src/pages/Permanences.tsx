@@ -21,6 +21,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { DoneBadge } from "@/components/StatusBadge";
 import { cn } from "@/lib/utils";
 
+const isRedundantSlot = (date: Date, slot: PermanenceSlot) => {
+  const wd = dateToWeekday(date);
+  if (wd === "SAM" && slot === "APRES_MIDI") return true;
+  if (wd === "DIM" && (slot === "MATIN" || slot === "APRES_MIDI")) return true;
+  return false;
+};
 
 export default function Permanences() {
   const { user, primaryRole } = useAuth();
@@ -209,7 +215,9 @@ export default function Permanences() {
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(["MATIN", "APRES_MIDI", "NUIT"] as PermanenceSlot[]).map((slot) => {
+              {(["MATIN", "APRES_MIDI", "NUIT"] as PermanenceSlot[])
+                .filter(slot => !isRedundantSlot(date, slot))
+                .map((slot) => {
                 const myAssigns = assignments.filter((a) => a.slot === slot);
                 const myTemplates = templates.filter((t) => t.slot === slot);
                 

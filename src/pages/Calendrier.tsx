@@ -225,10 +225,16 @@ export default function Calendrier() {
   };
 
   // ---- Render helpers ----
+  const isRedundantSlot = (wd: Weekday, slot: PermanenceSlot) => {
+    if (wd === "SAM" && slot === "APRES_MIDI") return true;
+    if (wd === "DIM" && (slot === "MATIN" || slot === "APRES_MIDI")) return true;
+    return false;
+  };
+
   const dayPerms = (d: Date) => {
     const wd = dateToWeekday(d);
-    const fromTpl = tplPerms.filter((t) => t.weekday === wd);
-    const fromOverride = overridePerms.filter((p) => p.date === format(d, "yyyy-MM-dd"));
+    const fromTpl = tplPerms.filter((t) => t.weekday === wd && !isRedundantSlot(wd, t.slot as PermanenceSlot));
+    const fromOverride = overridePerms.filter((p) => p.date === format(d, "yyyy-MM-dd") && !isRedundantSlot(wd, p.slot as PermanenceSlot));
     return { fromTpl, fromOverride };
   };
   const dayRestos = (d: Date) => {
@@ -434,7 +440,9 @@ export default function Calendrier() {
                             <Select value={pForm.slot} onValueChange={(v) => setPForm({ ...pForm, slot: v as PermanenceSlot })}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {(Object.keys(SLOT_LABELS) as PermanenceSlot[]).map((s) => (
+                                {(Object.keys(SLOT_LABELS) as PermanenceSlot[])
+                                  .filter((s) => !isRedundantSlot(pForm.weekday, s))
+                                  .map((s) => (
                                   <SelectItem key={s} value={s}>{SLOT_LABELS[s]}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -457,7 +465,7 @@ export default function Calendrier() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
                   {WEEKDAYS_ORDER.map((wd) => {
-                    const items = tplPerms.filter((t) => t.weekday === wd);
+                    const items = tplPerms.filter((t) => t.weekday === wd && !isRedundantSlot(wd, t.slot as PermanenceSlot));
                     return (
                       <div key={wd} className="border rounded-lg p-2 min-h-[120px]">
                         <div className="text-xs font-semibold mb-2">{WEEKDAY_LABELS[wd]}</div>

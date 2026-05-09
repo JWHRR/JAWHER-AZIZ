@@ -17,6 +17,12 @@ const SLOT_TIMES: Record<PermanenceSlot, { start: string, end: string }> = {
   NUIT: { start: "20:00", end: "23:00" },
 };
 
+const isRedundantSlot = (wd: string, slot: string) => {
+  if (wd === "SAM" && slot === "APRES_MIDI") return true;
+  if (wd === "DIM" && (slot === "MATIN" || slot === "APRES_MIDI")) return true;
+  return false;
+};
+
 export default function SurveillantDashboard() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -49,7 +55,8 @@ export default function SurveillantDashboard() {
       ]);
       
       setMyDortoirs(da.data ?? []);
-      setTodayPerms([...(permTpl.data ?? []), ...(permOv.data ?? [])]);
+      const allPerms = [...(permTpl.data ?? []), ...(permOv.data ?? [])];
+      setTodayPerms(allPerms.filter(p => !isRedundantSlot(wd, p.slot)));
       setLogsAssigned(pLogs.data ?? []);
       
       const allResto = [...(restoTpl.data ?? []), ...(restoOv.data ?? [])];

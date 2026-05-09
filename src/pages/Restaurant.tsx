@@ -20,6 +20,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateTablePdf } from "@/lib/pdf";
 import { getBusinessDate } from "@/lib/time";
 
+const isRedundantRestoSlot = (date: Date | string, repas: RepasType | string) => {
+  const wd = typeof date === "string" ? dateToWeekday(new Date(date)) : dateToWeekday(date);
+  if (wd === "SAM" && repas === "DINER") return true;
+  if (wd === "DIM") return true;
+  return false;
+};
+
 export default function Restaurant() {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
@@ -226,7 +233,9 @@ export default function Restaurant() {
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(["PETIT_DEJEUNER", "DEJEUNER", "DINER"] as RepasType[]).map((r) => {
+              {(["PETIT_DEJEUNER", "DEJEUNER", "DINER"] as RepasType[])
+                .filter(r => !isRedundantRestoSlot(date, r))
+                .map((r) => {
                 const myAssigns = assignments.filter((a) => a.repas === r);
                 const myTemplates = templates.filter((t) => t.repas === r);
                 const myLogs = logs.filter((l) => l.repas === r);

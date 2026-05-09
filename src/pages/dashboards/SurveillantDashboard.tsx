@@ -23,6 +23,12 @@ const isRedundantSlot = (wd: string, slot: string) => {
   return false;
 };
 
+const isRedundantRestoSlot = (wd: string, repas: string) => {
+  if (wd === "SAM" && repas === "DINER") return true;
+  if (wd === "DIM") return true;
+  return false;
+};
+
 export default function SurveillantDashboard() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -60,8 +66,9 @@ export default function SurveillantDashboard() {
       setLogsAssigned(pLogs.data ?? []);
       
       const allResto = [...(restoTpl.data ?? []), ...(restoOv.data ?? [])];
+      const validResto = allResto.filter((r: any) => !isRedundantRestoSlot(wd, r.repas));
       // Deduplicate by repas type so we don't show the same meal twice
-      const uniqueResto = Array.from(new Map(allResto.map(r => [r.repas, r])).values());
+      const uniqueResto = Array.from(new Map(validResto.map((r: any) => [r.repas, r])).values());
       setTodayResto(uniqueResto);
       
       setTodayInspections(inspections.data ?? []);

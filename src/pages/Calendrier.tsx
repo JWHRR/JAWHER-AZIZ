@@ -231,6 +231,12 @@ export default function Calendrier() {
     return false;
   };
 
+  const isRedundantRestoSlot = (wd: Weekday, repas: RepasType) => {
+    if (wd === "SAM" && repas === "DINER") return true;
+    if (wd === "DIM") return true;
+    return false;
+  };
+
   const dayPerms = (d: Date) => {
     const wd = dateToWeekday(d);
     const fromTpl = tplPerms.filter((t) => t.weekday === wd && !isRedundantSlot(wd, t.slot as PermanenceSlot));
@@ -239,8 +245,8 @@ export default function Calendrier() {
   };
   const dayRestos = (d: Date) => {
     const wd = dateToWeekday(d);
-    const fromTpl = tplRestos.filter((t) => t.weekday === wd);
-    const fromOverride = overrideRestos.filter((r) => r.date === format(d, "yyyy-MM-dd"));
+    const fromTpl = tplRestos.filter((t) => t.weekday === wd && !isRedundantRestoSlot(wd, t.repas as RepasType));
+    const fromOverride = overrideRestos.filter((r) => r.date === format(d, "yyyy-MM-dd") && !isRedundantRestoSlot(wd, r.repas as RepasType));
     return { fromTpl, fromOverride };
   };
 
@@ -529,7 +535,9 @@ export default function Calendrier() {
                             <Select value={rForm.repas} onValueChange={(v) => setRForm({ ...rForm, repas: v as RepasType })}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                {(Object.keys(REPAS_LABELS) as RepasType[]).map((s) => (
+                                {(Object.keys(REPAS_LABELS) as RepasType[])
+                                  .filter(s => !isRedundantRestoSlot(rForm.weekday, s))
+                                  .map((s) => (
                                   <SelectItem key={s} value={s}>{REPAS_LABELS[s]}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -548,7 +556,7 @@ export default function Calendrier() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
                   {WEEKDAYS_ORDER.map((wd) => {
-                    const items = tplRestos.filter((t) => t.weekday === wd);
+                    const items = tplRestos.filter((t) => t.weekday === wd && !isRedundantRestoSlot(wd, t.repas as RepasType));
                     return (
                       <div key={wd} className="border rounded-lg p-2 min-h-[120px]">
                         <div className="text-xs font-semibold mb-2">{WEEKDAY_LABELS[wd]}</div>

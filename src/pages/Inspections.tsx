@@ -270,7 +270,7 @@ export default function Inspections() {
         <div className="flex items-center gap-2">
           <Label htmlFor="d" className="text-sm">Date</Label>
           <Input id="d" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
-          {!isAdmin && isToday && (
+          {!isAdmin && (
             <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre affectée" : "Ajouter une inspection"}>
               <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection
             </Button>
@@ -287,8 +287,8 @@ export default function Inspections() {
                 {chambres.length === 0 
                   ? "⚠ Vous n'êtes affecté à aucun dortoir pour le moment."
                   : inspections.length > 0
-                  ? `✓ Vous avez inspecté ${inspections.length} chambre(s) aujourd'hui`
-                  : "Vous devez inspecter au moins une chambre aujourd'hui"}
+                  ? `✓ Vous avez inspecté ${inspections.length} chambre(s) pour ce jour`
+                  : "Vous devez inspecter au moins une chambre pour ce jour"}
               </div>
               <div className="text-xs text-muted-foreground">
                 {chambres.length} chambre(s) disponible(s) dans vos dortoirs · {remainingChambres.length} restantes

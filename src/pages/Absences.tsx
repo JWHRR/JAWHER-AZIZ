@@ -297,6 +297,14 @@ export default function Absences() {
 
       if (!pastAbs) return;
 
+      // Find the latest checklist date for each dortoir to determine active streaks
+      const latestChecklistDateByDortoir: Record<string, string> = {};
+      pastAbs.forEach(a => {
+        if (!latestChecklistDateByDortoir[a.dortoir_id] || a.date > latestChecklistDateByDortoir[a.dortoir_id]) {
+          latestChecklistDateByDortoir[a.dortoir_id] = a.date;
+        }
+      });
+
       const results: any[] = [];
 
       students.forEach((stu: any) => {
@@ -313,6 +321,9 @@ export default function Absences() {
         const isMyDortoir = myDortoirs.some(d => d.dortoir_id === dortoirId);
         if (!isAdmin && !isMyDortoir) return;
 
+        const latestChecklistDate = latestChecklistDateByDortoir[dortoirId];
+        if (!latestChecklistDate) return;
+
         // Find all dates where this student was absent
         const studentAbsenceDates = pastAbs
           .filter(a => a.dortoir_id === dortoirId)
@@ -327,6 +338,10 @@ export default function Absences() {
         const streaks = findStreaks(studentAbsenceDates);
 
         streaks.forEach(streak => {
+          // A streak is active only if it ends exactly on the latest checklist date for that dortoir
+          // If the student was present on a newer checklist date, their streak is broken!
+          if (streak.end !== latestChecklistDate) return;
+
           results.push({
             studentId: stu.id,
             nom_complet: stu.nom_complet,

@@ -152,11 +152,13 @@ export default function Reclamations() {
     load();
   };
 
-  const filtered = items.filter((r) => {
-    if (tab !== "ALL" && r.status !== tab) return false;
-    if (search && !`${r.titre} ${r.description ?? ""} ${r.lieu ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filtered = items
+    .filter((r) => {
+      if (tab !== "ALL" && r.status !== tab) return false;
+      if (search && !`${r.titre} ${r.description ?? ""} ${r.lieu ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const exportTodayPdf = () => {
     if (exportTypes.size === 0) {

@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users } from "lucide-react";
+import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users, Search } from "lucide-react";
 import { format, subDays, isFriday, isSaturday, isSunday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -220,7 +220,19 @@ export default function Absences() {
   // Consecutive Absences View State
   const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<any[]>([]);
   const [consecutiveLoading, setConsecutiveLoading] = useState(false);
+  const [consecutiveSearch, setConsecutiveSearch] = useState("");
   const view = searchParams.get("view") || "daily";
+
+  const filteredConsecutiveAbsences = consecutiveAbsencesList.filter((item) => {
+    const query = consecutiveSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      (item.nom_complet || "").toLowerCase().includes(query) ||
+      (item.dortoirCode || "").toLowerCase().includes(query) ||
+      (item.chambreNumero || "").toLowerCase().includes(query) ||
+      (item.telephone || "").toLowerCase().includes(query)
+    );
+  });
 
   const findStreaks = (dates: string[]) => {
     if (dates.length === 0) return [];
@@ -624,107 +636,127 @@ export default function Absences() {
                 </p>
               </CardContent>
             </Card>
-          ) : isAdmin ? (
-            // Group by Dortoir for Admin
-            (() => {
-              const grouped: Record<string, any[]> = {};
-              consecutiveAbsencesList.forEach(item => {
-                const code = item.dortoirCode || "Inconnu";
-                if (!grouped[code]) grouped[code] = [];
-                grouped[code].push(item);
-              });
-
-              return Object.entries(grouped)
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([code, list]) => (
-                  <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
-                    <CardHeader className="pb-3 border-b">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <CalendarDays className="h-5 w-5 text-primary" />
-                        Dortoir {code}
-                      </CardTitle>
-                      <CardDescription>{list.length} alerte(s) active(s)</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0 sm:p-4">
-                      <div className="rounded-md border overflow-hidden">
-                        <Table>
-                          <TableHeader className="bg-muted/50">
-                            <TableRow>
-                              <TableHead>Étudiant</TableHead>
-                              <TableHead>Téléphone</TableHead>
-                              <TableHead>Chambre</TableHead>
-                              <TableHead>Nombre de Nuits</TableHead>
-                              <TableHead>Période d'Absence</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {list.map((item, idx) => (
-                              <TableRow key={idx} className="hover:bg-accent/40">
-                                <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
-                                <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                                <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
-                                <TableCell className="py-3">
-                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
-                                    <AlertTriangle className="h-3 w-3 animate-bounce" /> {item.count} nuits consécutives
-                                  </span>
-                                </TableCell>
-                                <TableCell className="font-mono text-xs py-3 text-muted-foreground">
-                                  Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ));
-            })()
           ) : (
-            // Single flat table for Surveillant (their own assigned dorms)
-            <Card className="border-l-4 border-l-amber-500 shadow-sm">
-              <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  Alertes Absences Consécutives
-                </CardTitle>
-                <CardDescription>Étudiants absents depuis 3 nuits consécutives ou plus.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 sm:p-4">
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Étudiant</TableHead>
-                        <TableHead>Téléphone</TableHead>
-                        <TableHead>Dortoir</TableHead>
-                        <TableHead>Chambre</TableHead>
-                        <TableHead>Nombre de Nuits</TableHead>
-                        <TableHead>Période d'Absence</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {consecutiveAbsencesList.map((item, idx) => (
-                        <TableRow key={idx} className="hover:bg-accent/40">
-                          <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
-                          <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                          <TableCell className="py-3">Dortoir {item.dortoirCode}</TableCell>
-                          <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
-                          <TableCell className="py-3">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
-                              <AlertTriangle className="h-3 w-3" /> {item.count} nuits consécutives
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs py-3 text-muted-foreground">
-                            Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <>
+              <div className="relative">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Rechercher un étudiant par nom, dortoir, chambre ou téléphone..."
+                  value={consecutiveSearch}
+                  onChange={(e) => setConsecutiveSearch(e.target.value)}
+                />
+              </div>
+
+              {filteredConsecutiveAbsences.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground italic">
+                    Aucun résultat ne correspond à votre recherche.
+                  </CardContent>
+                </Card>
+              ) : isAdmin ? (
+                // Group by Dortoir for Admin
+                (() => {
+                  const grouped: Record<string, any[]> = {};
+                  filteredConsecutiveAbsences.forEach(item => {
+                    const code = item.dortoirCode || "Inconnu";
+                    if (!grouped[code]) grouped[code] = [];
+                    grouped[code].push(item);
+                  });
+
+                  return Object.entries(grouped)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([code, list]) => (
+                      <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
+                        <CardHeader className="pb-3 border-b">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <CalendarDays className="h-5 w-5 text-primary" />
+                            Dortoir {code}
+                          </CardTitle>
+                          <CardDescription>{list.length} alerte(s) active(s)</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 sm:p-4">
+                          <div className="rounded-md border overflow-hidden">
+                            <Table>
+                              <TableHeader className="bg-muted/50">
+                                <TableRow>
+                                  <TableHead>Étudiant</TableHead>
+                                  <TableHead>Téléphone</TableHead>
+                                  <TableHead>Chambre</TableHead>
+                                  <TableHead>Nombre de Nuits</TableHead>
+                                  <TableHead>Période d'Absence</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {list.map((item, idx) => (
+                                  <TableRow key={idx} className="hover:bg-accent/40">
+                                    <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                                    <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                                    <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
+                                    <TableCell className="py-3">
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
+                                        <AlertTriangle className="h-3 w-3 animate-bounce" /> {item.count} nuits consécutives
+                                      </span>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-xs py-3 text-muted-foreground">
+                                      Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ));
+                })()
+              ) : (
+                // Single flat table for Surveillant (their own assigned dorms)
+                <Card className="border-l-4 border-l-amber-500 shadow-sm">
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-amber-500" />
+                      Alertes Absences Consécutives
+                    </CardTitle>
+                    <CardDescription>Étudiants absents depuis 3 nuits consécutives ou plus.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-0 sm:p-4">
+                    <div className="rounded-md border overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead>Étudiant</TableHead>
+                            <TableHead>Téléphone</TableHead>
+                            <TableHead>Dortoir</TableHead>
+                            <TableHead>Chambre</TableHead>
+                            <TableHead>Nombre de Nuits</TableHead>
+                            <TableHead>Période d'Absence</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredConsecutiveAbsences.map((item, idx) => (
+                            <TableRow key={idx} className="hover:bg-accent/40">
+                              <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                              <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                              <TableCell className="py-3">Dortoir {item.dortoirCode}</TableCell>
+                              <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
+                              <TableCell className="py-3">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
+                                  <AlertTriangle className="h-3 w-3" /> {item.count} nuits consécutives
+                                </span>
+                              </TableCell>
+                              <TableCell className="font-mono text-xs py-3 text-muted-foreground">
+                                Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
       )}

@@ -228,9 +228,7 @@ export default function Absences() {
     if (!query) return true;
     return (
       (item.nom_complet || "").toLowerCase().includes(query) ||
-      (item.dortoirCode || "").toLowerCase().includes(query) ||
-      (item.chambreNumero || "").toLowerCase().includes(query) ||
-      (item.telephone || "").toLowerCase().includes(query)
+      (item.chambreNumero || "").toLowerCase().includes(query)
     );
   });
 
@@ -642,7 +640,7 @@ export default function Absences() {
                 <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="pl-9"
-                  placeholder="Rechercher un étudiant par nom, dortoir, chambre ou téléphone..."
+                  placeholder="Rechercher un étudiant par nom ou numéro de chambre..."
                   value={consecutiveSearch}
                   onChange={(e) => setConsecutiveSearch(e.target.value)}
                 />

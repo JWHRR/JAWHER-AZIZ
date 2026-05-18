@@ -11,11 +11,12 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Eye, FileDown, CalendarDays } from "lucide-react";
+import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users } from "lucide-react";
 import { format, subDays, isFriday, isSaturday, isSunday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
 import { getBusinessDate } from "@/lib/time";
@@ -184,23 +185,173 @@ export default function Absences() {
     );
 
     if (consecutiveAbsentees.length > 0) {
-      // Send notification to Admin
-      await supabase.from("notifications").insert({
-        role: "ADMIN",
-        title: "Alerte Absences Consécutives",
-        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives dans le dortoir ${dortoirsToShow.find(d => d.id === dortoir_id)?.code}.`,
-        link: `/absences?date=${date}`
-      });
-      // Notification to current user (surveillant)
-      await supabase.from("notifications").insert({
-        user_id: user.id,
-        title: "Alerte Absences Consécutives",
-        message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives.`,
-        link: `/absences?date=${date}`
-      });
-      toast.warning(`${consecutiveAbsentees.length} étudiant(s) absent(s) 3 nuits consécutives!`);
+      const dortoirCode = dortoirsToShow.find(d => d.id === dortoir_id)?.code || "";
+      
+      // Anti-Spam: Check if there is already an unread notification for consecutive absences in this dortoir
+      const { data: existingUnread } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("title", "Alerte Absences Consécutives")
+        .eq("is_read", false)
+        .like("message", `%dortoir ${dortoirCode}%`);
+
+      if (!existingUnread || existingUnread.length === 0) {
+        // Send notification to Admin
+        await supabase.from("notifications").insert({
+          role: "ADMIN",
+          title: "Alerte Absences Consécutives",
+          message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives dans le dortoir ${dortoirCode}.`,
+          link: "/absences?view=consecutive"
+        });
+        
+        // Notification to current user (surveillant)
+        await supabase.from("notifications").insert({
+          user_id: user.id,
+          title: "Alerte Absences Consécutives",
+          message: `${consecutiveAbsentees.join(", ")} a/ont été absent(s) 3 nuits consécutives.`,
+          link: "/absences?view=consecutive"
+        });
+
+        toast.warning(`${consecutiveAbsentees.length} étudiant(s) absent(s) 3 nuits consécutives!`);
+      }
     }
   };
+
+  // Consecutive Absences View State
+  const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<any[]>([]);
+  const [consecutiveLoading, setConsecutiveLoading] = useState(false);
+  const view = searchParams.get("view") || "daily";
+
+  const findStreaks = (dates: string[]) => {
+    if (dates.length === 0) return [];
+    
+    // Sort dates descending
+    const sorted = [...new Set(dates)].sort((a, b) => b.localeCompare(a));
+    
+    const streaks: { count: number; start: string; end: string }[] = [];
+    let currentStreak: string[] = [];
+    
+    for (let i = 0; i < sorted.length; i++) {
+      const currentDate = new Date(sorted[i]);
+      if (currentStreak.length === 0) {
+        currentStreak.push(sorted[i]);
+      } else {
+        const lastDate = new Date(currentStreak[currentStreak.length - 1]);
+        const diffTime = Math.abs(lastDate.getTime() - currentDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          currentStreak.push(sorted[i]);
+        } else {
+          if (currentStreak.length >= 3) {
+            streaks.push({
+              count: currentStreak.length,
+              start: currentStreak[currentStreak.length - 1], // oldest date
+              end: currentStreak[0] // newest date
+            });
+          }
+          currentStreak = [sorted[i]];
+        }
+      }
+    }
+    
+    if (currentStreak.length >= 3) {
+      streaks.push({
+        count: currentStreak.length,
+        start: currentStreak[currentStreak.length - 1],
+        end: currentStreak[0]
+      });
+    }
+    
+    return streaks;
+  };
+
+  const loadConsecutiveAbsences = async () => {
+    setConsecutiveLoading(true);
+    try {
+      // 1. Fetch students & rooms & dormitories
+      const { data: students } = await supabase
+        .from("etudiants")
+        .select(`
+          id,
+          nom_complet,
+          chambre_id,
+          chambres!inner (
+            numero,
+            dortoir_id,
+            dortoirs!inner (
+              id,
+              code
+            )
+          )
+        `);
+
+      if (!students) return;
+
+      // 2. Fetch all historical absences sorted by date descending
+      const { data: pastAbs } = await supabase
+        .from("absences")
+        .select("dortoir_id, date, noms_absents")
+        .order("date", { ascending: false });
+
+      if (!pastAbs) return;
+
+      const results: any[] = [];
+
+      students.forEach((stu: any) => {
+        const dortoirId = stu.chambres?.dortoirs?.id;
+        const dortoirCode = stu.chambres?.dortoirs?.code;
+        const chambreNum = stu.chambres?.numero;
+        if (!dortoirId) return;
+
+        // Check permission:
+        // Surveillant can only see their assigned dortoirs
+        const isMyDortoir = myDortoirs.some(d => d.dortoir_id === dortoirId);
+        if (!isAdmin && !isMyDortoir) return;
+
+        // Find all dates where this student was absent
+        const studentAbsenceDates = pastAbs
+          .filter(a => a.dortoir_id === dortoirId)
+          .filter(a => {
+            const namesList = (a.noms_absents || "")
+              .split("\n")
+              .map((n: string) => n.trim().toLowerCase());
+            return namesList.includes(stu.nom_complet.trim().toLowerCase());
+          })
+          .map(a => a.date);
+
+        const streaks = findStreaks(studentAbsenceDates);
+
+        streaks.forEach(streak => {
+          results.push({
+            studentId: stu.id,
+            nom_complet: stu.nom_complet,
+            dortoirId,
+            dortoirCode,
+            chambreNumero: chambreNum,
+            count: streak.count,
+            start: streak.start,
+            end: streak.end
+          });
+        });
+      });
+
+      // Sort by streak end date descending (newest streaks first)
+      results.sort((a, b) => b.end.localeCompare(a.end));
+
+      setConsecutiveAbsencesList(results);
+    } catch (err: any) {
+      toast.error("Erreur de chargement: " + err.message);
+    } finally {
+      setConsecutiveLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === "consecutive") {
+      loadConsecutiveAbsences();
+    }
+  }, [view, user, date, isAdmin, absences, myDortoirs]);
 
   const save = async () => {
     if (!user) return;
@@ -329,79 +480,228 @@ export default function Absences() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
-          <CardDescription>{isAdmin ? "Tous les dortoirs" : "Vos dortoirs affectés"}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          ) : dortoirsToShow.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
-          ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {dortoirsToShow.map((d) => {
-                const a = absences.find((x) => x.dortoir_id === d.id);
-                return (
-                  <li key={d.id} className="p-4 rounded-lg border bg-card">
-                    <div className="flex items-center justify-between">
-                      <div className="font-semibold">Dortoir {d.code}</div>
-                      <DoneBadge done={!!a} />
-                    </div>
-                    {a && (
-                      <div className="text-sm text-muted-foreground mt-2">
-                        {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
-                      </div>
-                    )}
-                    <Button size="sm" variant={a ? "outline" : "default"} className="mt-3 w-full" onClick={() => openNew(d.id)}>
-                      {a ? <><Eye className="h-3.5 w-3.5 mr-1" /> Voir / modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Tournée & Inspection</>}
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* Top Toggle Controls */}
+      <div className="flex border-b border-border/80 gap-6">
+        <button
+          onClick={() => setSearchParams({ date, view: "daily" })}
+          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
+            view !== "consecutive"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <Users className="h-4 w-4" />
+            Effectif Quotidien
+          </div>
+        </button>
+        <button
+          onClick={() => setSearchParams({ date, view: "consecutive" })}
+          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
+            view === "consecutive"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <History className="h-4 w-4" />
+            Absences Consécutives (3+ nuits)
+          </div>
+        </button>
+      </div>
 
-      {/* SECTION EFFECTIF WEEKEND */}
-      {!isAdmin && isFriday(new Date(date)) && (
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" /> Effectif Weekend
-            </CardTitle>
-            <CardDescription>Saisie requise uniquement le Vendredi</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {dortoirsToShow.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
-            ) : (
-              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {dortoirsToShow.map((d) => {
-                  const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
-                  return (
-                    <li key={d.id} className="p-4 rounded-lg border bg-card">
-                      <div className="flex items-center justify-between">
-                        <div className="font-semibold">Dortoir {d.code}</div>
-                        <DoneBadge done={!!we} />
-                      </div>
-                      {we && (
-                        <div className="text-sm text-muted-foreground mt-2 font-medium">
-                          {we.nombre_presents} présent(s) ce weekend
+      {view !== "consecutive" ? (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
+              <CardDescription>{isAdmin ? "Tous les dortoirs" : "Vos dortoirs affectés"}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              ) : dortoirsToShow.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+              ) : (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {dortoirsToShow.map((d) => {
+                    const a = absences.find((x) => x.dortoir_id === d.id);
+                    return (
+                      <li key={d.id} className="p-4 rounded-lg border bg-card">
+                        <div className="flex items-center justify-between">
+                          <div className="font-semibold">Dortoir {d.code}</div>
+                          <DoneBadge done={!!a} />
                         </div>
-                      )}
-                      <Button size="sm" variant={we ? "outline" : "default"} className="mt-3 w-full" onClick={() => openWeekend(d.id)}>
-                        {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
-                      </Button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                        {a && (
+                          <div className="text-sm text-muted-foreground mt-2">
+                            {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
+                          </div>
+                        )}
+                        <Button size="sm" variant={a ? "outline" : "default"} className="mt-3 w-full" onClick={() => openNew(d.id)}>
+                          {a ? <><Eye className="h-3.5 w-3.5 mr-1" /> Voir / modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Tournée & Inspection</>}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* SECTION EFFECTIF WEEKEND */}
+          {!isAdmin && isFriday(new Date(date)) && (
+            <Card className="border-primary">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-primary" /> Effectif Weekend
+                </CardTitle>
+                <CardDescription>Saisie requise uniquement le Vendredi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {dortoirsToShow.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+                ) : (
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {dortoirsToShow.map((d) => {
+                      const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
+                      return (
+                        <li key={d.id} className="p-4 rounded-lg border bg-card">
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold">Dortoir {d.code}</div>
+                            <DoneBadge done={!!we} />
+                          </div>
+                          {we && (
+                            <div className="text-sm text-muted-foreground mt-2 font-medium">
+                              {we.nombre_presents} présent(s) ce weekend
+                            </div>
+                          )}
+                          <Button size="sm" variant={we ? "outline" : "default"} className="mt-3 w-full" onClick={() => openWeekend(d.id)}>
+                            {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <div className="space-y-6">
+          {consecutiveLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : consecutiveAbsencesList.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertTriangle className="h-10 w-10 text-amber-500 mb-3 animate-pulse" />
+                <h3 className="font-semibold text-lg">Aucune alerte active</h3>
+                <p className="text-muted-foreground max-w-sm mt-1">
+                  Aucun étudiant n'a été absent plus de 3 nuits consécutives dans vos dortoirs d'affectation.
+                </p>
+              </CardContent>
+            </Card>
+          ) : isAdmin ? (
+            // Group by Dortoir for Admin
+            (() => {
+              const grouped: Record<string, any[]> = {};
+              consecutiveAbsencesList.forEach(item => {
+                const code = item.dortoirCode || "Inconnu";
+                if (!grouped[code]) grouped[code] = [];
+                grouped[code].push(item);
+              });
+
+              return Object.entries(grouped)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([code, list]) => (
+                  <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
+                    <CardHeader className="pb-3 border-b">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 text-primary" />
+                        Dortoir {code}
+                      </CardTitle>
+                      <CardDescription>{list.length} alerte(s) active(s)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 sm:p-4">
+                      <div className="rounded-md border overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-muted/50">
+                            <TableRow>
+                              <TableHead>Étudiant</TableHead>
+                              <TableHead>Chambre</TableHead>
+                              <TableHead>Nombre de Nuits</TableHead>
+                              <TableHead>Période d'Absence</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {list.map((item, idx) => (
+                              <TableRow key={idx} className="hover:bg-accent/40">
+                                <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                                <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
+                                <TableCell className="py-3">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
+                                    <AlertTriangle className="h-3 w-3 animate-bounce" /> {item.count} nuits consécutives
+                                  </span>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs py-3 text-muted-foreground">
+                                  Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ));
+            })()
+          ) : (
+            // Single flat table for Surveillant (their own assigned dorms)
+            <Card className="border-l-4 border-l-amber-500 shadow-sm">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  Alertes Absences Consécutives
+                </CardTitle>
+                <CardDescription>Étudiants absents depuis 3 nuits consécutives ou plus.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0 sm:p-4">
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Étudiant</TableHead>
+                        <TableHead>Dortoir</TableHead>
+                        <TableHead>Chambre</TableHead>
+                        <TableHead>Nombre de Nuits</TableHead>
+                        <TableHead>Période d'Absence</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {consecutiveAbsencesList.map((item, idx) => (
+                        <TableRow key={idx} className="hover:bg-accent/40">
+                          <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                          <TableCell className="py-3">Dortoir {item.dortoirCode}</TableCell>
+                          <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
+                          <TableCell className="py-3">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
+                              <AlertTriangle className="h-3 w-3" /> {item.count} nuits consécutives
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs py-3 text-muted-foreground">
+                            Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* DIALOG ABSENCES */}

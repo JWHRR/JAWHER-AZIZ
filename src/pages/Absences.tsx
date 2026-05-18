@@ -276,6 +276,7 @@ export default function Absences() {
           id,
           nom_complet,
           chambre_id,
+          autorisation_absence,
           chambres!inner (
             numero,
             dortoir_id,
@@ -299,6 +300,9 @@ export default function Absences() {
       const results: any[] = [];
 
       students.forEach((stu: any) => {
+        // Skip students who have active absence authorization
+        if (stu.autorisation_absence) return;
+
         const dortoirId = stu.chambres?.dortoirs?.id;
         const dortoirCode = stu.chambres?.dortoirs?.code;
         const chambreNum = stu.chambres?.numero;

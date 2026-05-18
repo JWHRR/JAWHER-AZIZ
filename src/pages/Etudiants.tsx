@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users, FileDown, Edit, Trash2, ArrowLeft } from "lucide-react";
+import { Loader2, Users, FileDown, Edit, Trash2, ArrowLeft, Check, Car } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Etudiants() {
   const { user, primaryRole } = useAuth();
@@ -21,7 +22,14 @@ export default function Etudiants() {
   const [etudiants, setEtudiants] = useState<any[]>([]);
   
   const [openEdit, setOpenEdit] = useState(false);
-  const [editForm, setEditForm] = useState({ id: "", nom_complet: "", telephone: "" });
+  const [editForm, setEditForm] = useState({ 
+    id: "", 
+    nom_complet: "", 
+    telephone: "",
+    autorisation_absence: false,
+    autorisation_voiture: false,
+    matricule_voiture: ""
+  });
   const [selectedDortoir, setSelectedDortoir] = useState<string | null>(null);
   const [assignedDortoirs, setAssignedDortoirs] = useState<string[]>([]);
 
@@ -80,6 +88,9 @@ export default function Etudiants() {
       id: etudiant.id,
       nom_complet: etudiant.nom_complet,
       telephone: etudiant.telephone || "",
+      autorisation_absence: etudiant.autorisation_absence || false,
+      autorisation_voiture: etudiant.autorisation_voiture || false,
+      matricule_voiture: etudiant.matricule_voiture || "",
     });
     setOpenEdit(true);
   };
@@ -90,6 +101,9 @@ export default function Etudiants() {
     const { error } = await supabase.from("etudiants").update({
       nom_complet: editForm.nom_complet.trim(),
       telephone: editForm.telephone.trim() || null,
+      autorisation_absence: editForm.autorisation_absence,
+      autorisation_voiture: editForm.autorisation_voiture,
+      matricule_voiture: editForm.autorisation_voiture ? editForm.matricule_voiture.trim() : "",
     }).eq("id", editForm.id);
 
     if (error) { toast.error(error.message); return; }
@@ -198,7 +212,25 @@ export default function Etudiants() {
                         {studentsInDortoir.map((e) => (
                           <TableRow key={e.id}>
                             <TableCell className="font-medium py-2">{e.chambre_numero}</TableCell>
-                            <TableCell className="py-2">{e.nom_complet}</TableCell>
+                            <TableCell className="py-2">
+                              <div className="flex flex-col gap-1">
+                                <span className="font-medium">{e.nom_complet}</span>
+                                {(e.autorisation_absence || e.autorisation_voiture) && (
+                                  <div className="flex gap-1.5 flex-wrap">
+                                    {e.autorisation_absence && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/50">
+                                        <Check className="h-2.5 w-2.5" /> Abs. Autorisée
+                                      </span>
+                                    )}
+                                    {e.autorisation_voiture && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200/50">
+                                        <Car className="h-2.5 w-2.5 flex-shrink-0" /> Voiture: {e.matricule_voiture || "—"}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="py-2">{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
                             {canEdit && (
                               <TableCell className="text-right py-2">
@@ -262,6 +294,51 @@ export default function Etudiants() {
                 onChange={(e) => setEditForm({ ...editForm, telephone: e.target.value })} 
                 placeholder="Ex: 55 123 456" 
               />
+            </div>
+            
+            <div className="flex flex-col gap-3 mt-4 border-t pt-4 bg-muted/10 p-3 rounded-md border">
+              <Label className="text-sm font-semibold">Autorisations & Véhicule</Label>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="absence_checkbox" 
+                  checked={editForm.autorisation_absence} 
+                  onCheckedChange={(checked) => setEditForm({ ...editForm, autorisation_absence: !!checked })}
+                />
+                <label htmlFor="absence_checkbox" className="text-sm font-medium cursor-pointer">
+                  Autorisation d'absence
+                </label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="voiture_checkbox" 
+                  checked={editForm.autorisation_voiture} 
+                  onCheckedChange={(checked) => {
+                    const active = !!checked;
+                    setEditForm({ 
+                      ...editForm, 
+                      autorisation_voiture: active,
+                      matricule_voiture: active ? editForm.matricule_voiture : ""
+                    });
+                  }}
+                />
+                <label htmlFor="voiture_checkbox" className="text-sm font-medium cursor-pointer">
+                  Autorisation voiture
+                </label>
+              </div>
+
+              {editForm.autorisation_voiture && (
+                <div className="space-y-1.5 mt-1 pl-6">
+                  <Label>Matricule de voiture</Label>
+                  <Input 
+                    value={editForm.matricule_voiture || ""} 
+                    onChange={(e) => setEditForm({ ...editForm, matricule_voiture: e.target.value })} 
+                    placeholder="Ex: 123 TUN 456" 
+                    className="font-mono text-sm"
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

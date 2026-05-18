@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, X, BedDouble, DoorOpen, Trash2, Users } from "lucide-react";
+import { Loader2, Plus, X, BedDouble, DoorOpen, Trash2, Users, Edit, Check, Car } from "lucide-react";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Dortoirs() {
   const { user, primaryRole } = useAuth();
@@ -29,6 +30,14 @@ export default function Dortoirs() {
     dortoir_id: "", 
     numero: "", 
     etudiants: [{ nom_complet: "", telephone: "" }] 
+  });
+
+  const [openEditCh, setOpenEditCh] = useState(false);
+  const [editChForm, setEditChForm] = useState<any>({
+    id: "",
+    dortoir_id: "",
+    numero: "",
+    etudiants: []
   });
 
   const load = async () => {
@@ -157,6 +166,97 @@ export default function Dortoirs() {
     if (!confirm("Supprimer cette chambre ? Les inspections associées seront aussi supprimées.")) return;
     const { error } = await supabase.from("chambres").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
+    load();
+  };
+
+  const openEditChambre = (chambre: any) => {
+    const roomStudents = etudiants.filter(e => e.chambre_id === chambre.id).map(e => ({
+      id: e.id,
+      chambre_id: e.chambre_id,
+      nom_complet: e.nom_complet,
+      telephone: e.telephone || "",
+      autorisation_absence: e.autorisation_absence || false,
+      autorisation_voiture: e.autorisation_voiture || false,
+      matricule_voiture: e.matricule_voiture || ""
+    }));
+    setEditChForm({
+      id: chambre.id,
+      dortoir_id: chambre.dortoir_id,
+      numero: chambre.numero,
+      etudiants: roomStudents
+    });
+    setOpenEditCh(true);
+  };
+
+  const saveChambre = async () => {
+    if (!editChForm.dortoir_id || !editChForm.numero) { toast.error("Numéro et dortoir requis"); return; }
+    
+    // 1. Update Chambre
+    const { error: chError } = await supabase.from("chambres").update({
+      dortoir_id: editChForm.dortoir_id,
+      numero: editChForm.numero
+    }).eq("id", editChForm.id);
+
+    if (chError) {
+      if (chError.code === "23505") toast.error("Ce numéro de chambre existe déjà dans ce dortoir.");
+      else toast.error(chError.message);
+      return;
+    }
+
+    // 2. Identify students to insert, update, or delete
+    const originalStudents = etudiants.filter(e => e.chambre_id === editChForm.id);
+    const originalIds = originalStudents.map(e => e.id);
+    
+    const currentStudents = editChForm.etudiants.filter((s: any) => s.nom_complet.trim() !== "");
+    const currentIds = currentStudents.map((s: any) => s.id).filter(Boolean);
+
+    // Students to delete
+    const idsToDelete = originalIds.filter(id => !currentIds.includes(id));
+
+    // Students to insert
+    const studentsToInsert = currentStudents.filter((s: any) => !s.id).map((s: any) => ({
+      chambre_id: editChForm.id,
+      nom_complet: s.nom_complet.trim(),
+      telephone: s.telephone.trim() || null,
+      autorisation_absence: s.autorisation_absence || false,
+      autorisation_voiture: s.autorisation_voiture || false,
+      matricule_voiture: s.autorisation_voiture ? s.matricule_voiture.trim() : ""
+    }));
+
+    // Students to update
+    const studentsToUpdate = currentStudents.filter((s: any) => s.id);
+
+    const promises = [];
+
+    if (idsToDelete.length > 0) {
+      promises.push(supabase.from("etudiants").delete().in("id", idsToDelete));
+    }
+
+    if (studentsToInsert.length > 0) {
+      promises.push(supabase.from("etudiants").insert(studentsToInsert));
+    }
+
+    studentsToUpdate.forEach((s: any) => {
+      promises.push(
+        supabase.from("etudiants").update({
+          nom_complet: s.nom_complet.trim(),
+          telephone: s.telephone.trim() || null,
+          autorisation_absence: s.autorisation_absence || false,
+          autorisation_voiture: s.autorisation_voiture || false,
+          matricule_voiture: s.autorisation_voiture ? s.matricule_voiture.trim() : ""
+        }).eq("id", s.id)
+      );
+    });
+
+    const results = await Promise.all(promises);
+    const errorResult = results.find(r => r.error);
+    if (errorResult) {
+      toast.error("Erreur lors de la mise à jour des étudiants: " + errorResult.error.message);
+    } else {
+      toast.success("Chambre mise à jour");
+    }
+
+    setOpenEditCh(false);
     load();
   };
 
@@ -334,7 +434,10 @@ export default function Dortoirs() {
                               <div className="flex items-center justify-between font-medium">
                                 <span className="flex items-center gap-1"><DoorOpen className="h-3 w-3" /> Chambre {c.numero}</span>
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => removeChambre(c.id)}>
+                                  <button onClick={() => openEditChambre(c)} title="Modifier la chambre">
+                                    <Edit className="h-3 w-3 text-primary hover:opacity-70" />
+                                  </button>
+                                  <button onClick={() => removeChambre(c.id)} title="Supprimer la chambre">
                                     <Trash2 className="h-3 w-3 text-destructive hover:opacity-70" />
                                   </button>
                                 </div>
@@ -342,10 +445,26 @@ export default function Dortoirs() {
                               {chambreEtudiants.length > 0 && (
                                 <div className="mt-2 space-y-1">
                                   {chambreEtudiants.map(etu => (
-                                    <div key={etu.id} className="flex items-center gap-1 text-muted-foreground/90 bg-background/50 px-2 py-1 rounded">
-                                      <Users className="h-3 w-3 flex-shrink-0" />
-                                      <span className="font-medium truncate">{etu.nom_complet}</span>
-                                      {etu.telephone && <span className="text-[10px] ml-auto">{etu.telephone}</span>}
+                                    <div key={etu.id} className="flex flex-col gap-1 text-muted-foreground/90 bg-background/50 px-2 py-1.5 rounded border border-border/10">
+                                      <div className="flex items-center gap-1">
+                                        <Users className="h-3 w-3 flex-shrink-0" />
+                                        <span className="font-semibold truncate text-[11px] text-foreground">{etu.nom_complet}</span>
+                                        {etu.telephone && <span className="text-[9px] ml-auto font-mono">{etu.telephone}</span>}
+                                      </div>
+                                      {(etu.autorisation_absence || etu.autorisation_voiture) && (
+                                        <div className="flex flex-wrap gap-1 mt-0.5">
+                                          {etu.autorisation_absence && (
+                                            <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded-sm text-[8px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/50">
+                                              <Check className="h-2 w-2" /> Abs. Aut.
+                                            </span>
+                                          )}
+                                          {etu.autorisation_voiture && (
+                                            <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded-sm text-[8px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200/50" title={etu.matricule_voiture}>
+                                              <Car className="h-2 w-2 flex-shrink-0" /> {etu.matricule_voiture || "Voiture"}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -362,6 +481,149 @@ export default function Dortoirs() {
           })}
         </div>
       )}
+
+      {/* DIALOG MODIFIER CHAMBRE */}
+      <Dialog open={openEditCh} onOpenChange={setOpenEditCh}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Modifier la chambre</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Dortoir</Label>
+              <Select value={editChForm.dortoir_id} onValueChange={(v) => setEditChForm({ ...editChForm, dortoir_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                <SelectContent>
+                  {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>Dortoir {d.code}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Numéro</Label>
+              <Input value={editChForm.numero} onChange={(e) => setEditChForm({ ...editChForm, numero: e.target.value })} placeholder="Ex : 101" />
+            </div>
+
+            <div className="space-y-3 mt-4 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Étudiants</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setEditChForm({ 
+                    ...editChForm, 
+                    etudiants: [...editChForm.etudiants, { nom_complet: "", telephone: "", autorisation_absence: false, autorisation_voiture: false, matricule_voiture: "" }] 
+                  })}
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Ajouter
+                </Button>
+              </div>
+
+              {editChForm.etudiants.map((student: any, index: number) => (
+                <div key={index} className="space-y-3 border p-3 rounded-md bg-muted/20 relative">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-semibold text-muted-foreground">Étudiant #{index + 1}</span>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive h-8 w-8"
+                      onClick={() => {
+                        const newE = [...editChForm.etudiants];
+                        newE.splice(index, 1);
+                        setEditChForm({ ...editChForm, etudiants: newE });
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Nom complet</Label>
+                      <Input 
+                        placeholder="Nom complet" 
+                        value={student.nom_complet}
+                        onChange={(e) => {
+                          const newE = [...editChForm.etudiants];
+                          newE[index].nom_complet = e.target.value;
+                          setEditChForm({ ...editChForm, etudiants: newE });
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Téléphone (Optionnel)</Label>
+                      <Input 
+                        placeholder="Téléphone" 
+                        value={student.telephone}
+                        onChange={(e) => {
+                          const newE = [...editChForm.etudiants];
+                          newE[index].telephone = e.target.value;
+                          setEditChForm({ ...editChForm, etudiants: newE });
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2.5 mt-2 bg-background p-2 rounded-sm border border-border/50">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`abs-edit-${index}`} 
+                          checked={student.autorisation_absence} 
+                          onCheckedChange={(v) => {
+                            const newE = [...editChForm.etudiants];
+                            newE[index].autorisation_absence = !!v;
+                            setEditChForm({ ...editChForm, etudiants: newE });
+                          }}
+                        />
+                        <label htmlFor={`abs-edit-${index}`} className="text-xs font-medium cursor-pointer">
+                          Autorisation d'absence
+                        </label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`car-edit-${index}`} 
+                          checked={student.autorisation_voiture} 
+                          onCheckedChange={(v) => {
+                            const newE = [...editChForm.etudiants];
+                            newE[index].autorisation_voiture = !!v;
+                            if (!v) newE[index].matricule_voiture = "";
+                            setEditChForm({ ...editChForm, etudiants: newE });
+                          }}
+                        />
+                        <label htmlFor={`car-edit-${index}`} className="text-xs font-medium cursor-pointer">
+                          Autorisation voiture
+                        </label>
+                      </div>
+
+                      {student.autorisation_voiture && (
+                        <div className="space-y-1 mt-1 pl-6">
+                          <Label className="text-[9px]">Matricule de voiture</Label>
+                          <Input 
+                            placeholder="Ex : 123 TUN 456" 
+                            value={student.matricule_voiture || ""}
+                            onChange={(e) => {
+                              const newE = [...editChForm.etudiants];
+                              newE[index].matricule_voiture = e.target.value;
+                              setEditChForm({ ...editChForm, etudiants: newE });
+                            }}
+                            className="h-8 text-xs font-mono"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setOpenEditCh(false)}>Annuler</Button>
+            <Button onClick={saveChambre}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

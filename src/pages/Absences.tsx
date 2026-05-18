@@ -169,7 +169,19 @@ export default function Absences() {
     const names1 = (pastAbs.find(a => a.date === prev1)?.noms_absents || "").split("\n").map(n => n.trim()).filter(Boolean);
     const names2 = (pastAbs.find(a => a.date === prev2)?.noms_absents || "").split("\n").map(n => n.trim()).filter(Boolean);
 
-    const consecutiveAbsentees = currentNames.filter(name => names1.includes(name) && names2.includes(name));
+    // Fetch students with autorisation_absence = true to bypass warnings
+    const { data: authorizedStudents } = await supabase
+      .from("etudiants")
+      .select("nom_complet")
+      .eq("autorisation_absence", true);
+
+    const authorizedNames = (authorizedStudents || []).map(s => s.nom_complet.trim().toLowerCase());
+
+    const consecutiveAbsentees = currentNames.filter(name => 
+      names1.includes(name) && 
+      names2.includes(name) &&
+      !authorizedNames.includes(name.trim().toLowerCase())
+    );
 
     if (consecutiveAbsentees.length > 0) {
       // Send notification to Admin

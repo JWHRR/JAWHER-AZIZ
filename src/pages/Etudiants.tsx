@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Users, FileDown, Edit, Trash2, ArrowLeft, Check, Car } from "lucide-react";
+import { Loader2, Users, FileDown, Edit, Trash2, ArrowLeft, Check, Car, Search } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -32,6 +32,7 @@ export default function Etudiants() {
   });
   const [selectedDortoir, setSelectedDortoir] = useState<string | null>(null);
   const [assignedDortoirs, setAssignedDortoirs] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     if (!user) return;
@@ -151,6 +152,15 @@ export default function Etudiants() {
     doc.save(`Liste_Etudiants_${format(new Date(), "yyyyMMdd")}.pdf`);
   };
 
+  const searchedStudents = etudiants.filter((e) => {
+    const query = search.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      e.nom_complet.toLowerCase().includes(query) ||
+      e.chambre_numero.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -168,6 +178,18 @@ export default function Etudiants() {
         </div>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input 
+            className="pl-9" 
+            placeholder="Rechercher un étudiant par nom ou numéro de chambre..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+          />
+        </div>
+      </div>
+
       {loading ? (
         <Card>
           <CardContent className="flex justify-center p-12">
@@ -178,6 +200,80 @@ export default function Etudiants() {
         <Card>
           <CardContent className="text-center p-12 text-muted-foreground italic">
             Aucun étudiant trouvé. Ajoutez-les via la gestion des chambres.
+          </CardContent>
+        </Card>
+      ) : search.trim() !== "" ? (
+        <Card>
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-lg">Résultats de recherche</CardTitle>
+            <CardDescription>{searchedStudents.length} étudiant(s) trouvé(s)</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 sm:p-4">
+            <div className="rounded-md border overflow-hidden">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead className="w-[120px]">Dortoir</TableHead>
+                    <TableHead className="w-[100px]">Chambre</TableHead>
+                    <TableHead>Nom Complet</TableHead>
+                    <TableHead>Téléphone</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {searchedStudents.map((e) => {
+                    const canEdit = isAdmin || assignedDortoirs.includes(e.dortoir_code);
+                    return (
+                      <TableRow key={e.id}>
+                        <TableCell className="font-semibold py-2">Dortoir {e.dortoir_code}</TableCell>
+                        <TableCell className="font-medium py-2">{e.chambre_numero}</TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{e.nom_complet}</span>
+                            {(e.autorisation_absence || e.autorisation_voiture) && (
+                              <div className="flex gap-1.5 flex-wrap">
+                                {e.autorisation_absence && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200/50">
+                                    <Check className="h-2.5 w-2.5" /> Abs. Autorisée
+                                  </span>
+                                )}
+                                {e.autorisation_voiture && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200/50">
+                                    <Car className="h-2.5 w-2.5 flex-shrink-0" /> Voiture: {e.matricule_voiture || "—"}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2">{e.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
+                        <TableCell className="text-right py-2">
+                          {canEdit ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(e)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteEtudiant(e.id, e.nom_complet)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic mr-2">Lecture seule</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {searchedStudents.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                        Aucun étudiant ne correspond à votre recherche.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       ) : selectedDortoir ? (

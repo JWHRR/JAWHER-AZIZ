@@ -275,6 +275,7 @@ export default function Absences() {
         .select(`
           id,
           nom_complet,
+          telephone,
           chambre_id,
           autorisation_absence,
           chambres!inner (
@@ -345,6 +346,7 @@ export default function Absences() {
           results.push({
             studentId: stu.id,
             nom_complet: stu.nom_complet,
+            telephone: stu.telephone,
             dortoirId,
             dortoirCode,
             chambreNumero: chambreNum,
@@ -649,6 +651,7 @@ export default function Absences() {
                           <TableHeader className="bg-muted/50">
                             <TableRow>
                               <TableHead>Étudiant</TableHead>
+                              <TableHead>Téléphone</TableHead>
                               <TableHead>Chambre</TableHead>
                               <TableHead>Nombre de Nuits</TableHead>
                               <TableHead>Période d'Absence</TableHead>
@@ -658,6 +661,7 @@ export default function Absences() {
                             {list.map((item, idx) => (
                               <TableRow key={idx} className="hover:bg-accent/40">
                                 <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                                <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
                                 <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
                                 <TableCell className="py-3">
                                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
@@ -692,6 +696,7 @@ export default function Absences() {
                     <TableHeader className="bg-muted/50">
                       <TableRow>
                         <TableHead>Étudiant</TableHead>
+                        <TableHead>Téléphone</TableHead>
                         <TableHead>Dortoir</TableHead>
                         <TableHead>Chambre</TableHead>
                         <TableHead>Nombre de Nuits</TableHead>
@@ -702,6 +707,7 @@ export default function Absences() {
                       {consecutiveAbsencesList.map((item, idx) => (
                         <TableRow key={idx} className="hover:bg-accent/40">
                           <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
+                          <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
                           <TableCell className="py-3">Dortoir {item.dortoirCode}</TableCell>
                           <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
                           <TableCell className="py-3">

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr" class="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IPEST - Direction de l'internat</title>
+    <meta name="description" content="IPEST est une application web pour la direction de l'internat.">
+    <meta name="author" content="Jawher Salhi and Mahfoudhi Aziz" />
+    <link rel="icon" type="image/png" href="/ipest-logo.png" />
+    <link rel="apple-touch-icon" href="/ipest-logo.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="IPEST - Direction de l'internat">
+    <meta property="og:description" content="IPEST est une application web pour la direction de l'internat.">
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="IPEST - Direction de l'internat">
+    <meta name="twitter:description" content="IPEST est une application web pour la direction de l'internat.">
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch((err) => console.log('SW registration failed:', err));
+        });
+      }
+    </script>
+  </body>
+</html>

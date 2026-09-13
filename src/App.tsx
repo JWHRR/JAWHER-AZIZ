@@ -81,6 +81,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* [PAUSED]
             <Route
               path="/reclamations"
               element={
@@ -89,6 +90,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            */}
+            {/* [PAUSED]
             <Route
               path="/messagerie"
               element={
@@ -97,6 +100,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            */}
             <Route
               path="/dortoirs"
               element={

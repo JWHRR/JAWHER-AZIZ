@@ -41,11 +41,11 @@ const items: NavItem[] = [
   { title: "Absences", url: "/absences", icon: ClipboardList, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Inspections", url: "/inspections", icon: DoorOpen, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Restaurant", url: "/restaurant", icon: Utensils, roles: ["ADMIN", "SURVEILLANT"] },
-  { title: "Réclamations", url: "/reclamations", icon: Wrench, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
+  // [PAUSED] { title: "Réclamations", url: "/reclamations", icon: Wrench, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
   { title: "Dortoirs", url: "/dortoirs", icon: BedDouble, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Liste des Étudiants", url: "/etudiants", icon: Users, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Demandes d'Absence", url: "/demandes-absence", icon: CalendarOff, roles: ["ADMIN", "SURVEILLANT"] },
-  { title: "Messagerie", url: "/messagerie", icon: MessageSquare, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
+  // [PAUSED] { title: "Messagerie", url: "/messagerie", icon: MessageSquare, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
   { title: "Utilisateurs", url: "/utilisateurs", icon: Users, roles: ["ADMIN"] },
 ];
 

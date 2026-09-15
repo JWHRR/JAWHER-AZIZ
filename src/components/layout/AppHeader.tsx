@@ -12,20 +12,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Bell, Check, MessageSquare } from "lucide-react";
+import { LogOut, Bell, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useChatNotifications } from "@/hooks/useChatNotifications";
 
 export function AppHeader() {
   const { profile, primaryRole, signOut, user } = useAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
-
-  const { totalUnread, clearTotalUnread } = useChatNotifications(user?.id ?? null);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -74,11 +71,6 @@ export function AppHeader() {
     if (n.link) navigate(n.link);
   };
 
-  const handleOpenChat = () => {
-    clearTotalUnread();
-    navigate("/messagerie");
-  };
-
   const displayName = profile?.full_name || user?.email?.split("@")[0] || "Utilisateur";
   const initials = displayName
     .split(" ")
@@ -100,21 +92,7 @@ export function AppHeader() {
           </Badge>
         )}
 
-        {/* Chat icon with unread badge */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative h-9 w-9 rounded-full"
-          onClick={handleOpenChat}
-          title="Messagerie"
-        >
-          <MessageSquare className="h-5 w-5" />
-          {totalUnread > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white border-2 border-background">
-              {totalUnread > 9 ? '9+' : totalUnread}
-            </span>
-          )}
-        </Button>
+
 
         {/* Notification bell */}
         <DropdownMenu>

@@ -51,13 +51,12 @@ export default function SurveillantDashboard() {
     (async () => {
       const weekStartStr = format(startOfWeek(businessDate, { weekStartsOn: 1 }), "yyyy-MM-dd");
       
-      const [da, permTpl, permOv, restoTpl, restoOv, inspections, wp, pLogs] = await Promise.all([
+      const [da, permTpl, permOv, restoTpl, restoOv, wp, pLogs] = await Promise.all([
         supabase.from("dortoir_assignments").select("*, dortoirs(*)").eq("surveillant_id", user.id),
         supabase.from("permanence_template").select("*").eq("surveillant_id", user.id).eq("weekday", wd),
         supabase.from("permanences").select("*").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("restaurant_template").select("*").eq("surveillant_id", user.id).eq("weekday", wd),
         supabase.from("restaurant_assignments").select("*").eq("surveillant_id", user.id).eq("date", today),
-        supabase.from("chambre_inspections").select("id").eq("surveillant_id", user.id).eq("date", today),
         supabase.from("weekend_permanences").select("id").eq("surveillant_id", user.id).eq("week_start_date", weekStartStr),
         supabase.from("permanence_logs").select("*").eq("surveillant_id", user.id).eq("date", today),
       ]);
@@ -73,11 +72,12 @@ export default function SurveillantDashboard() {
       const uniqueResto = Array.from(new Map(validResto.map((r: any) => [r.repas, r])).values());
       setTodayResto(uniqueResto);
       
-      setTodayInspections(inspections.data ?? []);
       setIsWeekendPerm((wp.data ?? []).length > 0);
 
       const dortoirIds = (da.data ?? []).map((d: any) => d.dortoir_id);
       if (dortoirIds.length) {
+        // Check absences: one record per dortoir per day.
+        // Any co-surveillant's submission counts for the whole dortoir.
         const { data: abs } = await supabase
           .from("absences")
           .select("dortoir_id")
@@ -87,6 +87,25 @@ export default function SurveillantDashboard() {
         dortoirIds.forEach((id: string) => (map[id] = false));
         (abs ?? []).forEach((a: any) => (map[a.dortoir_id] = true));
         setAbsenceDoneToday(map);
+
+        // Check inspections by chambre_id (scoped to this user's dortoirs),
+        // NOT by surveillant_id, so that a co-surveillant's completed inspection
+        // also shows as done for the current user.
+        const { data: myChambres } = await supabase
+          .from("chambres")
+          .select("id")
+          .in("dortoir_id", dortoirIds);
+        const myChambreIds = (myChambres ?? []).map((c: any) => c.id);
+        if (myChambreIds.length) {
+          const { data: inspData } = await supabase
+            .from("chambre_inspections")
+            .select("id")
+            .eq("date", today)
+            .in("chambre_id", myChambreIds);
+          setTodayInspections(inspData ?? []);
+        } else {
+          setTodayInspections([]);
+        }
       }
 
       const repasList = uniqueResto.map((r: any) => r.repas);

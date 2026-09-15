@@ -112,12 +112,14 @@ export default function Inspections() {
 
     setChambres(validChambreData);
 
-    // Today's inspections
+    // Today's inspections — no surveillant_id filter needed:
+    // RLS now grants access to all inspections for chambres in the user's assigned dortoirs,
+    // so co-surveillants on the same dortoir both see the completed work.
     const insQuery = supabase
       .from("chambre_inspections")
       .select("*")
       .eq("date", date);
-    const { data: ins } = isAdmin ? await insQuery : await insQuery.eq("surveillant_id", user.id);
+    const { data: ins } = await insQuery;
 
     // Recent (last 7 days) for context
     const since = format(subDays(new Date(date), 6), "yyyy-MM-dd");
@@ -128,7 +130,7 @@ export default function Inspections() {
       .lte("date", date)
       .order("date", { ascending: false })
       .limit(60);
-    const { data: rec } = isAdmin ? await recentQuery : await recentQuery.eq("surveillant_id", user.id);
+    const { data: rec } = await recentQuery;
 
     // Enrich names
     const surveillantIds = Array.from(new Set([

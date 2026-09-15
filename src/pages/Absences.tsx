@@ -174,13 +174,24 @@ export default function Absences() {
     }));
   };
 
+  const getPreviousBusinessDay = (d: Date): Date => {
+    let prev = subDays(d, 1);
+    while (isSaturday(prev) || isSunday(prev)) {
+      prev = subDays(prev, 1);
+    }
+    return prev;
+  };
+
   const checkThreeConsecutiveAbsences = async (dortoir_id: string, currentNames: string[], currentDateStr: string) => {
     if (!currentNames.length) return;
     
-    // Get last two days
+    // Get last two business days
     const current = new Date(currentDateStr);
-    const prev1 = format(subDays(current, 1), "yyyy-MM-dd");
-    const prev2 = format(subDays(current, 2), "yyyy-MM-dd");
+    const prev1Date = getPreviousBusinessDay(current);
+    const prev2Date = getPreviousBusinessDay(prev1Date);
+    
+    const prev1 = format(prev1Date, "yyyy-MM-dd");
+    const prev2 = format(prev2Date, "yyyy-MM-dd");
 
     const { data: pastAbs } = await supabase
       .from("absences")
@@ -265,16 +276,15 @@ export default function Absences() {
     let currentStreak: string[] = [];
     
     for (let i = 0; i < sorted.length; i++) {
-      const currentDate = new Date(sorted[i]);
+      const currentDateStr = sorted[i];
       if (currentStreak.length === 0) {
-        currentStreak.push(sorted[i]);
+        currentStreak.push(currentDateStr);
       } else {
         const lastDate = new Date(currentStreak[currentStreak.length - 1]);
-        const diffTime = Math.abs(lastDate.getTime() - currentDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const expectedPrevDate = format(getPreviousBusinessDay(lastDate), "yyyy-MM-dd");
         
-        if (diffDays === 1) {
-          currentStreak.push(sorted[i]);
+        if (currentDateStr === expectedPrevDate) {
+          currentStreak.push(currentDateStr);
         } else {
           if (currentStreak.length >= 3) {
             streaks.push({
@@ -283,7 +293,7 @@ export default function Absences() {
               end: currentStreak[0] // newest date
             });
           }
-          currentStreak = [sorted[i]];
+          currentStreak = [currentDateStr];
         }
       }
     }

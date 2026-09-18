@@ -253,6 +253,39 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string
+          role: Database["public"]["Enums"]["app_role"] | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string
+          role?: Database["public"]["Enums"]["app_role"] | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       permanences: {
         Row: {
           created_at: string
@@ -330,6 +363,7 @@ export type Database = {
           resolved_at: string | null
           status: Database["public"]["Enums"]["reclamation_status"]
           titre: string
+          type: string | null
           updated_at: string
         }
         Insert: {
@@ -345,6 +379,7 @@ export type Database = {
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["reclamation_status"]
           titre: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
@@ -360,6 +395,7 @@ export type Database = {
           resolved_at?: string | null
           status?: Database["public"]["Enums"]["reclamation_status"]
           titre?: string
+          type?: string | null
           updated_at?: string
         }
         Relationships: [

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Search, Trash2, FileDown, Pencil } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, FileDown, Pencil, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -22,36 +22,60 @@ import { ReclamationStatus, ReclamationPriority, STATUS_LABELS, PRIORITY_LABELS 
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { generateTablePdf } from "@/lib/pdf";
 
+const RECLAMATION_TYPES = ["Électricité", "Plomberie", "Menuiserie", "Autre"];
+
+/** Sentinelles du Select "N° du dortoir" (Radix interdit la valeur ""). */
+const NO_DORTOIR = "none";
+const OTHER_LIEU = "autre";
+
+const emptyForm = {
+  titre: "",
+  description: "",
+  lieu: "",
+  dortoir_id: NO_DORTOIR,
+  priority: "NORMALE" as ReclamationPriority,
+  type: "Autre",
+};
+
+/** Date locale au format yyyy-MM-dd (created_at est en UTC : on ne peut pas
+ *  comparer les chaînes ISO directement sans décaler d'un jour). */
+const localDay = (d: Date | string) => format(new Date(d), "yyyy-MM-dd");
+
 export default function Reclamations() {
   const { user, primaryRole } = useAuth();
   const canEditStatus = primaryRole === "ADMIN" || primaryRole === "TECHNICIEN" || primaryRole === "SURVEILLANT";
   const isAdmin = primaryRole === "ADMIN";
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [dortoirs, setDortoirs] = useState<{ id: string; code: string }[]>([]);
   const [tab, setTab] = useState<ReclamationStatus | "ALL">("ALL");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [openCreate, setOpenCreate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    titre: "",
-    description: "",
-    lieu: "",
-    dortoir_id: "",
-    priority: "NORMALE" as ReclamationPriority,
-    type: "Autre",
-  });
-  
+  const [form, setForm] = useState(emptyForm);
+
   const [openExport, setOpenExport] = useState(false);
-  const RECLAMATION_TYPES = ["Électricité", "Plomberie", "Menuiserie", "Autre"];
   const [exportTypes, setExportTypes] = useState<Set<string>>(new Set(RECLAMATION_TYPES));
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     const [r, d] = await Promise.all([
       supabase.from("reclamations").select("*, dortoirs(code)").order("created_at", { ascending: false }),
       supabase.from("dortoirs").select("id, code").order("code"),
     ]);
+
+    if (r.error) {
+      setLoadError(r.error.message);
+      setItems([]);
+      setDortoirs(d.data ?? []);
+      setLoading(false);
+      return;
+    }
+
     const reclamations = r.data ?? [];
     const creatorIds = Array.from(new Set(reclamations.map((x: any) => x.created_by).filter(Boolean)));
     let nameById: Record<string, string> = {};
@@ -70,95 +94,149 @@ export default function Reclamations() {
   useEffect(() => { load(); }, []);
 
   const save = async () => {
-    if (!user || !form.titre.trim()) { toast.error("Titre requis"); return; }
-    const finalDortoirId = (form.dortoir_id === "none" || form.dortoir_id === "autre" || !form.dortoir_id) ? null : form.dortoir_id;
-    const finalLieu = form.dortoir_id === "autre" ? "Autre.." : null;
+    if (!user) { toast.error("Session expirée, reconnectez-vous."); return; }
+    if (!form.titre.trim()) { toast.error("Le champ « Réclamation » est requis."); return; }
+    if (form.dortoir_id === OTHER_LIEU && !form.lieu.trim()) {
+      toast.error("Précisez l'emplacement.");
+      return;
+    }
 
+    const isOther = form.dortoir_id === OTHER_LIEU;
     const payload = {
-      titre: form.titre,
-      description: form.description || null,
-      lieu: finalLieu,
-      dortoir_id: finalDortoirId,
+      titre: form.titre.trim(),
+      description: form.description.trim() || null,
+      // "Autre.." => emplacement libre saisi par l'utilisateur
+      lieu: isOther ? form.lieu.trim() : null,
+      dortoir_id: isOther || form.dortoir_id === NO_DORTOIR ? null : form.dortoir_id,
       priority: form.priority,
       type: form.type,
     };
 
-    if (editingId) {
-      const { error } = await supabase.from("reclamations").update(payload).eq("id", editingId);
-      if (error) { toast.error(error.message); return; }
-      toast.success("Réclamation mise à jour");
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Modifié réclamation", entity: "reclamations", entity_id: editingId,
-      });
-    } else {
-      const { error } = await supabase.from("reclamations").insert({ ...payload, created_by: user.id });
-      if (error) { toast.error(error.message); return; }
-      
-      if (form.priority === "HAUTE") {
-        await supabase.from("notifications").insert([
-          { role: "ADMIN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" },
-          { role: "TECHNICIEN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${form.titre}`, link: "/reclamations" }
-        ]);
-      }
-      toast.success("Réclamation créée");
-      await supabase.from("activity_logs").insert({
-        user_id: user.id, action: "Créé réclamation", entity: "reclamations",
-      });
-    }
+    setSaving(true);
+    try {
+      if (editingId) {
+        // .select() : sans cela une UPDATE bloquée par la RLS renvoie
+        // "succès" avec 0 ligne et l'utilisateur ne voit aucune erreur.
+        const { data, error } = await supabase
+          .from("reclamations").update(payload).eq("id", editingId).select("id");
+        if (error) { toast.error(error.message); return; }
+        if (!data || data.length === 0) {
+          toast.error("Modification refusée : vous n'avez pas les droits sur cette réclamation.");
+          return;
+        }
+        toast.success("Réclamation mise à jour");
+        await supabase.from("activity_logs").insert({
+          user_id: user.id, action: "Modifié réclamation", entity: "reclamations", entity_id: editingId,
+        });
+      } else {
+        const { data, error } = await supabase
+          .from("reclamations").insert({ ...payload, created_by: user.id }).select("id").single();
+        if (error) { toast.error(error.message); return; }
 
-    setOpenCreate(false);
-    setEditingId(null);
-    setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE", type: "Autre" });
-    load();
+        if (form.priority === "HAUTE") {
+          await supabase.from("notifications").insert([
+            { role: "ADMIN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${payload.titre}`, link: "/reclamations" },
+            { role: "TECHNICIEN", title: "🚨 Réclamation Urgente", message: `${form.type} - ${payload.titre}`, link: "/reclamations" },
+          ]);
+        }
+        toast.success("Réclamation créée");
+        await supabase.from("activity_logs").insert({
+          user_id: user.id, action: "Créé réclamation", entity: "reclamations", entity_id: data?.id ?? null,
+        });
+      }
+
+      setOpenCreate(false);
+      setEditingId(null);
+      setForm(emptyForm);
+      load();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openNew = () => {
     setEditingId(null);
-    setForm({ titre: "", description: "", lieu: "", dortoir_id: "", priority: "NORMALE", type: "Autre" });
+    setForm(emptyForm);
     setOpenCreate(true);
   };
 
   const openEdit = (r: any) => {
     setEditingId(r.id);
     setForm({
-      titre: r.titre,
+      titre: r.titre ?? "",
       description: r.description || "",
       lieu: r.lieu || "",
-      dortoir_id: r.dortoir_id || "none",
-      priority: r.priority as ReclamationPriority,
+      // Un lieu libre sans dortoir => le Select doit revenir sur "Autre..",
+      // sinon la valeur saisie est effacée à l'enregistrement.
+      dortoir_id: r.dortoir_id ? r.dortoir_id : (r.lieu ? OTHER_LIEU : NO_DORTOIR),
+      priority: (r.priority ?? "NORMALE") as ReclamationPriority,
       type: r.type || "Autre",
     });
     setOpenCreate(true);
   };
 
-  const updateStatus = async (id: string, status: ReclamationStatus) => {
+  const updateStatus = async (r: any, status: ReclamationStatus) => {
+    if (r.status === status) return;
     const payload: any = { status };
-    if (status === "TERMINEE") payload.resolved_at = new Date().toISOString();
-    else payload.resolved_at = null;
-    const { error } = await supabase.from("reclamations").update(payload).eq("id", id);
+    payload.resolved_at = status === "TERMINEE" ? new Date().toISOString() : null;
+
+    const { data, error } = await supabase
+      .from("reclamations").update(payload).eq("id", r.id).select("id");
     if (error) { toast.error(error.message); return; }
-    toast.success("Statut mis à jour");
+    if (!data || data.length === 0) {
+      toast.error("Changement refusé : droits insuffisants sur cette réclamation.");
+      return;
+    }
+
+    toast.success(`Statut → ${STATUS_LABELS[status]}`);
+
+    // Prévenir l'auteur du suivi de sa réclamation.
+    if (r.created_by && r.created_by !== user?.id) {
+      await supabase.from("notifications").insert({
+        user_id: r.created_by,
+        title: "Réclamation mise à jour",
+        message: `${r.titre} → ${STATUS_LABELS[status]}`,
+        link: "/reclamations",
+      });
+    }
+
     await supabase.from("activity_logs").insert({
-      user_id: user?.id ?? null, action: `Statut → ${STATUS_LABELS[status]}`, entity: "reclamations", entity_id: id,
+      user_id: user?.id ?? null, action: `Statut → ${STATUS_LABELS[status]}`, entity: "reclamations", entity_id: r.id,
     });
     load();
   };
 
   const remove = async (id: string) => {
     if (!confirm("Supprimer cette réclamation ?")) return;
-    const { error } = await supabase.from("reclamations").delete().eq("id", id);
+    const { data, error } = await supabase
+      .from("reclamations").delete().eq("id", id).select("id");
     if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) {
+      toast.error("Suppression refusée : droits insuffisants.");
+      return;
+    }
     toast.success("Supprimée");
     load();
   };
 
-  const filtered = items
-    .filter((r) => {
-      if (tab !== "ALL" && r.status !== tab) return false;
-      if (search && !`${r.titre} ${r.description ?? ""} ${r.lieu ?? ""}`.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const matchesSearch = (r: any) => {
+    if (!search.trim()) return true;
+    const haystack = [
+      r.titre, r.description, r.lieu, r.type,
+      r.dortoirs?.code, r.creator?.full_name,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return haystack.includes(search.trim().toLowerCase());
+  };
+
+  const visible = items.filter((r) => {
+    if (typeFilter !== "ALL" && (r.type || "Autre") !== typeFilter) return false;
+    return matchesSearch(r);
+  });
+
+  const filtered = visible.filter((r) => tab === "ALL" || r.status === tab);
+
+  const countFor = (s: ReclamationStatus | "ALL") =>
+    s === "ALL" ? visible.length : visible.filter((r) => r.status === s).length;
 
   const exportTodayPdf = () => {
     if (exportTypes.size === 0) {
@@ -166,28 +244,40 @@ export default function Reclamations() {
       return;
     }
 
-    const today = format(new Date(), "yyyy-MM-dd");
-    const todayItems = items.filter((r) => r.created_at.startsWith(today) && exportTypes.has(r.type || "Autre"));
-    const pendingItems = items.filter((r) => r.status !== "TERMINEE" && exportTypes.has(r.type || "Autre"));
+    const today = localDay(new Date());
+    const selected = items.filter((r) => exportTypes.has(r.type || "Autre"));
+    const todayItems = selected.filter((r) => localDay(r.created_at) === today);
+    const todayIds = new Set(todayItems.map((r) => r.id));
+    // Sans ce filtre, une réclamation créée aujourd'hui et non terminée
+    // apparaissait deux fois dans le PDF.
+    const pendingItems = selected.filter((r) => r.status !== "TERMINEE" && !todayIds.has(r.id));
+
+    if (todayItems.length === 0 && pendingItems.length === 0) {
+      toast.error("Aucune réclamation à exporter pour ces types.");
+      return;
+    }
 
     const buildRows = (rows: any[]) => rows.map((r) => [
       r.type || "Autre",
       r.titre,
       r.description || "—",
       r.dortoirs?.code ? r.dortoirs.code : (r.lieu || "—"),
-      PRIORITY_LABELS[r.priority as ReclamationPriority],
+      PRIORITY_LABELS[r.priority as ReclamationPriority] ?? "—",
+      STATUS_LABELS[r.status as ReclamationStatus] ?? "—",
       r.creator?.full_name ?? "—",
     ]);
 
     generateTablePdf({
+      // 7 colonnes : illisible en portrait
+      orientation: "landscape",
       title: "Réclamations",
       subtitle: `Filtres: ${Array.from(exportTypes).join(", ")} | Du jour (${todayItems.length}) + non terminées (${pendingItems.length}) — ${format(new Date(), "d MMMM yyyy", { locale: fr })}`,
       filename: `reclamations_${today}.pdf`,
-      head: ["Type", "Réclamation", "Description", "N° du dortoir", "Priorité", "Auteur"],
+      head: ["Type", "Réclamation", "Description", "N° du dortoir", "Priorité", "Statut", "Auteur"],
       rows: [
-        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", "", ""]] : []),
+        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", "", "", ""]] : []),
         ...buildRows(todayItems),
-        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", "", ""]] : []),
+        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", "", "", ""]] : []),
         ...buildRows(pendingItems),
       ],
     });
@@ -210,7 +300,7 @@ export default function Reclamations() {
           <p className="text-muted-foreground mt-1">Suivi et résolution des incidents</p>
         </div>
         <div className="flex gap-2">
-          {(isAdmin || canEditStatus) && (
+          {canEditStatus && (
             <Dialog open={openExport} onOpenChange={setOpenExport}>
               <DialogTrigger asChild>
                 <Button variant="outline"><FileDown className="h-4 w-4 mr-1" /> Exporter PDF</Button>
@@ -222,10 +312,10 @@ export default function Reclamations() {
                   <div className="space-y-2">
                     {RECLAMATION_TYPES.map((t) => (
                       <div key={t} className="flex items-center gap-2">
-                        <Checkbox 
-                          id={`exp-${t}`} 
-                          checked={exportTypes.has(t)} 
-                          onCheckedChange={() => toggleExportType(t)} 
+                        <Checkbox
+                          id={`exp-${t}`}
+                          checked={exportTypes.has(t)}
+                          onCheckedChange={() => toggleExportType(t)}
                         />
                         <Label htmlFor={`exp-${t}`} className="cursor-pointer">{t}</Label>
                       </div>
@@ -248,14 +338,18 @@ export default function Reclamations() {
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label>Réclamation *</Label>
-                  <Input value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} placeholder="Ex : Robinet cassé" />
+                  <Input
+                    value={form.titre}
+                    onChange={(e) => setForm({ ...form, titre: e.target.value })}
+                    placeholder="Ex : Robinet cassé"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Type de réclamation</Label>
                   <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {RECLAMATION_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {RECLAMATION_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -266,12 +360,12 @@ export default function Reclamations() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>N° du dortoir</Label>
-                    <Select value={form.dortoir_id || "none"} onValueChange={(v) => setForm({ ...form, dortoir_id: v })}>
+                    <Select value={form.dortoir_id} onValueChange={(v) => setForm({ ...form, dortoir_id: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Aucun</SelectItem>
+                        <SelectItem value={NO_DORTOIR}>Aucun</SelectItem>
                         {dortoirs.map((d) => <SelectItem key={d.id} value={d.id}>{d.code}</SelectItem>)}
-                        <SelectItem value="autre">Autre..</SelectItem>
+                        <SelectItem value={OTHER_LIEU}>Autre..</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -287,10 +381,23 @@ export default function Reclamations() {
                     </Select>
                   </div>
                 </div>
+                {form.dortoir_id === OTHER_LIEU && (
+                  <div className="space-y-2">
+                    <Label>Emplacement *</Label>
+                    <Input
+                      value={form.lieu}
+                      onChange={(e) => setForm({ ...form, lieu: e.target.value })}
+                      placeholder="Ex : Couloir bloc B, 2ème étage"
+                    />
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setOpenCreate(false); setEditingId(null); }}>Annuler</Button>
-                <Button onClick={save}>{editingId ? "Enregistrer" : "Créer"}</Button>
+                <Button onClick={save} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  {editingId ? "Enregistrer" : "Créer"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -300,20 +407,36 @@ export default function Reclamations() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Rechercher (titre, description, lieu, type, auteur)…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="sm:w-[190px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">Tous les types</SelectItem>
+            {RECLAMATION_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList>
-          <TabsTrigger value="ALL">Toutes</TabsTrigger>
-          <TabsTrigger value="EN_ATTENTE">En attente</TabsTrigger>
-          <TabsTrigger value="EN_COURS">En cours</TabsTrigger>
-          <TabsTrigger value="TERMINEE">Terminées</TabsTrigger>
+          <TabsTrigger value="ALL">Toutes ({countFor("ALL")})</TabsTrigger>
+          <TabsTrigger value="EN_ATTENTE">En attente ({countFor("EN_ATTENTE")})</TabsTrigger>
+          <TabsTrigger value="EN_COURS">En cours ({countFor("EN_COURS")})</TabsTrigger>
+          <TabsTrigger value="TERMINEE">Terminées ({countFor("TERMINEE")})</TabsTrigger>
         </TabsList>
         <TabsContent value={tab} className="mt-4">
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          ) : loadError ? (
+            <Card>
+              <CardContent className="py-8 text-center space-y-3">
+                <AlertTriangle className="h-6 w-6 mx-auto text-destructive" />
+                <p className="font-medium">Impossible de charger les réclamations.</p>
+                <p className="text-sm text-muted-foreground">{loadError}</p>
+                <Button variant="outline" size="sm" onClick={load}>Réessayer</Button>
+              </CardContent>
+            </Card>
           ) : filtered.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">Aucune réclamation.</CardContent></Card>
           ) : (
@@ -323,7 +446,7 @@ export default function Reclamations() {
                   <TableRow>
                     <TableHead>Réclamation</TableHead>
                     <TableHead>Emplacement</TableHead>
-                    <TableHead>Auteur & Date</TableHead>
+                    <TableHead>Auteur &amp; Date</TableHead>
                     <TableHead>Statut</TableHead>
                     <TableHead>Priorité</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -363,7 +486,7 @@ export default function Reclamations() {
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {canEditStatus && (
-                            <Select value={r.status} onValueChange={(v) => updateStatus(r.id, v as ReclamationStatus)}>
+                            <Select value={r.status} onValueChange={(v) => updateStatus(r, v as ReclamationStatus)}>
                               <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {(Object.keys(STATUS_LABELS) as ReclamationStatus[]).map((s) => (
@@ -373,12 +496,12 @@ export default function Reclamations() {
                             </Select>
                           )}
                           {(isAdmin || r.created_by === user?.id) && (
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(r)}>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" title="Modifier" onClick={() => openEdit(r)}>
                               <Pencil className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           )}
-                          {isAdmin && (
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => remove(r.id)}>
+                          {(isAdmin || r.created_by === user?.id) && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8" title="Supprimer" onClick={() => remove(r.id)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           )}

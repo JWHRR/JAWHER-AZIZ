@@ -302,7 +302,6 @@ export default function AdminDashboard() {
     { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/absences" },
     { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant" },
     { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/inspections" },
-    { label: "Réclamations en attente", value: stats.reclamationsEnAttente, icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations" },
   ];
 
   return (
@@ -427,7 +426,6 @@ export default function AdminDashboard() {
             <CardDescription>État global</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm"><span>En attente</span><span className="font-semibold text-warning">{stats.reclamationsEnAttente}</span></div>
             <div className="flex justify-between text-sm"><span>En cours</span><span className="font-semibold text-primary">{stats.reclamationsEnCours}</span></div>
             <div className="flex justify-between text-sm"><span>Terminées</span><span className="font-semibold text-success">{stats.reclamationsTerminees}</span></div>
             <Button asChild variant="outline" size="sm" className="w-full mt-2">

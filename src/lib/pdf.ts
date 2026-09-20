@@ -10,6 +10,8 @@ interface PdfOpts {
   head: string[];
   rows: (string | number)[][];
   foot?: string[][];
+  /** "landscape" pour les tableaux larges (7 colonnes ou plus). */
+  orientation?: "portrait" | "landscape";
 }
 
 /**
@@ -17,11 +19,14 @@ interface PdfOpts {
  * Header includes IPEST branding line, generated-on date, title and subtitle.
  */
 export function generateTablePdf(opts: PdfOpts) {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: opts.orientation ?? "portrait", unit: "mm", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const rightX = pageW - 14;
 
   // Header band
   doc.setFillColor(37, 99, 235); // primary blue
-  doc.rect(0, 0, 210, 22, "F");
+  doc.rect(0, 0, pageW, 22, "F");
   doc.setTextColor(255);
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
@@ -31,7 +36,7 @@ export function generateTablePdf(opts: PdfOpts) {
   doc.text("Gestion des surveillants", 14, 16);
   doc.text(
     `Généré le ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: fr })}`,
-    196,
+    rightX,
     16,
     { align: "right" }
   );
@@ -68,8 +73,8 @@ export function generateTablePdf(opts: PdfOpts) {
     doc.setTextColor(140);
     doc.text(
       `Page ${i} / ${pageCount}`,
-      196,
-      290,
+      rightX,
+      pageH - 7,
       { align: "right" }
     );
   }

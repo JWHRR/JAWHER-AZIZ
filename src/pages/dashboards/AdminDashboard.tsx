@@ -108,11 +108,11 @@ export default function AdminDashboard() {
         .select("dortoir_id, surveillant_id, dortoirs(code)");
       const { data: yAbs } = await supabase
         .from("absences")
-        .select("dortoir_id, surveillant_id")
+        .select("dortoir_id")
         .eq("date", yesterday);
-      const absDoneSet = new Set((yAbs ?? []).map((x: any) => `${x.surveillant_id}:${x.dortoir_id}`));
+      const absDoneSet = new Set((yAbs ?? []).map((x: any) => x.dortoir_id));
       (dortoirAssigns ?? []).forEach((da: any) => {
-        if (nameById[da.surveillant_id] && !absDoneSet.has(`${da.surveillant_id}:${da.dortoir_id}`)) {
+        if (nameById[da.surveillant_id] && !absDoneSet.has(da.dortoir_id)) {
           missing.push({
             type: "ABSENCE",
             surveillant_id: da.surveillant_id,
@@ -159,20 +159,19 @@ export default function AdminDashboard() {
         }
       });
 
-      // 3. Inspections: each dortoir-assigned surveillant should have done at least 1 inspection yesterday
+      // 3. Inspections: each dortoir must have at least 1 inspection yesterday
       const { data: yIns } = await supabase
         .from("chambre_inspections")
-        .select("surveillant_id")
+        .select("chambres!inner(dortoir_id)")
         .eq("date", yesterday);
-      const inspDoneSet = new Set((yIns ?? []).map((x: any) => x.surveillant_id));
-      const surveillantsWithDortoirs = new Set((dortoirAssigns ?? []).map((d: any) => d.surveillant_id));
-      surveillantsWithDortoirs.forEach((sid) => {
-        if (nameById[sid as string] && !inspDoneSet.has(sid)) {
+      const inspDoneSet = new Set((yIns ?? []).map((x: any) => x.chambres?.dortoir_id).filter(Boolean));
+      (dortoirAssigns ?? []).forEach((da: any) => {
+        if (nameById[da.surveillant_id] && !inspDoneSet.has(da.dortoir_id)) {
           missing.push({
             type: "INSPECTION",
-            surveillant_id: sid as string,
-            surveillantName: nameById[sid as string],
-            detail: "Inspection chambre",
+            surveillant_id: da.surveillant_id,
+            surveillantName: nameById[da.surveillant_id],
+            detail: `Inspection Dortoir ${da.dortoirs?.code ?? "?"}`,
           });
         }
       });
@@ -186,9 +185,9 @@ export default function AdminDashboard() {
       // Today absences
       const { data: tAbs } = await supabase
         .from("absences")
-        .select("dortoir_id, surveillant_id")
+        .select("dortoir_id")
         .eq("date", today);
-      const tAbsSet = new Set((tAbs ?? []).map((x: any) => `${x.surveillant_id}:${x.dortoir_id}`));
+      const tAbsSet = new Set((tAbs ?? []).map((x: any) => x.dortoir_id));
       (dortoirAssigns ?? []).forEach((da: any) => {
         const name = nameById[da.surveillant_id];
         if (!name) return;
@@ -198,7 +197,7 @@ export default function AdminDashboard() {
           surveillantName: name,
           detail: `Absences D. ${da.dortoirs?.code ?? "?"}`,
         };
-        if (tAbsSet.has(`${da.surveillant_id}:${da.dortoir_id}`)) done.push(item);
+        if (tAbsSet.has(da.dortoir_id)) done.push(item);
         else pending.push(item);
       });
 

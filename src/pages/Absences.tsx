@@ -269,8 +269,16 @@ export default function Absences() {
   const findStreaks = (dates: string[]) => {
     if (dates.length === 0) return [];
     
+    // Exclude Saturday (6) and Sunday (0) — weekends don't count as absence days
+    const weekdayDates = dates.filter(d => {
+      const day = new Date(d).getDay();
+      return day !== 0 && day !== 6;
+    });
+
+    if (weekdayDates.length === 0) return [];
+
     // Sort dates descending
-    const sorted = [...new Set(dates)].sort((a, b) => b.localeCompare(a));
+    const sorted = [...new Set(weekdayDates)].sort((a, b) => b.localeCompare(a));
     
     const streaks: { count: number; start: string; end: string }[] = [];
     let currentStreak: string[] = [];

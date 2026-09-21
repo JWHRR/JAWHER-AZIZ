@@ -18,10 +18,10 @@ import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { generateTablePdf } from "@/lib/pdf";
-import { getBusinessDate } from "@/lib/time";
+import { getBusinessDate, parseLocalDate } from "@/lib/time";
 
 const isRedundantRestoSlot = (date: Date | string, repas: RepasType | string) => {
-  const wd = typeof date === "string" ? dateToWeekday(new Date(date)) : dateToWeekday(date);
+  const wd = dateToWeekday(parseLocalDate(date));
   if (wd === "SAM" && repas === "DINER") return true;
   if (wd === "DIM") return true;
   return false;
@@ -49,8 +49,7 @@ export default function Restaurant() {
     if (!user) return;
     setLoading(true);
     try {
-      const [y, m, d] = date.split("-").map(Number);
-      const wd = dateToWeekday(new Date(y, m - 1, d));
+      const wd = dateToWeekday(parseLocalDate(date));
 
       const [aRes, lRes, tRes] = await Promise.all([
         supabase.from("restaurant_assignments").select("*").eq("date", date).order("repas"),
@@ -144,8 +143,8 @@ export default function Restaurant() {
 
   const exportWeekPdf = async () => {
     // Sunday-anchored: take the week containing the selected date (Mon-Sun)
-    const ws = startOfWeek(new Date(date), { weekStartsOn: 1 });
-    const we = endOfWeek(new Date(date), { weekStartsOn: 1 });
+    const ws = startOfWeek(parseLocalDate(date), { weekStartsOn: 1 });
+    const we = endOfWeek(parseLocalDate(date), { weekStartsOn: 1 });
     const start = format(ws, "yyyy-MM-dd");
     const end = format(we, "yyyy-MM-dd");
 
@@ -163,7 +162,7 @@ export default function Restaurant() {
     const nameById: Record<string, string> = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name || "—"]));
 
     const rows = (weekLogs ?? []).map((l: any) => [
-      format(new Date(l.date), "EEE dd/MM", { locale: fr }),
+      format(parseLocalDate(l.date), "EEE dd/MM", { locale: fr }),
       REPAS_LABELS[l.repas as RepasType],
       nameById[l.surveillant_id] || "—",
       l.nombre_eleves,
@@ -186,7 +185,7 @@ export default function Restaurant() {
     if (hasLog) return { label: "Terminé", color: "bg-green-500 hover:bg-green-600 text-white" };
     
     const now = new Date();
-    const targetDate = new Date(date);
+    const targetDate = parseLocalDate(date);
     
     // Simple logic: if date is past -> Missed. If today -> In progress. If future -> In progress/waiting.
     // We can refine this with hours, but basic logic suffices.
@@ -223,7 +222,7 @@ export default function Restaurant() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
+          <CardTitle className="text-base">{format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
           <CardDescription>
             {isAdmin ? "Vue de tous les services" : "Vos services affectés"}
           </CardDescription>
@@ -314,7 +313,7 @@ export default function Restaurant() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{REPAS_LABELS[form.repas]}</DialogTitle>
-            <DialogDescription>{format(new Date(date), "dd/MM/yyyy")}</DialogDescription>
+            <DialogDescription>{format(parseLocalDate(date), "dd/MM/yyyy")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

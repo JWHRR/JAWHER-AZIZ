@@ -86,3 +86,25 @@ export const getBusinessDate = (dateOverride?: Date): Date => {
 
   return new Date(year, month - 1, day, hour % 24, minute, second, baseDate.getMilliseconds());
 };
+
+/**
+ * Parses a "yyyy-MM-dd" string as a LOCAL calendar day.
+ *
+ * `new Date("2026-09-21")` is parsed by JavaScript as UTC midnight, which is
+ * still the 20th for any timezone behind UTC. Anchoring at midday keeps the
+ * day stable whatever the offset. Use this everywhere a date input, a URL
+ * parameter or a database `date` column is turned back into a Date.
+ */
+export const parseLocalDate = (value: string | Date): Date => {
+  if (value instanceof Date) return value;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!m) return new Date(value);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0);
+};
+
+/** The current business day as a "yyyy-MM-dd" string. */
+export const getBusinessDateStr = (): string => {
+  const d = getBusinessDate();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};

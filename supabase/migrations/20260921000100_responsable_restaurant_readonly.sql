@@ -8,6 +8,23 @@
 -- update a row on its own behalf. We now require the caller to actually be a
 -- SURVEILLANT (or ADMIN), so the new role can look but never touch.
 
+-- ── Lecture ─────────────────────────────────────────────────────────────────
+-- Forcé ici aussi : selon que la migration 20260426 a été appliquée ou non, la
+-- base peut encore porter la version restrictive de database_setup.sql, qui
+-- limite la lecture à l'ADMIN et au surveillant propriétaire de la ligne — le
+-- Responsable Restaurant ne verrait alors aucun pointage.
+DROP POLICY IF EXISTS "restlogs_select" ON public.restaurant_logs;
+CREATE POLICY "restlogs_select"
+ON public.restaurant_logs FOR SELECT
+TO authenticated
+USING (true);
+
+DROP POLICY IF EXISTS "weekend_select" ON public.weekend_effectifs;
+CREATE POLICY "weekend_select"
+ON public.weekend_effectifs FOR SELECT
+TO authenticated
+USING (true);
+
 -- ── restaurant_logs ─────────────────────────────────────────────────────────
 DROP POLICY IF EXISTS "restlogs_insert_self_or_admin" ON public.restaurant_logs;
 CREATE POLICY "restlogs_insert_self_or_admin"

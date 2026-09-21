@@ -9,7 +9,7 @@ import { Loader2, Utensils, CalendarDays, Sun } from "lucide-react";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
-import { getBusinessDate } from "@/lib/time";
+import { getBusinessDate, parseLocalDate } from "@/lib/time";
 
 const REPAS_ORDER: RepasType[] = ["PETIT_DEJEUNER", "DEJEUNER", "DINER"];
 
@@ -49,10 +49,12 @@ export default function ResponsableRestaurantDashboard() {
   const [week, setWeek] = useState<DayRow[]>([]);
   const [weekendRows, setWeekendRows] = useState<{ code: string; nombre: number }[]>([]);
   const [weekendDate, setWeekendDate] = useState<Date>(() => weekendAnchor(getBusinessDate()));
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setError(null);
       try {
         const businessDate = getBusinessDate();
         const monday = startOfWeek(businessDate, { weekStartsOn: 1 });
@@ -63,7 +65,10 @@ export default function ResponsableRestaurantDashboard() {
         const anchor = weekendAnchor(businessDate);
         setWeekendDate(anchor);
 
-        const [logsRes, weRes] = await Promise.all([
+        // Les jointures imbriquées de PostgREST dépendent des clés étrangères et
+        // des droits sur la table liée ; on joint côté client, comme le fait la
+        // page Restaurant, pour que l'affichage ne dépende que d'un SELECT simple.
+        const [logsRes, weRes, dortRes] = await Promise.all([
           supabase
             .from("restaurant_logs")
             .select("date, repas, nombre_eleves")
@@ -71,9 +76,18 @@ export default function ResponsableRestaurantDashboard() {
             .lte("date", weekEnd),
           supabase
             .from("weekend_effectifs")
-            .select("nombre_presents, dortoirs(code)")
+            .select("dortoir_id, nombre_presents")
             .eq("semaine_du", format(anchor, "yyyy-MM-dd")),
+          supabase.from("dortoirs").select("id, code"),
         ]);
+
+        // Un blocage RLS renvoie une liste vide sans erreur : on affiche donc
+        // explicitement toute erreur plutôt que de laisser un tableau muet.
+        const firstError = logsRes.error ?? weRes.error ?? dortRes.error;
+        if (firstError) {
+          console.error("Chargement restaurant:", firstError);
+          setError(firstError.message);
+        }
 
         // Plusieurs surveillants peuvent saisir le même service : on additionne.
         const byDate: Record<string, Record<string, number>> = {};
@@ -102,9 +116,12 @@ export default function ResponsableRestaurantDashboard() {
         setWeek(rows);
         setToday(rows.find((r) => r.date === format(businessDate, "yyyy-MM-dd")) ?? null);
 
+        const codeById: Record<string, string> = Object.fromEntries(
+          (dortRes.data ?? []).map((d: any) => [d.id, d.code])
+        );
         setWeekendRows(
           (weRes.data ?? []).map((w: any) => ({
-            code: w.dortoirs?.code ?? "—",
+            code: codeById[w.dortoir_id] ?? "—",
             nombre: w.nombre_presents ?? 0,
           }))
         );
@@ -146,6 +163,12 @@ export default function ResponsableRestaurantDashboard() {
         </p>
       </div>
 
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Impossible de lire les effectifs : {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {REPAS_ORDER.map((r) => {
           const v = today?.perRepas[r];
@@ -174,8 +197,8 @@ export default function ResponsableRestaurantDashboard() {
           </CardTitle>
           <CardDescription>
             Comptage relevé par les surveillants à chaque service — semaine du{" "}
-            {week.length ? format(new Date(week[0].date), "d MMM", { locale: fr }) : ""} au{" "}
-            {week.length ? format(new Date(week[6].date), "d MMM yyyy", { locale: fr }) : ""}
+            {week.length ? format(parseLocalDate(week[0].date), "d MMM", { locale: fr }) : ""} au{" "}
+            {week.length ? format(parseLocalDate(week[6].date), "d MMM yyyy", { locale: fr }) : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>

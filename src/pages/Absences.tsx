@@ -19,7 +19,7 @@ import { DoneBadge } from "@/components/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
-import { getBusinessDate } from "@/lib/time";
+import { getBusinessDate, parseLocalDate } from "@/lib/time";
 
 interface DortoirAssign {
   id: string;
@@ -55,12 +55,12 @@ export default function Absences() {
 
   const load = async () => {
     setLoading(true);
-    const isThu = isThursday(new Date(date));
-    const isFri = isFriday(new Date(date));
-    const isSat = isSaturday(new Date(date));
-    const isSun = isSunday(new Date(date));
-    const isMon = isMonday(new Date(date));
-    const thuDate = isThu ? date : (isFri ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(new Date(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(new Date(date), 3), "yyyy-MM-dd") : (isMon ? format(subDays(new Date(date), 4), "yyyy-MM-dd") : null))));
+    const isThu = isThursday(parseLocalDate(date));
+    const isFri = isFriday(parseLocalDate(date));
+    const isSat = isSaturday(parseLocalDate(date));
+    const isSun = isSunday(parseLocalDate(date));
+    const isMon = isMonday(parseLocalDate(date));
+    const thuDate = isThu ? date : (isFri ? format(subDays(parseLocalDate(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(parseLocalDate(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(parseLocalDate(date), 3), "yyyy-MM-dd") : (isMon ? format(subDays(parseLocalDate(date), 4), "yyyy-MM-dd") : null))));
 
     // Load all dortoirs and weekend effectifs for all authenticated users
     const { data: dortData } = await supabase.from("dortoirs").select("id, code").order("code");
@@ -476,11 +476,11 @@ export default function Absences() {
 
   const saveWeekend = async () => {
     if (!user) return;
-    const isThu = isThursday(new Date(date));
-    const isFri = isFriday(new Date(date));
-    const isSat = isSaturday(new Date(date));
-    const isSun = isSunday(new Date(date));
-    const thuDate = isThu ? date : (isFri ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(new Date(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(new Date(date), 3), "yyyy-MM-dd") : null)));
+    const isThu = isThursday(parseLocalDate(date));
+    const isFri = isFriday(parseLocalDate(date));
+    const isSat = isSaturday(parseLocalDate(date));
+    const isSun = isSunday(parseLocalDate(date));
+    const thuDate = isThu ? date : (isFri ? format(subDays(parseLocalDate(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(parseLocalDate(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(parseLocalDate(date), 3), "yyyy-MM-dd") : null)));
     if (!thuDate) return;
     
     const payload = {
@@ -504,13 +504,13 @@ export default function Absences() {
   };
 
   const exportWeekendPdf = () => {
-    const isThu = isThursday(new Date(date));
-    const isFri = isFriday(new Date(date));
-    const isSat = isSaturday(new Date(date));
-    const isSun = isSunday(new Date(date));
-    const isMon = isMonday(new Date(date));
+    const isThu = isThursday(parseLocalDate(date));
+    const isFri = isFriday(parseLocalDate(date));
+    const isSat = isSaturday(parseLocalDate(date));
+    const isSun = isSunday(parseLocalDate(date));
+    const isMon = isMonday(parseLocalDate(date));
     if (!isThu && !isFri && !isSat && !isSun && !isMon) return;
-    const thuDate = isThu ? date : (isFri ? format(subDays(new Date(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(new Date(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(new Date(date), 3), "yyyy-MM-dd") : format(subDays(new Date(date), 4), "yyyy-MM-dd"))));
+    const thuDate = isThu ? date : (isFri ? format(subDays(parseLocalDate(date), 1), "yyyy-MM-dd") : (isSat ? format(subDays(parseLocalDate(date), 2), "yyyy-MM-dd") : (isSun ? format(subDays(parseLocalDate(date), 3), "yyyy-MM-dd") : format(subDays(parseLocalDate(date), 4), "yyyy-MM-dd"))));
     
     const dortoirsList = allDortoirs;
     const totalCapacite = 0;
@@ -525,7 +525,7 @@ export default function Absences() {
 
     generateTablePdf({
       title: "Effectif Weekend",
-      subtitle: `Exporté le ${format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })} (Saisie du jeudi)`,
+      subtitle: `Exporté le ${format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })} (Saisie du jeudi)`,
       filename: `effectif_weekend_${thuDate}.pdf`,
       head: ["Dortoir", "Présents ce weekend"],
       rows,
@@ -549,7 +549,7 @@ export default function Absences() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && <WeeklyAbsenceHistory />}
-          {(isThursday(new Date(date)) || isFriday(new Date(date)) || isSaturday(new Date(date)) || isSunday(new Date(date)) || isMonday(new Date(date))) && (
+          {(isThursday(parseLocalDate(date)) || isFriday(parseLocalDate(date)) || isSaturday(parseLocalDate(date)) || isSunday(parseLocalDate(date)) || isMonday(parseLocalDate(date))) && (
             <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="border-primary text-primary">
               <FileDown className="h-4 w-4 mr-1" /> Effectif weekend (PDF)
             </Button>
@@ -593,7 +593,7 @@ export default function Absences() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">{format(new Date(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
+              <CardTitle className="text-base">{format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
               <CardDescription>{isAdmin ? "Tous les dortoirs" : "Vos dortoirs affectés"}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -628,7 +628,7 @@ export default function Absences() {
           </Card>
 
           {/* SECTION EFFECTIF WEEKEND */}
-          {isThursday(new Date(date)) && !isAdmin && (
+          {isThursday(parseLocalDate(date)) && !isAdmin && (
             <Card className="border-primary">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -829,7 +829,7 @@ export default function Absences() {
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier l'effectif" : "Nouvel effectif"}</DialogTitle>
             <DialogDescription>
-              Dortoir {dortoirsToShow.find((d) => d.id === form.dortoir_id)?.code} · {format(new Date(date), "dd/MM/yyyy")}
+              Dortoir {dortoirsToShow.find((d) => d.id === form.dortoir_id)?.code} · {format(parseLocalDate(date), "dd/MM/yyyy")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

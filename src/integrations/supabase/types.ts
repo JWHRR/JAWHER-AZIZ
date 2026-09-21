@@ -585,7 +585,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "ADMIN" | "SURVEILLANT" | "TECHNICIEN"
+      app_role: "ADMIN" | "SURVEILLANT" | "TECHNICIEN" | "RESPONSABLE_RESTAURANT"
       permanence_slot: "MATIN" | "APRES_MIDI" | "NUIT"
       reclamation_priority: "BASSE" | "NORMALE" | "HAUTE"
       reclamation_status: "EN_ATTENTE" | "EN_COURS" | "TERMINEE"
@@ -718,7 +718,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["ADMIN", "SURVEILLANT", "TECHNICIEN"],
+      app_role: ["ADMIN", "SURVEILLANT", "TECHNICIEN", "RESPONSABLE_RESTAURANT"],
       permanence_slot: ["MATIN", "APRES_MIDI", "NUIT"],
       reclamation_priority: ["BASSE", "NORMALE", "HAUTE"],
       reclamation_status: ["EN_ATTENTE", "EN_COURS", "TERMINEE"],

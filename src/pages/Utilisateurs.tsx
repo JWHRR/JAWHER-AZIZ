@@ -48,7 +48,7 @@ interface UserRow {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const ROLES: AppRole[] = ["ADMIN", "SURVEILLANT", "TECHNICIEN"];
+const ROLES: AppRole[] = ["ADMIN", "SURVEILLANT", "TECHNICIEN", "RESPONSABLE_RESTAURANT"];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star, Pencil, Trash2 } fr
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { getBusinessDate } from "@/lib/time";
+import { getBusinessDate, parseLocalDate } from "@/lib/time";
 
 interface Chambre {
   id: string;
@@ -122,7 +122,7 @@ export default function Inspections() {
     const { data: ins } = await insQuery;
 
     // Recent (last 7 days) for context
-    const since = format(subDays(new Date(date), 6), "yyyy-MM-dd");
+    const since = format(subDays(parseLocalDate(date), 6), "yyyy-MM-dd");
     const recentQuery = supabase
       .from("chambre_inspections")
       .select("*")
@@ -307,7 +307,7 @@ export default function Inspections() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Inspections du {format(new Date(date), "d MMMM yyyy", { locale: fr })}
+                Inspections du {format(parseLocalDate(date), "d MMMM yyyy", { locale: fr })}
               </CardTitle>
               <CardDescription>{inspections.length} inspection(s) ce jour</CardDescription>
             </CardHeader>
@@ -387,7 +387,7 @@ export default function Inspections() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingId ? "Modifier l'inspection" : "Nouvelle inspection"}</DialogTitle>
-            <DialogDescription>{format(new Date(date), "EEEE d MMMM", { locale: fr })}</DialogDescription>
+            <DialogDescription>{format(parseLocalDate(date), "EEEE d MMMM", { locale: fr })}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

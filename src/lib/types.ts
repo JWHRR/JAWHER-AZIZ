@@ -1,4 +1,4 @@
-export type AppRole = "ADMIN" | "SURVEILLANT" | "TECHNICIEN";
+export type AppRole = "ADMIN" | "SURVEILLANT" | "TECHNICIEN" | "RESPONSABLE_RESTAURANT";
 export type PermanenceSlot = "MATIN" | "APRES_MIDI" | "NUIT";
 export type RepasType = "PETIT_DEJEUNER" | "DEJEUNER" | "DINER";
 export type ReclamationStatus = "EN_ATTENTE" | "EN_COURS" | "TERMINEE";
@@ -27,6 +27,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   ADMIN: "Administrateur",
   SURVEILLANT: "Surveillant",
   TECHNICIEN: "Technicien",
+  RESPONSABLE_RESTAURANT: "Responsable Restaurant",
 };
 
 export const STATUS_LABELS: Record<ReclamationStatus, string> = {

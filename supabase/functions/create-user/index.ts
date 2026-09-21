@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       .eq("user_id", newUser.id);
 
     // ── 5. Optionally override the default SURVEILLANT role ───────────────────
-    const targetRole = (role && ["ADMIN", "SURVEILLANT", "TECHNICIEN"].includes(role))
+    const targetRole = (role && ["ADMIN", "SURVEILLANT", "TECHNICIEN", "RESPONSABLE_RESTAURANT"].includes(role))
       ? role
       : "SURVEILLANT";
 

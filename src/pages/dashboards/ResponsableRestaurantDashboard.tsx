@@ -1,0 +1,355 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import { Loader2, Utensils, CalendarDays, Sun, FileDown } from "lucide-react";
+import { addDays, format, startOfWeek, subDays } from "date-fns";
+import { fr } from "date-fns/locale";
+import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
+import { getBusinessDate, parseLocalDate } from "@/lib/time";
+import { generateTablePdf } from "@/lib/pdf";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+
+const REPAS_ORDER: RepasType[] = ["PETIT_DEJEUNER", "DEJEUNER", "DINER"];
+
+/** null = service non assuré, undefined = service non encore saisi. */
+type Count = number | null | undefined;
+
+/** Services non assurés : le dîner du samedi et toute la journée du dimanche. */
+const isRedundantRestoSlot = (date: Date, repas: RepasType) => {
+  const wd = dateToWeekday(date);
+  if (wd === "SAM" && repas === "DINER") return true;
+  if (wd === "DIM") return true;
+  return false;
+};
+
+/**
+ * Les effectifs weekend sont enregistrés sous le jeudi de leur semaine
+ * (`semaine_du`), comme le fait la page Absences pour les surveillants.
+ */
+export const weekendAnchor = (d: Date) => {
+  const monday = startOfWeek(d, { weekStartsOn: 1 });
+  const thursday = addDays(monday, 3);
+  // Avant jeudi, le weekend concerné est encore celui de la semaine passée.
+  return d < thursday ? subDays(thursday, 7) : thursday;
+};
+
+export interface DayRow {
+  date: string;
+  label: string;
+  perRepas: Record<string, Count>;
+  total: number;
+}
+
+/** Même distinction que le tableau : service non assuré / non saisi / chiffre. */
+const countToText = (v: Count) => (v === null ? "—" : v === undefined ? "non saisi" : String(v));
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Construit le tableau du PDF hebdomadaire.
+ * Extrait du composant pour que l'alignement en-tête / lignes / total soit
+ * vérifiable : une colonne en trop passerait inaperçue jusqu'à l'impression.
+ */
+export const buildWeekPdfTable = (week: DayRow[], weekTotal: number) => ({
+  head: ["Jour", ...REPAS_ORDER.map((r) => REPAS_LABELS[r]), "Total"],
+  rows: week.map((row) => [
+    capitalize(row.label),
+    ...REPAS_ORDER.map((r) => countToText(row.perRepas[r])),
+    String(row.total),
+  ]),
+  foot: [["Total semaine", ...REPAS_ORDER.map(() => ""), String(weekTotal)]],
+});
+
+export default function ResponsableRestaurantDashboard() {
+  const { profile } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [today, setToday] = useState<DayRow | null>(null);
+  const [week, setWeek] = useState<DayRow[]>([]);
+  const [weekendRows, setWeekendRows] = useState<{ code: string; nombre: number }[]>([]);
+  const [weekendDate, setWeekendDate] = useState<Date>(() => weekendAnchor(getBusinessDate()));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const businessDate = getBusinessDate();
+        const monday = startOfWeek(businessDate, { weekStartsOn: 1 });
+        const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+        const weekStart = format(monday, "yyyy-MM-dd");
+        const weekEnd = format(addDays(monday, 6), "yyyy-MM-dd");
+
+        const anchor = weekendAnchor(businessDate);
+        setWeekendDate(anchor);
+
+        // Les jointures imbriquées de PostgREST dépendent des clés étrangères et
+        // des droits sur la table liée ; on joint côté client, comme le fait la
+        // page Restaurant, pour que l'affichage ne dépende que d'un SELECT simple.
+        const [logsRes, weRes, dortRes] = await Promise.all([
+          supabase
+            .from("restaurant_logs")
+            .select("date, repas, nombre_eleves")
+            .gte("date", weekStart)
+            .lte("date", weekEnd),
+          supabase
+            .from("weekend_effectifs")
+            .select("dortoir_id, nombre_presents")
+            .eq("semaine_du", format(anchor, "yyyy-MM-dd")),
+          supabase.from("dortoirs").select("id, code"),
+        ]);
+
+        // Un blocage RLS renvoie une liste vide sans erreur : on affiche donc
+        // explicitement toute erreur plutôt que de laisser un tableau muet.
+        const firstError = logsRes.error ?? weRes.error ?? dortRes.error;
+        if (firstError) {
+          console.error("Chargement restaurant:", firstError);
+          setError(firstError.message);
+        }
+
+        // Plusieurs surveillants peuvent saisir le même service : on additionne.
+        const byDate: Record<string, Record<string, number>> = {};
+        for (const l of logsRes.data ?? []) {
+          const slot = (byDate[l.date] ??= {});
+          slot[l.repas] = (slot[l.repas] ?? 0) + (l.nombre_eleves ?? 0);
+        }
+
+        const rows: DayRow[] = days.map((d) => {
+          const key = format(d, "yyyy-MM-dd");
+          const logged = byDate[key] ?? {};
+          const perRepas: Record<string, Count> = {};
+          let total = 0;
+          for (const r of REPAS_ORDER) {
+            if (isRedundantRestoSlot(d, r)) {
+              perRepas[r] = null;
+              continue;
+            }
+            const v = logged[r];
+            perRepas[r] = v;
+            if (typeof v === "number") total += v;
+          }
+          return { date: key, label: format(d, "EEEE d MMM", { locale: fr }), perRepas, total };
+        });
+
+        setWeek(rows);
+        setToday(rows.find((r) => r.date === format(businessDate, "yyyy-MM-dd")) ?? null);
+
+        const codeById: Record<string, string> = Object.fromEntries(
+          (dortRes.data ?? []).map((d: any) => [d.id, d.code])
+        );
+        setWeekendRows(
+          (weRes.data ?? []).map((w: any) => ({
+            code: codeById[w.dortoir_id] ?? "—",
+            nombre: w.nombre_presents ?? 0,
+          }))
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const weekTotal = week.reduce((s, r) => s + r.total, 0);
+  const weekendTotal = weekendRows.reduce((s, r) => s + r.nombre, 0);
+
+  const renderCount = (v: Count) => {
+    if (v === null) return <span className="text-muted-foreground/60">—</span>;
+    if (v === undefined) return <span className="text-muted-foreground italic text-xs">non saisi</span>;
+    return <span className="font-semibold">{v}</span>;
+  };
+
+  const exportWeekPdf = () => {
+    if (!week.length) return;
+    const from = week[0].date;
+    const to = week[week.length - 1].date;
+    generateTablePdf({
+      title: "Effectif Restaurant — Semaine",
+      subtitle:
+        `Du ${format(parseLocalDate(from), "d MMMM yyyy", { locale: fr })}` +
+        ` au ${format(parseLocalDate(to), "d MMMM yyyy", { locale: fr })}` +
+        " — comptage relevé par les surveillants",
+      filename: `effectif_restaurant_${from}_${to}.pdf`,
+      ...buildWeekPdfTable(week, weekTotal),
+    });
+    toast.success("PDF généré");
+  };
+
+  const exportWeekendPdf = () => {
+    const anchor = format(weekendDate, "yyyy-MM-dd");
+    generateTablePdf({
+      title: "Effectif Weekend",
+      subtitle: `Weekend du ${format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}`,
+      filename: `effectif_weekend_${anchor}.pdf`,
+      head: ["Dortoir", "Présents"],
+      rows: weekendRows.map((r) => [r.code, String(r.nombre)]),
+      foot: [["Total", String(weekendTotal)]],
+    });
+    toast.success("PDF généré");
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Bonjour{" "}
+          <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">
+            {profile?.full_name?.split(" ")[0] || ""}
+          </span>{" "}
+          👋
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">
+          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
+        </p>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+          Impossible de lire les effectifs : {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {REPAS_ORDER.map((r) => {
+          const v = today?.perRepas[r];
+          return (
+            <div key={r} className="stat-card">
+              <div className="text-xs uppercase font-medium text-primary">{REPAS_LABELS[r]}</div>
+              <div className="text-4xl font-bold mt-2">
+                {v === null ? (
+                  "—"
+                ) : v === undefined ? (
+                  <span className="text-xl text-muted-foreground italic">non saisi</span>
+                ) : (
+                  v
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">élèves aujourd&apos;hui</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" /> Effectif de la semaine
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={exportWeekPdf} className="shrink-0">
+              <FileDown className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          </div>
+          <CardDescription>
+            Comptage relevé par les surveillants à chaque service — semaine du{" "}
+            {week.length ? format(parseLocalDate(week[0].date), "d MMM", { locale: fr }) : ""} au{" "}
+            {week.length ? format(parseLocalDate(week[6].date), "d MMM yyyy", { locale: fr }) : ""}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Jour</TableHead>
+                  {REPAS_ORDER.map((r) => (
+                    <TableHead key={r} className="text-right">{REPAS_LABELS[r]}</TableHead>
+                  ))}
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {week.map((row) => (
+                  <TableRow key={row.date}>
+                    <TableCell className="capitalize">{row.label}</TableCell>
+                    {REPAS_ORDER.map((r) => (
+                      <TableCell key={r} className="text-right">
+                        {renderCount(row.perRepas[r])}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-right font-bold">{row.total}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow>
+                  <TableCell className="font-bold">Total semaine</TableCell>
+                  <TableCell colSpan={REPAS_ORDER.length} />
+                  <TableCell className="text-right font-bold">{weekTotal}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sun className="h-4 w-4 text-primary" /> Effectif weekend
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportWeekendPdf}
+              disabled={weekendRows.length === 0}
+              className="shrink-0"
+            >
+              <FileDown className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          </div>
+          <CardDescription>
+            Élèves restant à l&apos;internat pour le weekend du{" "}
+            {format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {weekendRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">
+              Aucun effectif weekend saisi pour cette semaine.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Dortoir</TableHead>
+                    <TableHead className="text-right">Présents</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {weekendRows.map((r, i) => (
+                    <TableRow key={`${r.code}-${i}`}>
+                      <TableCell>{r.code}</TableCell>
+                      <TableCell className="text-right font-semibold">{r.nombre}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow>
+                    <TableCell className="font-bold">Total</TableCell>
+                    <TableCell className="text-right font-bold">{weekendTotal}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+        <Utensils className="h-3.5 w-3.5" />
+        Consultation seule — les effectifs sont saisis par les surveillants.
+      </p>
+    </div>
+  );
+}

@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, Utensils, CalendarDays, Sun } from "lucide-react";
+import { Loader2, Utensils, CalendarDays, Sun, FileDown } from "lucide-react";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
+import { generateTablePdf } from "@/lib/pdf";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const REPAS_ORDER: RepasType[] = ["PETIT_DEJEUNER", "DEJEUNER", "DINER"];
 
@@ -35,12 +38,32 @@ export const weekendAnchor = (d: Date) => {
   return d < thursday ? subDays(thursday, 7) : thursday;
 };
 
-interface DayRow {
+export interface DayRow {
   date: string;
   label: string;
   perRepas: Record<string, Count>;
   total: number;
 }
+
+/** Même distinction que le tableau : service non assuré / non saisi / chiffre. */
+const countToText = (v: Count) => (v === null ? "—" : v === undefined ? "non saisi" : String(v));
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Construit le tableau du PDF hebdomadaire.
+ * Extrait du composant pour que l'alignement en-tête / lignes / total soit
+ * vérifiable : une colonne en trop passerait inaperçue jusqu'à l'impression.
+ */
+export const buildWeekPdfTable = (week: DayRow[], weekTotal: number) => ({
+  head: ["Jour", ...REPAS_ORDER.map((r) => REPAS_LABELS[r]), "Total"],
+  rows: week.map((row) => [
+    capitalize(row.label),
+    ...REPAS_ORDER.map((r) => countToText(row.perRepas[r])),
+    String(row.total),
+  ]),
+  foot: [["Total semaine", ...REPAS_ORDER.map(() => ""), String(weekTotal)]],
+});
 
 export default function ResponsableRestaurantDashboard() {
   const { profile } = useAuth();
@@ -148,6 +171,35 @@ export default function ResponsableRestaurantDashboard() {
     return <span className="font-semibold">{v}</span>;
   };
 
+  const exportWeekPdf = () => {
+    if (!week.length) return;
+    const from = week[0].date;
+    const to = week[week.length - 1].date;
+    generateTablePdf({
+      title: "Effectif Restaurant — Semaine",
+      subtitle:
+        `Du ${format(parseLocalDate(from), "d MMMM yyyy", { locale: fr })}` +
+        ` au ${format(parseLocalDate(to), "d MMMM yyyy", { locale: fr })}` +
+        " — comptage relevé par les surveillants",
+      filename: `effectif_restaurant_${from}_${to}.pdf`,
+      ...buildWeekPdfTable(week, weekTotal),
+    });
+    toast.success("PDF généré");
+  };
+
+  const exportWeekendPdf = () => {
+    const anchor = format(weekendDate, "yyyy-MM-dd");
+    generateTablePdf({
+      title: "Effectif Weekend",
+      subtitle: `Weekend du ${format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}`,
+      filename: `effectif_weekend_${anchor}.pdf`,
+      head: ["Dortoir", "Présents"],
+      rows: weekendRows.map((r) => [r.code, String(r.nombre)]),
+      foot: [["Total", String(weekendTotal)]],
+    });
+    toast.success("PDF généré");
+  };
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="mb-6">
@@ -192,9 +244,14 @@ export default function ResponsableRestaurantDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary" /> Effectif de la semaine
-          </CardTitle>
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-primary" /> Effectif de la semaine
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={exportWeekPdf} className="shrink-0">
+              <FileDown className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          </div>
           <CardDescription>
             Comptage relevé par les surveillants à chaque service — semaine du{" "}
             {week.length ? format(parseLocalDate(week[0].date), "d MMM", { locale: fr }) : ""} au{" "}
@@ -238,9 +295,20 @@ export default function ResponsableRestaurantDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Sun className="h-4 w-4 text-primary" /> Effectif weekend
-          </CardTitle>
+          <div className="flex items-start justify-between gap-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sun className="h-4 w-4 text-primary" /> Effectif weekend
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportWeekendPdf}
+              disabled={weekendRows.length === 0}
+              className="shrink-0"
+            >
+              <FileDown className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          </div>
           <CardDescription>
             Élèves restant à l&apos;internat pour le weekend du{" "}
             {format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}

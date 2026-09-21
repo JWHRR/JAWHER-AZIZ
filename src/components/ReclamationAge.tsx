@@ -10,6 +10,20 @@ interface Props {
 }
 
 /**
+ * Couleur du badge selon l'ancienneté, en jours :
+ *   0 – 1  vert
+ *      2   jaune
+ *      3   orange
+ *   4 et + rouge
+ */
+export const ageTone = (days: number): string => {
+  if (days >= 4) return "bg-red-500 text-white hover:bg-red-600";
+  if (days === 3) return "bg-orange-500 text-white hover:bg-orange-600";
+  if (days === 2) return "bg-yellow-500 text-white hover:bg-yellow-600";
+  return "bg-green-500 text-white hover:bg-green-600";
+};
+
+/**
  * Ancienneté d'une réclamation, en jours depuis sa déclaration.
  *
  * Tant qu'elle n'est pas terminée, la couleur s'assombrit avec l'attente :
@@ -33,14 +47,7 @@ export function ReclamationAge({ createdAt, status, resolvedAt }: Props) {
   }
 
   const days = daysSince(createdAt);
-  const tone =
-    days >= 14
-      ? "bg-red-500 text-white hover:bg-red-600"
-      : days >= 7
-      ? "bg-orange-500 text-white hover:bg-orange-600"
-      : days >= 3
-      ? "bg-yellow-500 text-white hover:bg-yellow-600"
-      : "bg-green-500 text-white hover:bg-green-600";
+  const tone = ageTone(days);
 
   return (
     <Badge className={`gap-1 font-normal ${tone}`} title={`Déclarée il y a ${ageLabel(createdAt)}`}>

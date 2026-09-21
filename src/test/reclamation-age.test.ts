@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { daysSince, ageLabel } from "@/lib/time";
+import { ageTone } from "@/components/ReclamationAge";
 
 // Tunis = UTC+1 toute l'année : heure de Tunis h <=> UTC h-1.
 const tunis = (y: number, m: number, d: number, h = 12) =>
@@ -47,5 +48,37 @@ describe("ageLabel", () => {
     expect(ageLabel(tunis(2026, 9, 20, 9), now)).toBe("1 jour");
     expect(ageLabel(tunis(2026, 9, 19, 9), now)).toBe("2 jours");
     expect(ageLabel(tunis(2026, 9, 1, 9), now)).toBe("20 jours");
+  });
+});
+
+describe("ageTone — couleur du badge", () => {
+  const colour = (days: number) =>
+    ageTone(days).includes("green") ? "vert"
+    : ageTone(days).includes("yellow") ? "jaune"
+    : ageTone(days).includes("orange") ? "orange"
+    : "rouge";
+
+  it("0 et 1 jour : vert", () => {
+    expect(colour(0)).toBe("vert");
+    expect(colour(1)).toBe("vert");
+  });
+
+  it("2 jours : jaune", () => {
+    expect(colour(2)).toBe("jaune");
+  });
+
+  it("3 jours : orange", () => {
+    expect(colour(3)).toBe("orange");
+  });
+
+  it("4 jours et plus : rouge", () => {
+    expect(colour(4)).toBe("rouge");
+    expect(colour(10)).toBe("rouge");
+    expect(colour(365)).toBe("rouge");
+  });
+
+  it("chaque jour a exactement une couleur", () => {
+    const seq = [0, 1, 2, 3, 4, 5].map(colour);
+    expect(seq).toEqual(["vert", "vert", "jaune", "orange", "rouge", "rouge"]);
   });
 });

@@ -90,11 +90,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await loadUserData(user.id);
   };
 
-  // Priority: ADMIN > TECHNICIEN > SURVEILLANT
+  // Priority: ADMIN > TECHNICIEN > RESPONSABLE_RESTAURANT > SURVEILLANT
   const primaryRole: AppRole | null = roles.includes("ADMIN")
     ? "ADMIN"
     : roles.includes("TECHNICIEN")
     ? "TECHNICIEN"
+    : roles.includes("RESPONSABLE_RESTAURANT")
+    ? "RESPONSABLE_RESTAURANT"
     : roles.includes("SURVEILLANT")
     ? "SURVEILLANT"
     : null;

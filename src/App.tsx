@@ -84,7 +84,7 @@ const App = () => (
             <Route
               path="/reclamations"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={["ADMIN", "SURVEILLANT", "TECHNICIEN"]}>
                   <AppLayout><Reclamations /></AppLayout>
                 </ProtectedRoute>
               }

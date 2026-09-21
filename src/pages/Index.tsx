@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AdminDashboard from "./dashboards/AdminDashboard";
 import SurveillantDashboard from "./dashboards/SurveillantDashboard";
 import TechnicienDashboard from "./dashboards/TechnicienDashboard";
+import ResponsableRestaurantDashboard from "./dashboards/ResponsableRestaurantDashboard";
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
@@ -17,6 +18,7 @@ const Index = () => {
 
   if (primaryRole === "ADMIN") return <AdminDashboard />;
   if (primaryRole === "TECHNICIEN") return <TechnicienDashboard />;
+  if (primaryRole === "RESPONSABLE_RESTAURANT") return <ResponsableRestaurantDashboard />;
   return <SurveillantDashboard />;
 };
 

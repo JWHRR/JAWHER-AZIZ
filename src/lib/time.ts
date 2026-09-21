@@ -108,3 +108,27 @@ export const getBusinessDateStr = (): string => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
+
+/**
+ * Nombre de jours écoulés depuis un horodatage (`created_at`, en UTC).
+ *
+ * Compte des jours de CALENDRIER tunisiens, pas des tranches de 24 h :
+ * une réclamation déclarée hier à 23h50 a « 1 jour », pas « 0 ».
+ * Renvoie 0 pour aujourd'hui, et jamais de valeur négative.
+ */
+export const daysSince = (value: string | Date, now?: Date): number => {
+  const created = new Date(value);
+  if (Number.isNaN(created.getTime())) return 0;
+  const a = getBusinessDate(created);
+  const b = getBusinessDate(now);
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((startOfDay(b) - startOfDay(a)) / 86400000);
+  return diff > 0 ? diff : 0;
+};
+
+/** Libellé court de l'ancienneté : « aujourd'hui », « 1 jour », « 12 jours ». */
+export const ageLabel = (value: string | Date, now?: Date): string => {
+  const d = daysSince(value, now);
+  if (d === 0) return "aujourd'hui";
+  return d === 1 ? "1 jour" : `${d} jours`;
+};

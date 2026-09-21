@@ -20,7 +20,9 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { ReclamationStatus, ReclamationPriority, STATUS_LABELS, PRIORITY_LABELS } from "@/lib/types";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
+import { ReclamationAge } from "@/components/ReclamationAge";
 import { generateTablePdf } from "@/lib/pdf";
+import { ageLabel } from "@/lib/time";
 
 const RECLAMATION_TYPES = ["Électricité", "Plomberie", "Menuiserie", "Autre"];
 
@@ -264,20 +266,22 @@ export default function Reclamations() {
       r.dortoirs?.code ? r.dortoirs.code : (r.lieu || "—"),
       PRIORITY_LABELS[r.priority as ReclamationPriority] ?? "—",
       STATUS_LABELS[r.status as ReclamationStatus] ?? "—",
+      // Ancienneté : la même information que le badge à l'écran.
+      r.status === "TERMINEE" ? "—" : ageLabel(r.created_at),
       r.creator?.full_name ?? "—",
     ]);
 
     generateTablePdf({
-      // 7 colonnes : illisible en portrait
+      // 8 colonnes : illisible en portrait
       orientation: "landscape",
       title: "Réclamations",
       subtitle: `Filtres: ${Array.from(exportTypes).join(", ")} | Du jour (${todayItems.length}) + non terminées (${pendingItems.length}) — ${format(new Date(), "d MMMM yyyy", { locale: fr })}`,
       filename: `reclamations_${today}.pdf`,
-      head: ["Type", "Réclamation", "Description", "N° du dortoir", "Priorité", "Statut", "Auteur"],
+      head: ["Type", "Réclamation", "Description", "N° du dortoir", "Priorité", "Statut", "Ancienneté", "Auteur"],
       rows: [
-        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", "", "", ""]] : []),
+        ...(todayItems.length ? [["— RÉCLAMATIONS DU JOUR —", "", "", "", "", "", "", ""]] : []),
         ...buildRows(todayItems),
-        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", "", "", ""]] : []),
+        ...(pendingItems.length ? [["— NON TERMINÉES —", "", "", "", "", "", "", ""]] : []),
         ...buildRows(pendingItems),
       ],
     });
@@ -475,6 +479,13 @@ export default function Reclamations() {
                         <div className="flex flex-col text-sm text-muted-foreground gap-0.5 whitespace-nowrap">
                           <span>👤 {r.creator?.full_name ?? "—"}</span>
                           <span>🕐 {format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}</span>
+                          <div className="pt-1">
+                            <ReclamationAge
+                              createdAt={r.created_at}
+                              status={r.status}
+                              resolvedAt={r.resolved_at}
+                            />
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>

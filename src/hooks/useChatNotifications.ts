@@ -119,6 +119,8 @@ export const useChatNotifications = (userId: string | null) => {
           // Ensure service worker is ready before showing notification, otherwise fallback to regular Notification API
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.ready.then(reg => {
+              // `renotify` fait partie de la spec Notifications mais manque
+              // encore dans les typings DOM de TypeScript.
               reg.showNotification(title, {
                 body,
                 icon: '/ipest-logo.png',
@@ -126,7 +128,7 @@ export const useChatNotifications = (userId: string | null) => {
                 tag: `chat-${msg.conversation_id}`,
                 renotify: true,
                 data: { url: '/messagerie' }
-              });
+              } as NotificationOptions & { renotify: boolean });
             });
           } else {
              const notif = new Notification(title, {
@@ -135,7 +137,7 @@ export const useChatNotifications = (userId: string | null) => {
               badge: '/ipest-logo.png',
               tag: `chat-${msg.conversation_id}`,
               renotify: true,
-            });
+            } as NotificationOptions & { renotify: boolean });
 
             notif.onclick = () => {
               window.focus();

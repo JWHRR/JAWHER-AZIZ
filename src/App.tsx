@@ -89,16 +89,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* [PAUSED]
             <Route
               path="/messagerie"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={["ADMIN", "SURVEILLANT", "TECHNICIEN"]}>
                   <AppLayout><Messagerie /></AppLayout>
                 </ProtectedRoute>
               }
             />
-            */}
             <Route
               path="/dortoirs"
               element={

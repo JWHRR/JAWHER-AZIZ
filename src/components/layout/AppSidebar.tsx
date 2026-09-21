@@ -45,7 +45,7 @@ const items: NavItem[] = [
   { title: "Dortoirs", url: "/dortoirs", icon: BedDouble, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Liste des Étudiants", url: "/etudiants", icon: Users, roles: ["ADMIN", "SURVEILLANT"] },
   { title: "Demandes d'Absence", url: "/demandes-absence", icon: CalendarOff, roles: ["ADMIN", "SURVEILLANT"] },
-  // [PAUSED] { title: "Messagerie", url: "/messagerie", icon: MessageSquare, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
+  { title: "Messagerie", url: "/messagerie", icon: MessageSquare, roles: ["ADMIN", "SURVEILLANT", "TECHNICIEN"] },
   { title: "Utilisateurs", url: "/utilisateurs", icon: Users, roles: ["ADMIN"] },
 ];
 

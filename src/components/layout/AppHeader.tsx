@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { ROLE_LABELS } from "@/lib/types";
+import { ROLE_LABELS, RECLAMATION_REMINDER_TITLE } from "@/lib/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Bell, Check } from "lucide-react";
+import { LogOut, Bell, Check, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -110,29 +110,52 @@ export function AppHeader() {
             {notifications.length === 0 ? (
               <div className="p-4 text-center text-sm text-muted-foreground">Aucune nouvelle notification</div>
             ) : (
-              notifications.map((n) => (
+              notifications.map((n) => {
+                // Le rappel « réclamations à vérifier » est une alerte : tout
+                // l'encart passe en rouge pour qu'il ne se noie pas dans les
+                // notifications courantes.
+                const isAlert = n.title === RECLAMATION_REMINDER_TITLE;
+                return (
                 <div
                   key={n.id}
-                  className={`p-3 border-b last:border-0 hover:bg-muted/50 transition-colors flex justify-between items-start gap-2 ${n.link ? "cursor-pointer" : ""}`}
+                  className={`p-3 border-b last:border-0 transition-colors flex justify-between items-start gap-2 ${
+                    isAlert
+                      ? "bg-destructive/10 border-l-4 border-l-destructive hover:bg-destructive/20"
+                      : "hover:bg-muted/50"
+                  } ${n.link ? "cursor-pointer" : ""}`}
                   onClick={() => { if (n.link) handleNotificationClick(n); }}
                 >
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">{n.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className={`text-sm leading-none flex items-center gap-1.5 ${
+                      isAlert ? "font-bold text-destructive" : "font-medium"
+                    }`}>
+                      {isAlert && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+                      {n.title}
+                    </p>
+                    {/* whitespace-pre-line : le rappel liste les réclamations
+                        une par ligne, sinon tout s'affiche en un seul bloc. */}
+                    <p className={`text-xs whitespace-pre-line ${
+                      isAlert ? "text-destructive/90" : "text-muted-foreground line-clamp-2"
+                    }`}>{n.message}</p>
+                    <p className={`text-[10px] ${isAlert ? "text-destructive/70" : "text-muted-foreground"}`}>
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: fr })}
                     </p>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0"
+                    className={`h-6 w-6 shrink-0 ${
+                      isAlert
+                        ? "text-destructive hover:text-destructive hover:bg-destructive/20"
+                        : "text-muted-foreground hover:text-primary"
+                    }`}
                     onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
                   >
                     <Check className="h-4 w-4" />
                   </Button>
                 </div>
-              ))
+                );
+              })
             )}
           </DropdownMenuContent>
         </DropdownMenu>

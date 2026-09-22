@@ -172,3 +172,13 @@ export interface PermanenceLog {
   created_at: string;
   full_name?: string;
 }
+
+/**
+ * Titre du rappel quotidien envoyé aux surveillants.
+ *
+ * Doit rester identique à celui écrit par rappel_reclamations_22h30.sql
+ * et envoyer_rappel_maintenant.sql : c'est à ce titre que l'interface
+ * reconnaît l'alerte pour l'afficher en rouge, et que le job de 22h30
+ * détecte qu'un rappel est déjà parti dans la journée.
+ */
+export const RECLAMATION_REMINDER_TITLE = "Réclamations à vérifier";

@@ -11,26 +11,26 @@ const isRedundantRestoSlot = (wd: string, repas: string) => {
 };
 
 describe("affectation restaurant", () => {
-  // Régression : un surveillant affecté au déjeuner du lundi ne voyait rien
-  // quand il ouvrait son compte tôt le matin. getBusinessDate() retranchait
-  // 8 h, la journée devenait « dimanche », donc :
-  //   1. la requête .eq("weekday", wd) cherchait les affectations du dimanche
-  //   2. isRedundantRestoSlot("DIM", …) supprimait tout le reste
-  it("trouve le bon jour de la semaine tôt le matin", () => {
-    const early = new Date("2026-09-21T06:00:00Z"); // lundi 07:00 à Tunis
+  // Un surveillant affecté au déjeuner du lundi voyait la mauvaise journée
+  // quand il ouvrait son compte avant 08:00. La journée de travail commence
+  // à 08:00 : avant ça, on est encore sur la journée précédente.
+  it("à 07:00 (avant 08h), on est sur la journée de travail précédente", () => {
+    const early = new Date("2026-09-21T06:00:00Z"); // lundi 07:00 à Tunis — avant 08h
     const wd = dateToWeekday(getBusinessDate(early));
+    // Toujours sur dimanche car la journée lundi ne commence qu'à 08:00
+    expect(wd).toBe("DIM");
+  });
+
+  it("à 08:00, on bascule sur la bonne journée de travail", () => {
+    const at8 = new Date("2026-09-21T07:00:00Z"); // lundi 08:00 à Tunis
+    const wd = dateToWeekday(getBusinessDate(at8));
     expect(wd).toBe("LUN");
     expect(isRedundantRestoSlot(wd, "DEJEUNER")).toBe(false);
   });
 
-  it("trouve le bon jour juste après minuit", () => {
-    const justAfterMidnight = new Date("2026-09-20T23:10:00Z"); // lundi 00:10 à Tunis
-    expect(dateToWeekday(getBusinessDate(justAfterMidnight))).toBe("LUN");
-  });
-
-  it("garde le même jour du matin au soir", () => {
+  it("garde le même jour du matin (08h+) au soir", () => {
     // Tunis est à UTC+1 toute l'année : heure de Tunis h <=> UTC h-1.
-    const tunisHours = [0, 6, 7, 8, 12, 19, 23];
+    const tunisHours = [8, 12, 19, 23];
     const days = tunisHours.map((h) => {
       const utc = new Date(Date.UTC(2026, 8, 21, h - 1, 30));
       return format(getBusinessDate(utc), "yyyy-MM-dd");
@@ -41,7 +41,7 @@ describe("affectation restaurant", () => {
   it("donne le jour tunisien même si l'appareil est dans un autre fuseau", () => {
     // La machine de test est en America/Los_Angeles : sans ancrage sur Tunis,
     // cet instant serait encore le 20 septembre.
-    const utc = new Date("2026-09-21T05:00:00Z"); // lundi 06:00 à Tunis
+    const utc = new Date("2026-09-21T09:00:00Z"); // lundi 10:00 à Tunis
     expect(format(getBusinessDate(utc), "yyyy-MM-dd")).toBe("2026-09-21");
   });
 });

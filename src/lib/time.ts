@@ -56,14 +56,19 @@ const zonedPartsFormatter = new Intl.DateTimeFormat("en-US", {
   hourCycle: "h23",
 });
 
+/** The hour (Tunis local time) at which a new work day begins. */
+export const WORK_DAY_START_HOUR = 8;
+
 /**
- * Returns the business date for the application: the current calendar day,
- * as read on a clock in Tunisia.
+ * Returns the business date for the application: the current *work* day,
+ * as read on a clock in Tunisia, anchored to 08:00.
  *
+ * Any moment between 00:00 and 07:59 (Tunis time) is attributed to the
+ * **previous** calendar day, because the work day has not started yet.
  * The returned Date carries the Tunis wall-clock time in the device's own
- * fields, so `format()`, `startOfWeek()` and friends from date-fns — which all
- * read local fields — report the Tunisian day even if the device's timezone is
- * wrong. The day rolls over at midnight, like the calendar.
+ * fields, so `format()`, `startOfWeek()` and friends from date-fns — which
+ * all read local fields — report the correct work day even if the device's
+ * timezone is wrong.
  */
 export const getBusinessDate = (dateOverride?: Date): Date => {
   const baseDate = dateOverride || getTrueDate();
@@ -82,6 +87,12 @@ export const getBusinessDate = (dateOverride?: Date): Date => {
 
   if ([year, month, day, hour, minute, second].some((n) => !Number.isFinite(n))) {
     return baseDate;
+  }
+
+  // Before the work day starts, attribute the moment to the previous calendar day.
+  if (hour < WORK_DAY_START_HOUR) {
+    const prev = new Date(year, month - 1, day - 1, hour % 24, minute, second, baseDate.getMilliseconds());
+    return prev;
   }
 
   return new Date(year, month - 1, day, hour % 24, minute, second, baseDate.getMilliseconds());

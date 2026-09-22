@@ -1,4 +1,17 @@
 -- =========================================================
+-- ⚠ SCRIPT DESTRUCTIF — NE PAS EXÉCUTER SUR LA BASE DE PRODUCTION
+--
+-- Les DROP TABLE ... CASCADE ci-dessous effacent TOUTES les
+-- conversations et TOUS les messages existants.
+--
+-- Pour installer ou réparer la messagerie sans rien perdre, utilisez
+-- activer_messagerie.sql (ou la migration 20260921000200_messagerie.sql),
+-- qui crée ce qui manque et laisse le reste intact.
+--
+-- Ce fichier n'est conservé que pour repartir volontairement de zéro.
+-- =========================================================
+
+-- =========================================================
 -- CHAT SYSTEM — Fresh setup (drop + recreate everything)
 -- =========================================================
 

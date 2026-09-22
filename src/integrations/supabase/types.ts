@@ -14,6 +14,184 @@ export type Database = {
   }
   public: {
     Tables: {
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          subscription: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subscription: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subscription?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          last_message_at: string
+          name: string | null
+          type: Database["public"]["Enums"]["conversation_type"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_message_at?: string
+          name?: string | null
+          type?: Database["public"]["Enums"]["conversation_type"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_message_at?: string
+          name?: string | null
+          type?: Database["public"]["Enums"]["conversation_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      conversation_members: {
+        Row: {
+          conversation_id: string
+          joined_at: string
+          last_read_at: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          joined_at?: string
+          last_read_at?: string
+          role?: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          joined_at?: string
+          last_read_at?: string
+          role?: Database["public"]["Enums"]["member_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_members_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          image_url: string | null
+          is_edited: boolean
+          is_pinned: boolean
+          reply_to_id: string | null
+          sender_id: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_edited?: boolean
+          is_pinned?: boolean
+          reply_to_id?: string | null
+          sender_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_edited?: boolean
+          is_pinned?: boolean
+          reply_to_id?: string | null
+          sender_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       absences: {
         Row: {
           created_at: string
@@ -583,9 +761,35 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_private_conversation: {
+        Args: { other_user_id: string }
+        Returns: string
+      }
+      create_group_conversation: {
+        Args: { group_name: string; member_ids: string[] }
+        Returns: string
+      }
+      delete_conversation: {
+        Args: { conv_id: string }
+        Returns: undefined
+      }
+      current_user_is_member: {
+        Args: { conv_id: string }
+        Returns: boolean
+      }
+      get_chat_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: { user_id: string; full_name: string; email: string }[]
+      }
+      get_profiles_by_ids: {
+        Args: { p_ids: string[] }
+        Returns: { user_id: string; full_name: string }[]
+      }
     }
     Enums: {
       app_role: "ADMIN" | "SURVEILLANT" | "TECHNICIEN" | "RESPONSABLE_RESTAURANT"
+      conversation_type: "private" | "group" | "channel"
+      member_role: "member" | "admin"
       permanence_slot: "MATIN" | "APRES_MIDI" | "NUIT"
       reclamation_priority: "BASSE" | "NORMALE" | "HAUTE"
       reclamation_status: "EN_ATTENTE" | "EN_COURS" | "TERMINEE"
@@ -719,6 +923,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["ADMIN", "SURVEILLANT", "TECHNICIEN", "RESPONSABLE_RESTAURANT"],
+      conversation_type: ["private", "group", "channel"],
+      member_role: ["member", "admin"],
       permanence_slot: ["MATIN", "APRES_MIDI", "NUIT"],
       reclamation_priority: ["BASSE", "NORMALE", "HAUTE"],
       reclamation_status: ["EN_ATTENTE", "EN_COURS", "TERMINEE"],

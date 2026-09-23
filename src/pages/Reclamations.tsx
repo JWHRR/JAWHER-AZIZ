@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Plus, Search, Trash2, FileDown, Pencil, AlertTriangle,
-  MapPin, User, Clock, Wrench,
+  MapPin, User, Clock, Wrench, Zap, Droplets, Hammer
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,13 +39,14 @@ const emptyForm = {
 
 const localDay = (d: Date | string) => format(new Date(d), "yyyy-MM-dd");
 
-const TYPE_ICON: Record<string, string> = {
-  "Électricité": "⚡",
-  "Plomberie": "🔧",
-  "Menuiserie": "🪚",
-  "Autre": "📋",
+const TypeIcon = ({ type, className }: { type: string; className?: string }) => {
+  switch (type) {
+    case "Électricité": return <Zap className={className} />;
+    case "Plomberie": return <Droplets className={className} />;
+    case "Menuiserie": return <Hammer className={className} />;
+    default: return <Wrench className={className} />;
+  }
 };
-
 export default function Reclamations() {
   const { user, primaryRole } = useAuth();
   const canEditStatus = primaryRole === "ADMIN" || primaryRole === "TECHNICIEN" || primaryRole === "SURVEILLANT";
@@ -337,7 +338,9 @@ export default function Reclamations() {
               {/* Top row: title + badges */}
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex items-start gap-2 min-w-0">
-                  <span className="text-lg leading-none mt-0.5 shrink-0">{TYPE_ICON[r.type] || "📋"}</span>
+                  <div className="mt-0.5 shrink-0 bg-muted/50 p-2 rounded-md">
+                    <TypeIcon type={r.type} className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <div className="min-w-0">
                     <div className="font-semibold text-sm leading-tight">{r.titre}</div>
                     {r.description && (

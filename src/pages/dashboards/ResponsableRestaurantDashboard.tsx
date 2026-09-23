@@ -221,66 +221,43 @@ export default function ResponsableRestaurantDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-
-          {/* Mobile: stacked day cards */}
-          <div className="sm:hidden space-y-2">
-            {week.map((row) => {
-              const isToday = row.date === format(getBusinessDate(), "yyyy-MM-dd");
-              return (
-                <div key={row.date} className={`rounded-lg border p-3 ${isToday ? "border-primary/40 bg-muted/30" : "bg-muted/10"}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-sm font-semibold capitalize ${isToday ? "text-primary" : ""}`}>{row.label}</span>
-                    <span className="text-sm font-bold">{row.total > 0 ? `Total : ${row.total}` : ""}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {REPAS_ORDER.map((r) => {
-                      const v = row.perRepas[r];
-                      return (
-                        <div key={r} className="flex flex-col items-center gap-0.5">
-                          <span className="text-xs text-muted-foreground">{r === "PETIT_DEJEUNER" ? "Matin" : r === "DEJEUNER" ? "Midi" : "Soir"}</span>
-                          <span className="text-sm font-semibold">{v === null ? "—" : v === undefined ? "—" : v}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="rounded-lg border p-3 flex items-center justify-between">
-              <span className="text-sm font-semibold">Total semaine</span>
-              <span className="text-lg font-bold">{weekTotal}</span>
-            </div>
-          </div>
-
-          {/* Desktop: table */}
-          <div className="hidden sm:block">
-            <Table>
+          {/* Unified table — fits any screen width */}
+          <div className="w-full">
+            <Table className="w-full table-fixed text-xs sm:text-sm">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Jour</TableHead>
-                  {REPAS_ORDER.map((r) => (
-                    <TableHead key={r} className="text-right">{REPAS_LABELS[r]}</TableHead>
-                  ))}
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="px-1 sm:px-4 w-[30%]">Jour</TableHead>
+                  <TableHead className="px-1 sm:px-4 text-right w-[18%]">
+                    <span className="sm:hidden">P.déj.</span>
+                    <span className="hidden sm:inline">Petit-déjeuner</span>
+                  </TableHead>
+                  <TableHead className="px-1 sm:px-4 text-right w-[18%]">Déjeuner</TableHead>
+                  <TableHead className="px-1 sm:px-4 text-right w-[18%]">Dîner</TableHead>
+                  <TableHead className="px-1 sm:px-4 text-right w-[16%]">Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {week.map((row) => {
                   const isToday = row.date === format(getBusinessDate(), "yyyy-MM-dd");
                   return (
-                    <TableRow key={row.date} className={isToday ? "bg-primary/5 font-semibold" : ""}>
-                      <TableCell className="capitalize">{row.label}{isToday && <span className="ml-2 text-[10px] bg-primary text-primary-foreground rounded px-1 py-0.5">Auj.</span>}</TableCell>
+                    <TableRow key={row.date} className={isToday ? "bg-muted/40 font-medium" : ""}>
+                      <TableCell className="px-1 sm:px-4 capitalize py-2">
+                        {row.label}
+                        {isToday && <span className="ml-1 text-[10px] bg-primary text-primary-foreground rounded px-1 py-0.5">Auj.</span>}
+                      </TableCell>
                       {REPAS_ORDER.map((r) => (
-                        <TableCell key={r} className="text-right">{renderCount(row.perRepas[r])}</TableCell>
+                        <TableCell key={r} className="px-1 sm:px-4 text-right py-2">
+                          {renderCount(row.perRepas[r])}
+                        </TableCell>
                       ))}
-                      <TableCell className="text-right font-bold">{row.total}</TableCell>
+                      <TableCell className="px-1 sm:px-4 text-right font-semibold py-2">{row.total || "—"}</TableCell>
                     </TableRow>
                   );
                 })}
                 <TableRow className="border-t-2">
-                  <TableCell className="font-bold">Total semaine</TableCell>
+                  <TableCell className="px-1 sm:px-4 font-semibold py-2">Total semaine</TableCell>
                   <TableCell colSpan={REPAS_ORDER.length} />
-                  <TableCell className="text-right font-bold">{weekTotal}</TableCell>
+                  <TableCell className="px-1 sm:px-4 text-right font-bold py-2">{weekTotal}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

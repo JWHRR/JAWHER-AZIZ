@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, Utensils, CalendarDays, Sun, FileDown } from "lucide-react";
+import { Loader2, Utensils, CalendarDays, Sun, FileDown, Coffee, UtensilsCrossed, Moon } from "lucide-react";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
@@ -16,10 +16,26 @@ import { toast } from "sonner";
 
 const REPAS_ORDER: RepasType[] = ["PETIT_DEJEUNER", "DEJEUNER", "DINER"];
 
-/** null = service non assuré, undefined = service non encore saisi. */
+const REPAS_ICONS: Record<RepasType, any> = {
+  PETIT_DEJEUNER: Coffee,
+  DEJEUNER: Utensils,
+  DINER: Moon,
+};
+
+const REPAS_COLORS: Record<RepasType, string> = {
+  PETIT_DEJEUNER: "text-orange-500",
+  DEJEUNER:       "text-primary",
+  DINER:          "text-indigo-500",
+};
+
+const REPAS_BG: Record<RepasType, string> = {
+  PETIT_DEJEUNER: "bg-orange-500/10 border-orange-500/20",
+  DEJEUNER:       "bg-primary/10 border-primary/20",
+  DINER:          "bg-indigo-500/10 border-indigo-500/20",
+};
+
 type Count = number | null | undefined;
 
-/** Services non assurés : le dîner du samedi et toute la journée du dimanche. */
 const isRedundantRestoSlot = (date: Date, repas: RepasType) => {
   const wd = dateToWeekday(date);
   if (wd === "SAM" && repas === "DINER") return true;
@@ -27,14 +43,9 @@ const isRedundantRestoSlot = (date: Date, repas: RepasType) => {
   return false;
 };
 
-/**
- * Les effectifs weekend sont enregistrés sous le jeudi de leur semaine
- * (`semaine_du`), comme le fait la page Absences pour les surveillants.
- */
 export const weekendAnchor = (d: Date) => {
   const monday = startOfWeek(d, { weekStartsOn: 1 });
   const thursday = addDays(monday, 3);
-  // Avant jeudi, le weekend concerné est encore celui de la semaine passée.
   return d < thursday ? subDays(thursday, 7) : thursday;
 };
 
@@ -45,16 +56,9 @@ export interface DayRow {
   total: number;
 }
 
-/** Même distinction que le tableau : service non assuré / non saisi / chiffre. */
-const countToText = (v: Count) => (v === null ? "—" : v === undefined ? "non saisi" : String(v));
-
+const countToText = (v: Count) => (v === null ? "-" : v === undefined ? "non saisi" : String(v));
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-/**
- * Construit le tableau du PDF hebdomadaire.
- * Extrait du composant pour que l'alignement en-tête / lignes / total soit
- * vérifiable : une colonne en trop passerait inaperçue jusqu'à l'impression.
- */
 export const buildWeekPdfTable = (week: DayRow[], weekTotal: number) => ({
   head: ["Jour", ...REPAS_ORDER.map((r) => REPAS_LABELS[r]), "Total"],
   rows: week.map((row) => [
@@ -84,35 +88,18 @@ export default function ResponsableRestaurantDashboard() {
         const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
         const weekStart = format(monday, "yyyy-MM-dd");
         const weekEnd = format(addDays(monday, 6), "yyyy-MM-dd");
-
         const anchor = weekendAnchor(businessDate);
         setWeekendDate(anchor);
 
-        // Les jointures imbriquées de PostgREST dépendent des clés étrangères et
-        // des droits sur la table liée ; on joint côté client, comme le fait la
-        // page Restaurant, pour que l'affichage ne dépende que d'un SELECT simple.
         const [logsRes, weRes, dortRes] = await Promise.all([
-          supabase
-            .from("restaurant_logs")
-            .select("date, repas, nombre_eleves")
-            .gte("date", weekStart)
-            .lte("date", weekEnd),
-          supabase
-            .from("weekend_effectifs")
-            .select("dortoir_id, nombre_presents")
-            .eq("semaine_du", format(anchor, "yyyy-MM-dd")),
+          supabase.from("restaurant_logs").select("date, repas, nombre_eleves").gte("date", weekStart).lte("date", weekEnd),
+          supabase.from("weekend_effectifs").select("dortoir_id, nombre_presents").eq("semaine_du", format(anchor, "yyyy-MM-dd")),
           supabase.from("dortoirs").select("id, code"),
         ]);
 
-        // Un blocage RLS renvoie une liste vide sans erreur : on affiche donc
-        // explicitement toute erreur plutôt que de laisser un tableau muet.
         const firstError = logsRes.error ?? weRes.error ?? dortRes.error;
-        if (firstError) {
-          console.error("Chargement restaurant:", firstError);
-          setError(firstError.message);
-        }
+        if (firstError) { console.error("Chargement restaurant:", firstError); setError(firstError.message); }
 
-        // Plusieurs surveillants peuvent saisir le même service : on additionne.
         const byDate: Record<string, Record<string, number>> = {};
         for (const l of logsRes.data ?? []) {
           const slot = (byDate[l.date] ??= {});
@@ -125,10 +112,7 @@ export default function ResponsableRestaurantDashboard() {
           const perRepas: Record<string, Count> = {};
           let total = 0;
           for (const r of REPAS_ORDER) {
-            if (isRedundantRestoSlot(d, r)) {
-              perRepas[r] = null;
-              continue;
-            }
+            if (isRedundantRestoSlot(d, r)) { perRepas[r] = null; continue; }
             const v = logged[r];
             perRepas[r] = v;
             if (typeof v === "number") total += v;
@@ -139,15 +123,8 @@ export default function ResponsableRestaurantDashboard() {
         setWeek(rows);
         setToday(rows.find((r) => r.date === format(businessDate, "yyyy-MM-dd")) ?? null);
 
-        const codeById: Record<string, string> = Object.fromEntries(
-          (dortRes.data ?? []).map((d: any) => [d.id, d.code])
-        );
-        setWeekendRows(
-          (weRes.data ?? []).map((w: any) => ({
-            code: codeById[w.dortoir_id] ?? "—",
-            nombre: w.nombre_presents ?? 0,
-          }))
-        );
+        const codeById: Record<string, string> = Object.fromEntries((dortRes.data ?? []).map((d: any) => [d.id, d.code]));
+        setWeekendRows((weRes.data ?? []).map((w: any) => ({ code: codeById[w.dortoir_id] ?? "-", nombre: w.nombre_presents ?? 0 })));
       } finally {
         setLoading(false);
       }
@@ -156,18 +133,20 @@ export default function ResponsableRestaurantDashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Chargement des effectifs...</p>
       </div>
     );
   }
 
   const weekTotal = week.reduce((s, r) => s + r.total, 0);
   const weekendTotal = weekendRows.reduce((s, r) => s + r.nombre, 0);
+  const todayTotal = today?.total ?? 0;
 
   const renderCount = (v: Count) => {
-    if (v === null) return <span className="text-muted-foreground/60">—</span>;
-    if (v === undefined) return <span className="text-muted-foreground italic text-xs">non saisi</span>;
+    if (v === null) return <span className="text-muted-foreground/50">-</span>;
+    if (v === undefined) return <span className="text-muted-foreground italic text-xs">-</span>;
     return <span className="font-semibold">{v}</span>;
   };
 
@@ -176,15 +155,12 @@ export default function ResponsableRestaurantDashboard() {
     const from = week[0].date;
     const to = week[week.length - 1].date;
     generateTablePdf({
-      title: "Effectif Restaurant — Semaine",
-      subtitle:
-        `Du ${format(parseLocalDate(from), "d MMMM yyyy", { locale: fr })}` +
-        ` au ${format(parseLocalDate(to), "d MMMM yyyy", { locale: fr })}` +
-        " — comptage relevé par les surveillants",
+      title: "Effectif Restaurant - Semaine",
+      subtitle: `Du ${format(parseLocalDate(from), "d MMMM yyyy", { locale: fr })} au ${format(parseLocalDate(to), "d MMMM yyyy", { locale: fr })} - comptage releve par les surveillants`,
       filename: `effectif_restaurant_${from}_${to}.pdf`,
       ...buildWeekPdfTable(week, weekTotal),
     });
-    toast.success("PDF généré");
+    toast.success("PDF genere");
   };
 
   const exportWeekendPdf = () => {
@@ -193,26 +169,36 @@ export default function ResponsableRestaurantDashboard() {
       title: "Effectif Weekend",
       subtitle: `Weekend du ${format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}`,
       filename: `effectif_weekend_${anchor}.pdf`,
-      head: ["Dortoir", "Présents"],
+      head: ["Dortoir", "Presents"],
       rows: weekendRows.map((r) => [r.code, String(r.nombre)]),
       foot: [["Total", String(weekendTotal)]],
     });
-    toast.success("PDF généré");
+    toast.success("PDF genere");
   };
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-4xl font-extrabold tracking-tight">
-          Bonjour{" "}
-          <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">
-            {profile?.full_name?.split(" ")[0] || ""}
-          </span>{" "}
-          👋
-        </h1>
-        <p className="text-muted-foreground mt-2 text-lg">
-          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
-        </p>
+
+      {/* ── Hero greeting ── */}
+      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-background to-background border border-primary/20 p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium mb-1">
+            {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+            Bonjour{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">
+              {profile?.full_name?.split(" ")[0] || ""}
+            </span>{" "}
+            👋
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">Tableau de bord - Responsable Restaurant</p>
+        </div>
+        <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+          <span className="text-xs text-muted-foreground">Total aujourd hui</span>
+          <span className="text-5xl font-black text-primary leading-none">{todayTotal}</span>
+          <span className="text-xs text-muted-foreground">eleves au restaurant</span>
+        </div>
       </div>
 
       {error && (
@@ -221,45 +207,83 @@ export default function ResponsableRestaurantDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* ── Stat cards (today per meal) ── */}
+      <div className="grid grid-cols-3 gap-3">
         {REPAS_ORDER.map((r) => {
           const v = today?.perRepas[r];
+          const Icon = REPAS_ICONS[r];
           return (
-            <div key={r} className="stat-card">
-              <div className="text-xs uppercase font-medium text-primary">{REPAS_LABELS[r]}</div>
-              <div className="text-4xl font-bold mt-2">
-                {v === null ? (
-                  "—"
-                ) : v === undefined ? (
-                  <span className="text-xl text-muted-foreground italic">non saisi</span>
-                ) : (
-                  v
-                )}
+            <div key={r} className={`rounded-xl border p-3 sm:p-4 flex flex-col gap-1 ${REPAS_BG[r]}`}>
+              <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${REPAS_COLORS[r]}`}>
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">{REPAS_LABELS[r]}</span>
+                <span className="sm:hidden">{r === "PETIT_DEJEUNER" ? "Matin" : r === "DEJEUNER" ? "Midi" : "Soir"}</span>
               </div>
-              <div className="text-xs text-muted-foreground mt-1">élèves aujourd&apos;hui</div>
+              <div className={`text-3xl sm:text-4xl font-black leading-none ${REPAS_COLORS[r]}`}>
+                {v === null ? "-" : v === undefined ? (
+                  <span className="text-lg text-muted-foreground font-normal italic">-</span>
+                ) : v}
+              </div>
+              <div className="text-xs text-muted-foreground">eleves</div>
             </div>
           );
         })}
       </div>
 
+      {/* ── Weekly table (desktop) / stacked cards (mobile) ── */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-primary" /> Effectif de la semaine
-            </CardTitle>
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-primary" /> Effectif de la semaine
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Du {week.length ? format(parseLocalDate(week[0].date), "d MMM", { locale: fr }) : ""}{" "}
+                au {week.length ? format(parseLocalDate(week[6].date), "d MMM yyyy", { locale: fr }) : ""}
+              </CardDescription>
+            </div>
             <Button variant="outline" size="sm" onClick={exportWeekPdf} className="shrink-0">
               <FileDown className="h-4 w-4 mr-1" /> PDF
             </Button>
           </div>
-          <CardDescription>
-            Comptage relevé par les surveillants à chaque service — semaine du{" "}
-            {week.length ? format(parseLocalDate(week[0].date), "d MMM", { locale: fr }) : ""} au{" "}
-            {week.length ? format(parseLocalDate(week[6].date), "d MMM yyyy", { locale: fr }) : ""}
-          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+
+          {/* Mobile: stacked day cards */}
+          <div className="sm:hidden space-y-2">
+            {week.map((row) => {
+              const isToday = row.date === format(getBusinessDate(), "yyyy-MM-dd");
+              return (
+                <div key={row.date} className={`rounded-lg border p-3 ${isToday ? "border-primary/40 bg-primary/5" : "bg-muted/20"}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-sm font-semibold capitalize ${isToday ? "text-primary" : ""}`}>{row.label}</span>
+                    <span className="text-sm font-bold">{row.total > 0 ? `Total: ${row.total}` : ""}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {REPAS_ORDER.map((r) => {
+                      const Icon = REPAS_ICONS[r];
+                      const v = row.perRepas[r];
+                      return (
+                        <div key={r} className="flex flex-col items-center gap-0.5">
+                          <Icon className={`h-3.5 w-3.5 ${REPAS_COLORS[r]}`} />
+                          <span className="text-xs text-muted-foreground">{r === "PETIT_DEJEUNER" ? "Matin" : r === "DEJEUNER" ? "Midi" : "Soir"}</span>
+                          <span className="text-sm font-semibold">{v === null ? "-" : v === undefined ? "-" : v}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-primary">Total semaine</span>
+              <span className="text-xl font-black text-primary">{weekTotal}</span>
+            </div>
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -271,21 +295,22 @@ export default function ResponsableRestaurantDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {week.map((row) => (
-                  <TableRow key={row.date}>
-                    <TableCell className="capitalize">{row.label}</TableCell>
-                    {REPAS_ORDER.map((r) => (
-                      <TableCell key={r} className="text-right">
-                        {renderCount(row.perRepas[r])}
-                      </TableCell>
-                    ))}
-                    <TableCell className="text-right font-bold">{row.total}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell className="font-bold">Total semaine</TableCell>
+                {week.map((row) => {
+                  const isToday = row.date === format(getBusinessDate(), "yyyy-MM-dd");
+                  return (
+                    <TableRow key={row.date} className={isToday ? "bg-primary/5 font-semibold" : ""}>
+                      <TableCell className="capitalize">{row.label}{isToday && <span className="ml-2 text-[10px] bg-primary text-primary-foreground rounded px-1 py-0.5">Auj.</span>}</TableCell>
+                      {REPAS_ORDER.map((r) => (
+                        <TableCell key={r} className="text-right">{renderCount(row.perRepas[r])}</TableCell>
+                      ))}
+                      <TableCell className="text-right font-bold">{row.total}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="border-t-2">
+                  <TableCell className="font-bold text-primary">Total semaine</TableCell>
                   <TableCell colSpan={REPAS_ORDER.length} />
-                  <TableCell className="text-right font-bold">{weekTotal}</TableCell>
+                  <TableCell className="text-right font-black text-primary text-base">{weekTotal}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -293,62 +318,77 @@ export default function ResponsableRestaurantDashboard() {
         </CardContent>
       </Card>
 
+      {/* ── Weekend effectif ── */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sun className="h-4 w-4 text-primary" /> Effectif weekend
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportWeekendPdf}
-              disabled={weekendRows.length === 0}
-              className="shrink-0"
-            >
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sun className="h-4 w-4 text-primary" /> Effectif weekend
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Eleves restant a l internat pour le weekend du{" "}
+                {format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={exportWeekendPdf} disabled={weekendRows.length === 0} className="shrink-0">
               <FileDown className="h-4 w-4 mr-1" /> PDF
             </Button>
           </div>
-          <CardDescription>
-            Élèves restant à l&apos;internat pour le weekend du{" "}
-            {format(addDays(weekendDate, 1), "EEEE d MMMM yyyy", { locale: fr })}
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {weekendRows.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">
-              Aucun effectif weekend saisi pour cette semaine.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dortoir</TableHead>
-                    <TableHead className="text-right">Présents</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {weekendRows.map((r, i) => (
-                    <TableRow key={`${r.code}-${i}`}>
-                      <TableCell>{r.code}</TableCell>
-                      <TableCell className="text-right font-semibold">{r.nombre}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell className="font-bold">Total</TableCell>
-                    <TableCell className="text-right font-bold">{weekendTotal}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/10">
+              <Sun className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground italic">Aucun effectif weekend saisi pour cette semaine.</p>
             </div>
+          ) : (
+            <>
+              {/* Mobile: simple stacked list */}
+              <div className="sm:hidden space-y-2">
+                {weekendRows.map((r, i) => (
+                  <div key={`${r.code}-${i}`} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                    <span className="font-medium text-sm">Dortoir {r.code}</span>
+                    <span className="font-bold text-lg">{r.nombre}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
+                  <span className="font-bold text-sm text-primary">Total</span>
+                  <span className="font-black text-xl text-primary">{weekendTotal}</span>
+                </div>
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dortoir</TableHead>
+                      <TableHead className="text-right">Presents</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {weekendRows.map((r, i) => (
+                      <TableRow key={`${r.code}-${i}`}>
+                        <TableCell>{r.code}</TableCell>
+                        <TableCell className="text-right font-semibold">{r.nombre}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2">
+                      <TableCell className="font-bold text-primary">Total</TableCell>
+                      <TableCell className="text-right font-black text-primary text-base">{weekendTotal}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
         <Utensils className="h-3.5 w-3.5" />
-        Consultation seule — les effectifs sont saisis par les surveillants.
+        Consultation seule - les effectifs sont saisis par les surveillants.
       </p>
     </div>
   );

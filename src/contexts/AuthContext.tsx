@@ -29,6 +29,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const LOAD_TIMEOUT_MS = 6000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Block deactivated accounts
       if (profileData && (profileData as any).is_active === false) {
+        queryClient.clear();
         await supabase.auth.signOut();
         setProfile(null);
         setRoles([]);
@@ -128,8 +130,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => sub.subscription.unsubscribe();
   }, []);
-
-  const queryClient = useQueryClient();
 
   const signOut = async () => {
     queryClient.clear(); // Clear all cached queries to prevent data leaks across accounts

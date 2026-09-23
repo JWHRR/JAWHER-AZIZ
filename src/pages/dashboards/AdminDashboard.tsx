@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
-  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown,
+  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -285,12 +285,14 @@ export default function AdminDashboard() {
   };
 
   const cards = [
-    { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
-    { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
     { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
     { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
     { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
+    { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/admin/permanences", desc: "Supervision des tours" },
+    { label: "Étudiants", icon: GraduationCap, color: "text-primary", bg: "bg-primary-soft", link: "/etudiants", desc: "Liste des résidents" },
     { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Suivi des tickets" },
+    { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
+    { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
   ];
 
   return (
@@ -349,7 +351,7 @@ export default function AdminDashboard() {
       )}
 
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
         {cards.map((c) => (
           <Link key={c.label} to={c.link} className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-1 hover:shadow-md">
             <div className="flex flex-col items-center justify-center text-center space-y-3">

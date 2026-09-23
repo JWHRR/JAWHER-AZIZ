@@ -299,9 +299,9 @@ export default function AdminDashboard() {
   const cards = [
     { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs" },
     { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs" },
-    { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/absences" },
+    { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences" },
     { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant" },
-    { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/inspections" },
+    { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/admin/inspections" },
   ];
 
   return (

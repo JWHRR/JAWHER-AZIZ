@@ -21,6 +21,8 @@ import Permanences from "./pages/Permanences.tsx";
 import Etudiants from "./pages/Etudiants.tsx";
 import Messagerie from "./pages/Messagerie.tsx";
 import AbsenceRequests from "./pages/AbsenceRequests.tsx";
+import AdminAbsencesList from "./pages/dashboards/AdminAbsencesList.tsx";
+import AdminInspectionsList from "./pages/dashboards/AdminInspectionsList.tsx";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +129,23 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
                   <AppLayout><AbsenceRequests /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/absences"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminAbsencesList /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/inspections"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminInspectionsList /></AppLayout>
                 </ProtectedRoute>
               }
             />

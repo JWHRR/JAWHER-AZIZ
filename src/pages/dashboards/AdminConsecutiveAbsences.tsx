@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -74,10 +74,10 @@ export default function AdminConsecutiveAbsences() {
       try {
         const { data: students } = await supabase
           .from("etudiants")
-          .select(
+          .select(`
             id, nom_complet, telephone, chambre_id, autorisation_absence,
             chambres!inner (numero, dortoir_id, dortoirs!inner (id, code))
-          );
+          `);
         if (!students) return;
 
         const { data: pastAbs } = await supabase

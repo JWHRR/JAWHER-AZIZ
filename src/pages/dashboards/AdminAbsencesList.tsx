@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, BedDouble, User, Users } from "lucide-react";
+import { Loader2, ArrowLeft, BedDouble, Users } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
@@ -30,19 +30,7 @@ export default function AdminAbsencesList() {
         .eq("date", date)
         .order("created_at", { ascending: false });
 
-      const survIds = Array.from(new Set((absData || []).map((x: any) => x.surveillant_id)));
-      let nameById: Record<string, string> = {};
-      if (survIds.length > 0) {
-        const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", survIds);
-        nameById = Object.fromEntries((profs || []).map((p: any) => [p.user_id, p.full_name]));
-      }
-
-      const enriched = (absData || []).map(a => ({
-        ...a,
-        surveillant_name: nameById[a.surveillant_id] || "—"
-      }));
-
-      setAbsences(enriched);
+      setAbsences(absData || []);
       setLoading(false);
     };
     load();
@@ -97,12 +85,6 @@ export default function AdminAbsencesList() {
                     <span className="inline-flex items-center justify-center bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
                       {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
                     </span>
-                  </div>
-
-                  {/* Surveillant */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-3.5 w-3.5 shrink-0" />
-                    <span>{a.surveillant_name}</span>
                   </div>
 
                   {/* Names */}

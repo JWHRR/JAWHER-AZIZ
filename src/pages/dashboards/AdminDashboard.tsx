@@ -344,7 +344,7 @@ export default function AdminDashboard() {
         <p className="text-muted-foreground mt-2 text-lg flex items-center gap-2">
           {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
           <span className="text-border mx-1">|</span>
-          <span className="font-mono tabular-nums text-foreground">{format(currentTime, "HH:mm:ss")}</span>
+          <span className="font-mono tabular-nums text-foreground">{displayTime}</span>
         </p>
       </div>
 

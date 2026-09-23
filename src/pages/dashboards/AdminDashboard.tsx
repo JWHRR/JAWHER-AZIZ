@@ -319,21 +319,21 @@ export default function AdminDashboard() {
       {/* Collapsible: missing tasks of yesterday */}
       {missingYesterday.length > 0 && (
         <Card
-          className="border-destructive/30 bg-gradient-to-br from-destructive/10 to-transparent shadow-sm backdrop-blur-sm cursor-pointer select-none"
+          className="border-border/60 bg-muted/30 shadow-sm cursor-pointer select-none"
           onClick={() => setMissingOpen((o) => !o)}
         >
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center justify-between text-destructive font-bold">
+            <CardTitle className="text-sm flex items-center justify-between text-muted-foreground font-medium">
               <span className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
+                <AlertTriangle className="h-4 w-4 text-muted-foreground/70" />
                 Tâches manquantes — hier ({format(subDays(getBusinessDate(), 1), "d MMM", { locale: fr })})
               </span>
-              <span className="flex items-center gap-2 text-sm font-medium">
-                <span className="rounded-full bg-destructive/15 text-destructive px-2.5 py-0.5 text-xs font-semibold">
-                  {missingYesterday.length} action(s)
+              <span className="flex items-center gap-2">
+                <span className="rounded-full bg-muted text-muted-foreground border border-border px-2.5 py-0.5 text-xs font-medium">
+                  {missingYesterday.length}
                 </span>
                 <ChevronDown
-                  className={`h-4 w-4 transition-transform duration-200 ${missingOpen ? "rotate-180" : ""}`}
+                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${missingOpen ? "rotate-180" : ""}`}
                 />
               </span>
             </CardTitle>
@@ -342,13 +342,13 @@ export default function AdminDashboard() {
             <CardContent onClick={(e) => e.stopPropagation()}>
               <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
                 {missingYesterday.map((m, i) => (
-                  <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/50 border border-border/40 transition-all hover:bg-background/80 hover:shadow-sm">
+                  <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/60 border border-border/30 transition-all hover:bg-background hover:shadow-sm">
                     <button
                       onClick={() => handleContactSurveillant(m.surveillant_id, m.surveillantName)}
                       className="flex items-center gap-2 font-medium hover:text-primary transition-colors text-left group"
                       title="Cliquer pour envoyer un message"
                     >
-                      <Badge variant="outline" className="text-[10px] bg-background text-destructive border-destructive/20">{m.type}</Badge>
+                      <Badge variant="outline" className="text-[10px] bg-background text-muted-foreground border-border">{m.type}</Badge>
                       <span className="group-hover:underline underline-offset-2">{m.surveillantName}</span>
                     </button>
                     <span className="text-xs text-muted-foreground">{m.detail}</span>

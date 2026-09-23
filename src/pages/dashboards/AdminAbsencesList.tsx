@@ -73,7 +73,7 @@ export default function AdminAbsencesList() {
             Absences du {format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}
           </CardTitle>
           <CardDescription className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 bg-destructive/10 text-destructive font-semibold px-2.5 py-1 rounded-full text-xs">
+            <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary font-semibold px-2.5 py-1 rounded-full text-xs">
               <Users className="h-3.5 w-3.5" />
               {totalAbsents} absent(s) au total
             </span>
@@ -94,7 +94,7 @@ export default function AdminAbsencesList() {
                       <BedDouble className="h-4 w-4 text-info shrink-0" />
                       <span className="font-semibold text-sm">Dortoir {a.dortoirs?.code}</span>
                     </div>
-                    <span className="inline-flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold px-3 py-1 rounded-full">
+                    <span className="inline-flex items-center justify-center bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full">
                       {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
                     </span>
                   </div>

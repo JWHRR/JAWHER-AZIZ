@@ -61,15 +61,19 @@ export default function AdminPermanencesList() {
 
       // 2. Attach logs (pointages)
       const logsBySurvSlot = new Map<string, any>();
+      
+      const inferSlot = (log: any) => {
+        if (log.slot) return log.slot;
+        if (!log.start_time) return "MATIN";
+        const h = parseInt(log.start_time.split(':')[0], 10);
+        if (h >= 4 && h < 14) return "MATIN";
+        if (h >= 14 && h < 20) return "APRES_MIDI";
+        return "NUIT";
+      };
+
       (logsRes.data || []).forEach(l => {
-        // Logs might just have start_time/end_time. If they have slot, map it.
-        // Assuming logs have slot column based on standard. If not, just attach to surveillant.
-        if (l.slot) {
-          logsBySurvSlot.set(`${l.surveillant_id}_${l.slot}`, l);
-        } else {
-           // fallback if logs don't have slot (just match surveillant)
-           logsBySurvSlot.set(`${l.surveillant_id}_MATIN`, l);
-        }
+        const inferredSlot = inferSlot(l);
+        logsBySurvSlot.set(`${l.surveillant_id}_${inferredSlot}`, l);
       });
 
       const enriched = Array.from(expected.values()).map(e => {
@@ -83,11 +87,11 @@ export default function AdminPermanencesList() {
 
       // Add any unexpected logs (surveillant checked in but wasn't scheduled)
       (logsRes.data || []).forEach(l => {
-        const slot = l.slot || 'MATIN';
-        if (!expected.has(`${l.surveillant_id}_${slot}`)) {
+        const inferredSlot = inferSlot(l);
+        if (!expected.has(`${l.surveillant_id}_${inferredSlot}`)) {
           enriched.push({
             surveillant_id: l.surveillant_id,
-            slot: slot,
+            slot: inferredSlot,
             source: "IMPREVU",
             notes: null,
             surveillant_name: nameById[l.surveillant_id] || "—",

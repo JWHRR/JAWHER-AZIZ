@@ -93,7 +93,7 @@ export default function Absences() {
     if (isAdmin) {
       const [abs, etud] = await Promise.all([
         supabase.from("absences").select("*, dortoirs(code)").eq("date", date).order("created_at"),
-        supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
+        supabase.from("etudiants").select("id, nom_complet, chambre_id, autorisation_absence, chambres!inner(numero, dortoir_id)")
       ]);
       setAbsences(abs.data ?? []);
       setStudentsData(etud.data ?? []);
@@ -108,7 +108,7 @@ export default function Absences() {
       if (ids.length) {
         const [absRes, etudRes] = await Promise.all([
           supabase.from("absences").select("*, dortoirs(code)").eq("date", date).in("dortoir_id", ids),
-          supabase.from("etudiants").select("id, nom_complet, chambre_id, chambres!inner(numero, dortoir_id)")
+          supabase.from("etudiants").select("id, nom_complet, chambre_id, autorisation_absence, chambres!inner(numero, dortoir_id)")
         ]);
         setAbsences(absRes.data ?? []);
         const filteredEtud = (etudRes.data ?? []).filter((e: any) => ids.includes(e.chambres?.dortoir_id));
@@ -862,6 +862,11 @@ export default function Absences() {
                             onChange={() => handleStudentToggle(s)}
                           />
                           <span>{s.nom_complet}</span>
+                          {s.autorisation_absence && (
+                            <span className="ml-2 text-[10px] uppercase font-bold text-success bg-success/10 px-1.5 py-0.5 rounded border border-success/20">
+                              Absence justifiée
+                            </span>
+                          )}
                         </label>
                       ))}
                     </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, BedDouble, Users } from "lucide-react";
+import { Loader2, ArrowLeft, BedDouble, Users, History } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
@@ -50,9 +50,17 @@ export default function AdminAbsencesList() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Label htmlFor="date" className="text-sm shrink-0">Date :</Label>
-        <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Label htmlFor="date" className="text-sm shrink-0">Date :</Label>
+          <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
+        </div>
+        <Button variant="outline" asChild className="text-amber-600 border-amber-600 hover:bg-amber-50">
+          <Link to="/absences?view=consecutive">
+            <History className="h-4 w-4 mr-2" />
+            Voir Absences Consécutives
+          </Link>
+        </Button>
       </div>
 
       <Card>

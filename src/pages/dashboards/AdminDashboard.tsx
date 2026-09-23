@@ -52,37 +52,44 @@ export default function AdminDashboard() {
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
   const [currentTime, setCurrentTime] = useState(new Date());
-  const timeOffsetRef = useRef(0); // ms difference: serverTime - deviceTime
+  const timeOffsetRef = useRef(0); // ms offset: serverUTC - deviceUTC
+  const timezoneRef = useRef(Intl.DateTimeFormat().resolvedOptions().timeZone); // corrected tz
 
   useEffect(() => {
-    // Sync once with Supabase server time (always available, no external dependency)
     const syncTime = async () => {
       try {
         const deviceBefore = Date.now();
-        // HEAD request to Supabase — no data, just get the server's Date header
-        const res = await fetch(
-          "https://nehqlgjrtoqglstyyuls.supabase.co/rest/v1/",
-          {
-            method: "HEAD",
-            headers: { apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laHFsZ2pydG9xZ2xzdHl5dWxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzM5NjcsImV4cCI6MjA5MjYwOTk2N30.1Q964vkHRu2rgR_u54qqBqHfKyNyIR_0x3fBaiSCUvo" }
-          }
-        );
+        const res = await fetch("https://worldtimeapi.org/api/ip", { cache: "no-store" });
         const deviceAfter = Date.now();
-        const serverDateHeader = res.headers.get("Date");
-        if (serverDateHeader) {
-          const serverMs = new Date(serverDateHeader).getTime();
-          const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
-          timeOffsetRef.current = serverMs - roundTripMid;
-          setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
-        }
+        if (!res.ok) throw new Error("time API error");
+        const data = await res.json();
+        // `unixtime` is guaranteed UTC seconds since epoch — no timezone ambiguity
+        const serverMs = data.unixtime * 1000;
+        const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
+        timeOffsetRef.current = serverMs - roundTripMid;
+        // Store the user's real timezone from the API (e.g. "Africa/Algiers")
+        if (data.timezone) timezoneRef.current = data.timezone;
+        setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
       } catch {
-        // Fallback to device time silently
+        // Fallback: device time only
       }
     };
     syncTime();
-    const timer = setInterval(() => setCurrentTime(new Date(Date.now() + timeOffsetRef.current)), 1000);
+    const timer = setInterval(
+      () => setCurrentTime(new Date(Date.now() + timeOffsetRef.current)),
+      1000
+    );
     return () => clearInterval(timer);
   }, []);
+
+  // Format time using the server-confirmed timezone, not the device's potentially wrong one
+  const displayTime = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: timezoneRef.current,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(currentTime);
 
   useEffect(() => {
     const businessDate = getBusinessDate();

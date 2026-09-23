@@ -55,18 +55,26 @@ export default function AdminDashboard() {
   const timeOffsetRef = useRef(0); // ms difference: serverTime - deviceTime
 
   useEffect(() => {
-    // Sync once with internet time, then tick using the corrected offset
+    // Sync once with Supabase server time (always available, no external dependency)
     const syncTime = async () => {
       try {
         const deviceBefore = Date.now();
-        const res = await fetch("https://worldtimeapi.org/api/ip");
+        // HEAD request to Supabase — no data, just get the server's Date header
+        const res = await fetch(
+          "https://nehqlgjrtoqglstyyuls.supabase.co/rest/v1/",
+          {
+            method: "HEAD",
+            headers: { apikey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laHFsZ2pydG9xZ2xzdHl5dWxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzM5NjcsImV4cCI6MjA5MjYwOTk2N30.1Q964vkHRu2rgR_u54qqBqHfKyNyIR_0x3fBaiSCUvo" }
+          }
+        );
         const deviceAfter = Date.now();
-        const data = await res.json();
-        const serverMs = new Date(data.datetime).getTime();
-        // Compensate for network round-trip by using midpoint
-        const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
-        timeOffsetRef.current = serverMs - roundTripMid;
-        setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
+        const serverDateHeader = res.headers.get("Date");
+        if (serverDateHeader) {
+          const serverMs = new Date(serverDateHeader).getTime();
+          const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
+          timeOffsetRef.current = serverMs - roundTripMid;
+          setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
+        }
       } catch {
         // Fallback to device time silently
       }

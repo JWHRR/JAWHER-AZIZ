@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, BedDouble, User, Users } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
@@ -30,7 +29,7 @@ export default function AdminAbsencesList() {
         .select("*, dortoirs(code)")
         .eq("date", date)
         .order("created_at", { ascending: false });
-      
+
       const survIds = Array.from(new Set((absData || []).map((x: any) => x.surveillant_id)));
       let nameById: Record<string, string> = {};
       if (survIds.length > 0) {
@@ -49,27 +48,36 @@ export default function AdminAbsencesList() {
     load();
   }, [date]);
 
+  const totalAbsents = absences.reduce((acc, curr) => acc + (curr.nombre_absents || 0), 0);
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-4 mb-2">
         <Button variant="outline" size="icon" asChild>
           <Link to="/"><ArrowLeft className="h-4 w-4" /></Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold">Liste des Absences</h1>
-          <p className="text-muted-foreground mt-1">Vue détaillée pour l'administration</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Liste des Absences</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Vue détaillée pour l'administration</p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <Label htmlFor="date" className="text-sm">Date :</Label>
+        <Label htmlFor="date" className="text-sm shrink-0">Date :</Label>
         <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Absences du {format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
-          <CardDescription>{absences.reduce((acc, curr) => acc + (curr.nombre_absents || 0), 0)} absent(s) au total</CardDescription>
+          <CardTitle className="text-base sm:text-lg">
+            Absences du {format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}
+          </CardTitle>
+          <CardDescription className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-destructive/10 text-destructive font-semibold px-2.5 py-1 rounded-full text-xs">
+              <Users className="h-3.5 w-3.5" />
+              {totalAbsents} absent(s) au total
+            </span>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -77,37 +85,44 @@ export default function AdminAbsencesList() {
           ) : absences.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Aucune absence enregistrée pour cette date.</p>
           ) : (
-            <div className="rounded-md border overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead>Dortoir</TableHead>
-                    <TableHead>Surveillant</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Noms des absents</TableHead>
-                    <TableHead>Observations</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {absences.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-medium whitespace-nowrap">Dortoir {a.dortoirs?.code}</TableCell>
-                      <TableCell className="whitespace-nowrap">{a.surveillant_name}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center justify-center bg-warning/20 text-warning-foreground px-2.5 py-0.5 rounded-full text-xs font-bold">
-                          {a.nombre_absents}
-                        </span>
-                      </TableCell>
-                      <TableCell className="whitespace-pre-wrap text-sm max-w-[200px] leading-relaxed">
-                        {a.noms_absents || <span className="text-muted-foreground italic">—</span>}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {a.observations || "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="space-y-3">
+              {absences.map((a) => (
+                <div key={a.id} className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                  {/* Header row */}
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <BedDouble className="h-4 w-4 text-info shrink-0" />
+                      <span className="font-semibold text-sm">Dortoir {a.dortoirs?.code}</span>
+                    </div>
+                    <span className="inline-flex items-center justify-center bg-destructive text-destructive-foreground text-xs font-bold px-3 py-1 rounded-full">
+                      {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  {/* Surveillant */}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="h-3.5 w-3.5 shrink-0" />
+                    <span>{a.surveillant_name}</span>
+                  </div>
+
+                  {/* Names */}
+                  {a.noms_absents && (
+                    <div className="text-sm">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Noms des absents</div>
+                      <div className="whitespace-pre-wrap leading-relaxed text-foreground bg-background rounded-lg px-3 py-2 border text-xs">
+                        {a.noms_absents}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observations */}
+                  {a.observations && (
+                    <div className="text-xs text-muted-foreground bg-background rounded-lg px-3 py-2 border">
+                      <span className="font-semibold text-foreground">Obs. : </span>{a.observations}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

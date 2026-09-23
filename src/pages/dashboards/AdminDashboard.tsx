@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -52,9 +52,27 @@ export default function AdminDashboard() {
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
   const [currentTime, setCurrentTime] = useState(new Date());
+  const timeOffsetRef = useRef(0); // ms difference: serverTime - deviceTime
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    // Sync once with internet time, then tick using the corrected offset
+    const syncTime = async () => {
+      try {
+        const deviceBefore = Date.now();
+        const res = await fetch("https://worldtimeapi.org/api/ip");
+        const deviceAfter = Date.now();
+        const data = await res.json();
+        const serverMs = new Date(data.datetime).getTime();
+        // Compensate for network round-trip by using midpoint
+        const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
+        timeOffsetRef.current = serverMs - roundTripMid;
+        setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
+      } catch {
+        // Fallback to device time silently
+      }
+    };
+    syncTime();
+    const timer = setInterval(() => setCurrentTime(new Date(Date.now() + timeOffsetRef.current)), 1000);
     return () => clearInterval(timer);
   }, []);
 

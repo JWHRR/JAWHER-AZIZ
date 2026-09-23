@@ -23,6 +23,8 @@ import Messagerie from "./pages/Messagerie.tsx";
 import AbsenceRequests from "./pages/AbsenceRequests.tsx";
 import AdminAbsencesList from "./pages/dashboards/AdminAbsencesList.tsx";
 import AdminInspectionsList from "./pages/dashboards/AdminInspectionsList.tsx";
+import AdminPermanencesList from "./pages/dashboards/AdminPermanencesList.tsx";
+import AdminRestaurantList from "./pages/dashboards/AdminRestaurantList.tsx";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +148,22 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN"]}>
                   <AppLayout><AdminInspectionsList /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/permanences"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminPermanencesList /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/restaurant"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminRestaurantList /></AppLayout>
                 </ProtectedRoute>
               }
             />

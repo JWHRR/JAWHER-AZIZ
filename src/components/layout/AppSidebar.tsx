@@ -55,7 +55,17 @@ export function AppSidebar() {
   const { primaryRole } = useAuth();
   const location = useLocation();
 
-  const visible = items.filter((i) => primaryRole && i.roles.includes(primaryRole));
+  const visible = items
+    .filter((i) => primaryRole && i.roles.includes(primaryRole))
+    .map((item) => {
+      if (primaryRole === "ADMIN") {
+        if (item.title === "Absences") return { ...item, url: "/admin/absences" };
+        if (item.title === "Inspections") return { ...item, url: "/admin/inspections" };
+        if (item.title === "Permanences") return { ...item, url: "/admin/permanences" };
+        if (item.title === "Restaurant") return { ...item, url: "/admin/restaurant" };
+      }
+      return item;
+    });
 
   return (
     <Sidebar collapsible="icon" className="border-r">

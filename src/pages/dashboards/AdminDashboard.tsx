@@ -51,6 +51,13 @@ export default function AdminDashboard() {
   const [missingOpen, setMissingOpen] = useState(false);
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => {
     const businessDate = getBusinessDate();
     const today = format(businessDate, "yyyy-MM-dd");
@@ -299,10 +306,12 @@ export default function AdminDashboard() {
     <div className="space-y-6 max-w-7xl">
       <div className="mb-2">
         <h1 className="text-4xl font-extrabold tracking-tight">
-          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+          Bonjour Mr <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
-        <p className="text-muted-foreground mt-2 text-lg">
+        <p className="text-muted-foreground mt-2 text-lg flex items-center gap-2">
           {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
+          <span className="text-border mx-1">|</span>
+          <span className="font-mono tabular-nums text-foreground">{format(currentTime, "HH:mm:ss")}</span>
         </p>
       </div>
 

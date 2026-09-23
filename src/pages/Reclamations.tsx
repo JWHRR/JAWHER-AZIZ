@@ -56,7 +56,7 @@ export default function Reclamations() {
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [dortoirs, setDortoirs] = useState<{ id: string; code: string }[]>([]);
-  const [tab, setTab] = useState<ReclamationStatus | "ALL">("ALL");
+  const [tab, setTab] = useState<ReclamationStatus | "ALL">("EN_ATTENTE");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [openCreate, setOpenCreate] = useState(false);

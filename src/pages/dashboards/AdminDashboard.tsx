@@ -288,7 +288,7 @@ export default function AdminDashboard() {
     { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
     { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
     { label: "Absences", icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
-    { label: "Restaurant", icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant", desc: "Effectifs repas" },
+    { label: "Restaurant", icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
     { label: "Inspections", icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
     { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Suivi des tickets" },
   ];

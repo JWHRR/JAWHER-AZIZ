@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AppRole } from "@/lib/types";
@@ -76,31 +77,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Don't leave the app stuck — proceed with null profile/roles
     } finally {
       loadingUserData.current = false;
-      if (!initialLoadDone.current) {
-        initialLoadDone.current = true;
-        setLoading(false);
-      }
+      initialLoadDone.current = true;
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     // 1. Set up auth state listener FIRST
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
       setUser(newSession?.user ?? null);
 
       if (!newSession?.user) {
         setProfile(null);
         setRoles([]);
-        // If we were still in initial load, unblock
         if (!initialLoadDone.current) {
           initialLoadDone.current = true;
           setLoading(false);
         }
+      } else if (event === "SIGNED_IN") {
+        // When user logs in, set loading to true to prevent "Bonjour" flash
+        // while profile is fetching.
+        setLoading(true);
+        loadUserData(newSession.user.id);
       }
-      // Note: we do NOT call loadUserData here to avoid racing with getSession below.
-      // loadUserData is called once from getSession.then() on initial mount.
-      // Subsequent auth events (token refresh etc.) don't need to reload profile/roles.
     });
 
     // 2. Check for existing session — single source of truth for initial load
@@ -129,7 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const queryClient = useQueryClient();
+
   const signOut = async () => {
+    queryClient.clear(); // Clear all cached queries to prevent data leaks across accounts
+    setProfile(null);
+    setRoles([]);
     await supabase.auth.signOut();
   };
 

@@ -297,11 +297,12 @@ export default function AdminDashboard() {
   };
 
   const cards = [
-    { label: "Utilisateurs actifs", value: stats.totalUsers, icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs" },
-    { label: "Dortoirs", value: stats.totalDortoirs, icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs" },
-    { label: "Absences aujourd'hui", value: stats.absencesAujourdhui, icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences" },
-    { label: "Effectifs restaurant", value: stats.restaurantLogsAujourdhui, icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant" },
-    { label: "Inspections chambres", value: stats.inspectionsAujourdhui, icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/admin/inspections" },
+    { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
+    { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
+    { label: "Absences", icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
+    { label: "Restaurant", icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/restaurant", desc: "Effectifs repas" },
+    { label: "Inspections", icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
+    { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Suivi des tickets" },
   ];
 
   return (
@@ -360,16 +361,18 @@ export default function AdminDashboard() {
       )}
 
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {cards.map((c) => (
-          <Link key={c.label} to={c.link} className="stat-card block transition-transform hover:-translate-y-1 hover:shadow-md cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <div className={`h-10 w-10 rounded-lg ${c.bg} flex items-center justify-center`}>
-                <c.icon className={`h-5 w-5 ${c.color}`} />
+          <Link key={c.label} to={c.link} className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-1 hover:shadow-md">
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className={`h-12 w-12 rounded-full ${c.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                <c.icon className={`h-6 w-6 ${c.color}`} />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">{c.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
               </div>
             </div>
-            <div className="text-3xl font-bold">{c.value}</div>
-            <div className="text-sm text-muted-foreground mt-1">{c.label}</div>
           </Link>
         ))}
       </div>

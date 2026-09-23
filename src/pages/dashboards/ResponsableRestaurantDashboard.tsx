@@ -1,11 +1,11 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, Utensils, CalendarDays, Sun, FileDown, Coffee, UtensilsCrossed, Moon } from "lucide-react";
+import { Loader2, Utensils, CalendarDays, Sun, FileDown } from "lucide-react";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
@@ -15,24 +15,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const REPAS_ORDER: RepasType[] = ["PETIT_DEJEUNER", "DEJEUNER", "DINER"];
-
-const REPAS_ICONS: Record<RepasType, any> = {
-  PETIT_DEJEUNER: Coffee,
-  DEJEUNER: Utensils,
-  DINER: Moon,
-};
-
-const REPAS_COLORS: Record<RepasType, string> = {
-  PETIT_DEJEUNER: "text-orange-500",
-  DEJEUNER:       "text-primary",
-  DINER:          "text-indigo-500",
-};
-
-const REPAS_BG: Record<RepasType, string> = {
-  PETIT_DEJEUNER: "bg-orange-500/10 border-orange-500/20",
-  DEJEUNER:       "bg-primary/10 border-primary/20",
-  DINER:          "bg-indigo-500/10 border-indigo-500/20",
-};
 
 type Count = number | null | undefined;
 
@@ -179,26 +161,14 @@ export default function ResponsableRestaurantDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
 
-      {/* ── Hero greeting ── */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-background to-background border border-primary/20 p-5 sm:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium mb-1">
-            {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Bonjour{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">
-              {profile?.full_name?.split(" ")[0] || ""}
-            </span>{" "}
-            👋
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Tableau de bord - Responsable Restaurant</p>
-        </div>
-        <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
-          <span className="text-xs text-muted-foreground">Total aujourd hui</span>
-          <span className="text-5xl font-black text-primary leading-none">{todayTotal}</span>
-          <span className="text-xs text-muted-foreground">eleves au restaurant</span>
-        </div>
+      {/* ── Header ── */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Bonjour, {profile?.full_name?.split(" ")[0] || ""}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })} — Tableau de bord restaurant
+        </p>
       </div>
 
       {error && (
@@ -207,24 +177,26 @@ export default function ResponsableRestaurantDashboard() {
         </div>
       )}
 
-      {/* ── Stat cards (today per meal) ── */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* ── Résumé du jour ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="col-span-2 sm:col-span-1 rounded-lg border bg-card p-4 flex flex-col gap-1">
+          <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total aujourd'hui</div>
+          <div className="text-4xl font-bold">{todayTotal}</div>
+          <div className="text-xs text-muted-foreground">repas servis</div>
+        </div>
         {REPAS_ORDER.map((r) => {
           const v = today?.perRepas[r];
-          const Icon = REPAS_ICONS[r];
           return (
-            <div key={r} className={`rounded-xl border p-3 sm:p-4 flex flex-col gap-1 ${REPAS_BG[r]}`}>
-              <div className={`flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide ${REPAS_COLORS[r]}`}>
-                <Icon className="h-3.5 w-3.5 shrink-0" />
-                <span className="hidden sm:inline">{REPAS_LABELS[r]}</span>
-                <span className="sm:hidden">{r === "PETIT_DEJEUNER" ? "Matin" : r === "DEJEUNER" ? "Midi" : "Soir"}</span>
+            <div key={r} className="rounded-lg border bg-card p-4 flex flex-col gap-1">
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                {r === "PETIT_DEJEUNER" ? "Petit-déjeuner" : r === "DEJEUNER" ? "Déjeuner" : "Dîner"}
               </div>
-              <div className={`text-3xl sm:text-4xl font-black leading-none ${REPAS_COLORS[r]}`}>
-                {v === null ? "-" : v === undefined ? (
-                  <span className="text-lg text-muted-foreground font-normal italic">-</span>
+              <div className="text-3xl font-bold">
+                {v === null ? "—" : v === undefined ? (
+                  <span className="text-base text-muted-foreground font-normal">—</span>
                 ) : v}
               </div>
-              <div className="text-xs text-muted-foreground">eleves</div>
+              <div className="text-xs text-muted-foreground">repas servis</div>
             </div>
           );
         })}
@@ -255,20 +227,18 @@ export default function ResponsableRestaurantDashboard() {
             {week.map((row) => {
               const isToday = row.date === format(getBusinessDate(), "yyyy-MM-dd");
               return (
-                <div key={row.date} className={`rounded-lg border p-3 ${isToday ? "border-primary/40 bg-primary/5" : "bg-muted/20"}`}>
+                <div key={row.date} className={`rounded-lg border p-3 ${isToday ? "border-primary/40 bg-muted/30" : "bg-muted/10"}`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className={`text-sm font-semibold capitalize ${isToday ? "text-primary" : ""}`}>{row.label}</span>
-                    <span className="text-sm font-bold">{row.total > 0 ? `Total: ${row.total}` : ""}</span>
+                    <span className="text-sm font-bold">{row.total > 0 ? `Total : ${row.total}` : ""}</span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {REPAS_ORDER.map((r) => {
-                      const Icon = REPAS_ICONS[r];
                       const v = row.perRepas[r];
                       return (
                         <div key={r} className="flex flex-col items-center gap-0.5">
-                          <Icon className={`h-3.5 w-3.5 ${REPAS_COLORS[r]}`} />
                           <span className="text-xs text-muted-foreground">{r === "PETIT_DEJEUNER" ? "Matin" : r === "DEJEUNER" ? "Midi" : "Soir"}</span>
-                          <span className="text-sm font-semibold">{v === null ? "-" : v === undefined ? "-" : v}</span>
+                          <span className="text-sm font-semibold">{v === null ? "—" : v === undefined ? "—" : v}</span>
                         </div>
                       );
                     })}
@@ -276,9 +246,9 @@ export default function ResponsableRestaurantDashboard() {
                 </div>
               );
             })}
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-primary">Total semaine</span>
-              <span className="text-xl font-black text-primary">{weekTotal}</span>
+            <div className="rounded-lg border p-3 flex items-center justify-between">
+              <span className="text-sm font-semibold">Total semaine</span>
+              <span className="text-lg font-bold">{weekTotal}</span>
             </div>
           </div>
 
@@ -308,9 +278,9 @@ export default function ResponsableRestaurantDashboard() {
                   );
                 })}
                 <TableRow className="border-t-2">
-                  <TableCell className="font-bold text-primary">Total semaine</TableCell>
+                  <TableCell className="font-bold">Total semaine</TableCell>
                   <TableCell colSpan={REPAS_ORDER.length} />
-                  <TableCell className="text-right font-black text-primary text-base">{weekTotal}</TableCell>
+                  <TableCell className="text-right font-bold">{weekTotal}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
@@ -338,10 +308,9 @@ export default function ResponsableRestaurantDashboard() {
         </CardHeader>
         <CardContent>
           {weekendRows.length === 0 ? (
-            <div className="text-center py-8 border-2 border-dashed rounded-lg bg-muted/10">
-              <Sun className="h-10 w-10 mx-auto text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground italic">Aucun effectif weekend saisi pour cette semaine.</p>
-            </div>
+            <p className="text-sm text-muted-foreground italic py-4">
+              Aucun effectif weekend saisi pour cette semaine.
+            </p>
           ) : (
             <>
               {/* Mobile: simple stacked list */}
@@ -352,9 +321,9 @@ export default function ResponsableRestaurantDashboard() {
                     <span className="font-bold text-lg">{r.nombre}</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5">
-                  <span className="font-bold text-sm text-primary">Total</span>
-                  <span className="font-black text-xl text-primary">{weekendTotal}</span>
+                <div className="flex items-center justify-between p-3 rounded-lg border">
+                  <span className="font-semibold text-sm">Total</span>
+                  <span className="font-bold text-lg">{weekendTotal}</span>
                 </div>
               </div>
 
@@ -375,8 +344,8 @@ export default function ResponsableRestaurantDashboard() {
                       </TableRow>
                     ))}
                     <TableRow className="border-t-2">
-                      <TableCell className="font-bold text-primary">Total</TableCell>
-                      <TableCell className="text-right font-black text-primary text-base">{weekendTotal}</TableCell>
+                      <TableCell className="font-bold">Total</TableCell>
+                      <TableCell className="text-right font-bold">{weekendTotal}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

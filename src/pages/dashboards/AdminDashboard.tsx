@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, TrendingUp,
-  Calendar as CalIcon, AlertTriangle, DoorOpen, CheckCircle2,
+  Calendar as CalIcon, AlertTriangle, DoorOpen, CheckCircle2, ChevronDown,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -52,6 +52,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recent, setRecent] = useState<any[]>([]);
   const [missingYesterday, setMissingYesterday] = useState<MissingTask[]>([]);
+  const [missingOpen, setMissingOpen] = useState(false);
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
 
   useEffect(() => {
@@ -314,35 +315,50 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Warnings: missing tasks of yesterday */}
+      {/* Collapsible: missing tasks of yesterday */}
       {missingYesterday.length > 0 && (
-        <Card className="border-destructive/30 bg-gradient-to-br from-destructive/10 to-transparent shadow-sm backdrop-blur-sm">
+        <Card
+          className="border-destructive/30 bg-gradient-to-br from-destructive/10 to-transparent shadow-sm backdrop-blur-sm cursor-pointer select-none"
+          onClick={() => setMissingOpen((o) => !o)}
+        >
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-destructive font-bold">
-              <AlertTriangle className="h-5 w-5" />
-              Tâches manquantes — hier ({format(subDays(getBusinessDate(), 1), "d MMM", { locale: fr })})
+            <CardTitle className="text-base flex items-center justify-between text-destructive font-bold">
+              <span className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Tâches manquantes — hier ({format(subDays(getBusinessDate(), 1), "d MMM", { locale: fr })})
+              </span>
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <span className="rounded-full bg-destructive/15 text-destructive px-2.5 py-0.5 text-xs font-semibold">
+                  {missingYesterday.length} action(s)
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform duration-200 ${missingOpen ? "rotate-180" : ""}`}
+                />
+              </span>
             </CardTitle>
-            <CardDescription className="text-destructive/80 font-medium">{missingYesterday.length} action(s) non effectuée(s)</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
-              {missingYesterday.map((m, i) => (
-                <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/50 border border-border/40 transition-all hover:bg-background/80 hover:shadow-sm">
-                  <button
-                    onClick={() => handleContactSurveillant(m.surveillant_id, m.surveillantName)}
-                    className="flex items-center gap-2 font-medium hover:text-primary transition-colors text-left group"
-                    title="Cliquer pour envoyer un message"
-                  >
-                    <Badge variant="outline" className="text-[10px] bg-background text-destructive border-destructive/20">{m.type}</Badge>
-                    <span className="group-hover:underline underline-offset-2">{m.surveillantName}</span>
-                  </button>
-                  <span className="text-xs text-muted-foreground">{m.detail}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
+          {missingOpen && (
+            <CardContent onClick={(e) => e.stopPropagation()}>
+              <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                {missingYesterday.map((m, i) => (
+                  <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/50 border border-border/40 transition-all hover:bg-background/80 hover:shadow-sm">
+                    <button
+                      onClick={() => handleContactSurveillant(m.surveillant_id, m.surveillantName)}
+                      className="flex items-center gap-2 font-medium hover:text-primary transition-colors text-left group"
+                      title="Cliquer pour envoyer un message"
+                    >
+                      <Badge variant="outline" className="text-[10px] bg-background text-destructive border-destructive/20">{m.type}</Badge>
+                      <span className="group-hover:underline underline-offset-2">{m.surveillantName}</span>
+                    </button>
+                    <span className="text-xs text-muted-foreground">{m.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          )}
         </Card>
       )}
+
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (

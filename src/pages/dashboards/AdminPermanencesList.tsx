@@ -144,16 +144,23 @@ export default function AdminPermanencesList() {
             <div className="space-y-3">
               {data.map((item, idx) => {
                 const hasPointage = !!item.log;
+                const isToday = date === format(getBusinessDate(), "yyyy-MM-dd");
+                const isWarning = !hasPointage && isToday;
+                
+                const cardBg = hasPointage ? 'bg-success/5 border-success/20' : isWarning ? 'bg-warning/5 border-warning/30' : 'bg-destructive/5 border-destructive/20';
+                const iconColor = hasPointage ? 'text-success' : isWarning ? 'text-warning' : 'text-destructive';
+                const badgeColor = hasPointage ? 'bg-success text-success-foreground' : isWarning ? 'bg-warning text-warning-foreground' : 'bg-destructive text-destructive-foreground';
+
                 return (
-                  <div key={idx} className={`rounded-xl border p-4 space-y-3 ${hasPointage ? 'bg-success/5 border-success/20' : 'bg-destructive/5 border-destructive/20'}`}>
+                  <div key={idx} className={`rounded-xl border p-4 space-y-3 ${cardBg}`}>
                     {/* Header row */}
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2">
-                        <Clock className={`h-4 w-4 ${hasPointage ? 'text-success' : 'text-destructive'} shrink-0`} />
+                        <Clock className={`h-4 w-4 ${iconColor} shrink-0`} />
                         <span className="font-semibold text-sm">{SLOT_LABELS[item.slot as PermanenceSlot] || item.slot}</span>
                       </div>
-                      <span className={`inline-flex items-center justify-center text-xs font-bold px-3 py-1 rounded-full ${hasPointage ? 'bg-success text-success-foreground' : 'bg-destructive text-destructive-foreground'}`}>
-                        {hasPointage ? 'Pointé' : 'Non pointé'}
+                      <span className={`inline-flex items-center justify-center text-xs font-bold px-3 py-1 rounded-full ${badgeColor}`}>
+                        {hasPointage ? 'Pointé' : isWarning ? 'En attente' : 'Non pointé'}
                       </span>
                     </div>
 

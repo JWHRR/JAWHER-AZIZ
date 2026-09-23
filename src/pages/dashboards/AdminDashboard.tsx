@@ -4,8 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, Users, BedDouble, ClipboardCheck, Wrench, TrendingUp,
-  Calendar as CalIcon, AlertTriangle, DoorOpen, CheckCircle2, ChevronDown,
+  Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
+  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -287,9 +287,9 @@ export default function AdminDashboard() {
   const cards = [
     { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
     { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
-    { label: "Absences", icon: ClipboardCheck, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
-    { label: "Restaurant", icon: TrendingUp, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
-    { label: "Inspections", icon: DoorOpen, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
+    { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
+    { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
+    { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
     { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Suivi des tickets" },
   ];
 

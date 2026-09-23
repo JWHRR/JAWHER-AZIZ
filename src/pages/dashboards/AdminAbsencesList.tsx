@@ -56,7 +56,7 @@ export default function AdminAbsencesList() {
           <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
         </div>
         <Button variant="outline" asChild className="text-amber-600 border-amber-600 hover:bg-amber-50">
-          <Link to="/absences?view=consecutive">
+          <Link to="/admin/absences/consecutive">
             <History className="h-4 w-4 mr-2" />
             Voir Absences Consécutives
           </Link>

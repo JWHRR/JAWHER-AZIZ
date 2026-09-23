@@ -22,6 +22,7 @@ import Etudiants from "./pages/Etudiants.tsx";
 import Messagerie from "./pages/Messagerie.tsx";
 import AbsenceRequests from "./pages/AbsenceRequests.tsx";
 import AdminAbsencesList from "./pages/dashboards/AdminAbsencesList.tsx";
+import AdminConsecutiveAbsences from "./pages/dashboards/AdminConsecutiveAbsences.tsx";
 import AdminInspectionsList from "./pages/dashboards/AdminInspectionsList.tsx";
 import AdminPermanencesList from "./pages/dashboards/AdminPermanencesList.tsx";
 import AdminRestaurantList from "./pages/dashboards/AdminRestaurantList.tsx";
@@ -140,6 +141,14 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN"]}>
                   <AppLayout><AdminAbsencesList /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/absences/consecutive"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminConsecutiveAbsences /></AppLayout>
                 </ProtectedRoute>
               }
             />

@@ -18,9 +18,6 @@ interface Stats {
   totalUsers: number;
   totalDortoirs: number;
   absencesAujourdhui: number;
-  reclamationsEnAttente: number;
-  reclamationsEnCours: number;
-  reclamationsTerminees: number;
   restaurantLogsAujourdhui: number;
   permanencesAujourdhui: number;
   permanencesLogsAujourdhui: number;
@@ -50,7 +47,6 @@ export default function AdminDashboard() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [recent, setRecent] = useState<any[]>([]);
   const [missingYesterday, setMissingYesterday] = useState<MissingTask[]>([]);
   const [missingOpen, setMissingOpen] = useState(false);
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
@@ -64,32 +60,24 @@ export default function AdminDashboard() {
 
     (async () => {
       // ---- Top stats
-      const [u, d, a, rPend, rProg, rDone, p, perm, pLogs, ins, act] = await Promise.all([
+      const [u, d, a, p, perm, pLogs, ins] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("dortoirs").select("*", { count: "exact", head: true }),
         supabase.from("absences").select("nombre_absents").eq("date", today),
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "EN_ATTENTE"),
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "EN_COURS"),
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "TERMINEE"),
         supabase.from("restaurant_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
-        supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(10),
       ]);
       setStats({
         totalUsers: u.count ?? 0,
         totalDortoirs: d.count ?? 0,
         absencesAujourdhui: (a.data ?? []).reduce((s, r: any) => s + (r.nombre_absents || 0), 0),
-        reclamationsEnAttente: rPend.count ?? 0,
-        reclamationsEnCours: rProg.count ?? 0,
-        reclamationsTerminees: rDone.count ?? 0,
         restaurantLogsAujourdhui: p.count ?? 0,
         permanencesAujourdhui: perm.count ?? 0,
         permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
       });
-      setRecent(act.data ?? []);
 
       // ---- Profile names cache
       const { data: allProfs } = await supabase
@@ -434,40 +422,6 @@ export default function AdminDashboard() {
             )}
             {todayActivity.done.length === 0 && todayActivity.pending.length === 0 && todayActivity.info.length === 0 && (
               <p className="text-sm text-muted-foreground italic">Aucune tâche prévue aujourd'hui.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base">Réclamations</CardTitle>
-            <CardDescription>État global</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm"><span>En cours</span><span className="font-semibold text-primary">{stats.reclamationsEnCours}</span></div>
-            <div className="flex justify-between text-sm"><span>Terminées</span><span className="font-semibold text-success">{stats.reclamationsTerminees}</span></div>
-            <Button asChild variant="outline" size="sm" className="w-full mt-2">
-              <Link to="/reclamations">Voir tout</Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-3 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base">Activité récente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recent.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune activité récente.</p>
-            ) : (
-              <ul className="space-y-2">
-                {recent.map((a) => (
-                  <li key={a.id} className="text-sm flex justify-between border-b last:border-0 pb-2 last:pb-0">
-                    <span>{a.action} {a.entity ? `· ${a.entity}` : ""}</span>
-                    <span className="text-xs text-muted-foreground">{format(new Date(a.created_at), "dd/MM HH:mm")}</span>
-                  </li>
-                ))}
-              </ul>
             )}
           </CardContent>
         </Card>

@@ -7,13 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
 
 export default function AdminAbsencesList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [date, setDate] = useState(searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(searchParams.get("date") || format(subDays(getBusinessDate(), 1), "yyyy-MM-dd"));
   const [loading, setLoading] = useState(true);
   const [absences, setAbsences] = useState<any[]>([]);
 

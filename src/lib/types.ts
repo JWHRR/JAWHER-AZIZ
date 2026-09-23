@@ -26,7 +26,7 @@ export const REPAS_LABELS: Record<RepasType, string> = {
 export const ROLE_LABELS: Record<AppRole, string> = {
   ADMIN: "Administrateur",
   SURVEILLANT: "Surveillant",
-  TECHNICIEN: "Technicien",
+  TECHNICIEN: "Responsable Réparation",
   RESPONSABLE_RESTAURANT: "Responsable Restaurant",
 };
 

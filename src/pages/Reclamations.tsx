@@ -348,8 +348,9 @@ export default function Reclamations() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <StatusBadge status={r.status} />
+                  <span className="text-muted-foreground/40 text-[10px]">•</span>
                   <PriorityBadge priority={r.priority} />
                 </div>
               </div>

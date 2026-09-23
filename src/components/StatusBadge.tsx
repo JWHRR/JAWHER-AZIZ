@@ -4,27 +4,27 @@ import { cn } from "@/lib/utils";
 
 export function StatusBadge({ status }: { status: ReclamationStatus }) {
   const styles: Record<ReclamationStatus, string> = {
-    EN_ATTENTE: "bg-warning-soft text-warning border-warning/30",
-    EN_COURS: "bg-primary-soft text-primary border-primary/30",
-    TERMINEE: "bg-success-soft text-success border-success/30",
+    EN_ATTENTE: "text-warning",
+    EN_COURS: "text-primary",
+    TERMINEE: "text-success",
   };
   return (
-    <Badge variant="outline" className={cn("font-medium", styles[status])}>
+    <span className={cn("text-xs font-semibold uppercase tracking-wide", styles[status])}>
       {STATUS_LABELS[status]}
-    </Badge>
+    </span>
   );
 }
 
 export function PriorityBadge({ priority }: { priority: ReclamationPriority }) {
   const styles: Record<ReclamationPriority, string> = {
-    BASSE: "bg-muted text-muted-foreground border-border",
-    NORMALE: "bg-primary-soft text-primary border-primary/30",
-    HAUTE: "bg-destructive/10 text-destructive border-destructive/30",
+    BASSE: "text-muted-foreground",
+    NORMALE: "text-primary",
+    HAUTE: "text-destructive",
   };
   return (
-    <Badge variant="outline" className={cn("font-medium", styles[priority])}>
+    <span className={cn("text-xs font-semibold uppercase tracking-wide", styles[priority])}>
       {PRIORITY_LABELS[priority]}
-    </Badge>
+    </span>
   );
 }
 

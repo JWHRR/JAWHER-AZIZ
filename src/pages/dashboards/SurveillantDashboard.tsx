@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Star, Briefcase } from "lucide-react";
+import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Briefcase } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -135,40 +135,13 @@ export default function SurveillantDashboard() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold tracking-tight">
-            Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
-          </p>
-        </div>
-
-        <Card className="w-full md:w-80 bg-gradient-to-br from-yellow-500/10 via-background to-background border-yellow-500/30 shadow-sm relative overflow-hidden shrink-0">
-          <div className="absolute top-0 right-0 p-1 bg-yellow-500/10 rounded-bl-lg">
-            <span className="text-[10px] font-bold text-yellow-600 dark:text-yellow-500 uppercase px-2">Bêta</span>
-          </div>
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-1 mb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Score Performance</span>
-                <span className="text-2xl font-black text-yellow-500 leading-none">100<span className="text-sm text-muted-foreground font-normal">/100</span></span>
-              </div>
-              <div className="flex items-center gap-0.5">
-                {[...Array(10)].map((_, i) => (
-                  <Star key={i} className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                ))}
-              </div>
-            </div>
-            <div className="h-2 w-full bg-secondary rounded-full mb-2 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]" style={{ width: "100%" }} />
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-tight">
-              Ce score reflète votre assiduité. Des points seront déduits en cas de tâches manquées (inspections, tournées, restaurant).
-            </p>
-          </CardContent>
-        </Card>
+      <div className="mb-6">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">
+          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,7 +166,7 @@ export default function SurveillantDashboard() {
                     <div className="flex items-center gap-2">
                       <DoneBadge done={absenceDoneToday[d.dortoir_id]} />
                       <Button asChild size="sm" variant={absenceDoneToday[d.dortoir_id] ? "outline" : "default"}>
-                        <Link to="/absences">{absenceDoneToday[d.dortoir_id] ? "Voir" : "Tournée & Inspection"}</Link>
+                        <Link to="/absences">{absenceDoneToday[d.dortoir_id] ? "Voir" : "Saisir les absences"}</Link>
                       </Button>
                     </div>
                   </li>

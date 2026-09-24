@@ -629,16 +629,16 @@ export default function Absences() {
 
           {/* SECTION EFFECTIF WEEKEND */}
           {isThursday(parseLocalDate(date)) && !isAdmin && (
-            <div className="ring-4 ring-red-500 ring-offset-2 rounded-xl animate-pulse-ring">
-              <Card className="border-2 border-red-500 rounded-xl overflow-hidden shadow-lg shadow-red-100/60 dark:shadow-red-900/30">
+            <div className="ring-4 ring-amber-400 ring-offset-2 rounded-xl animate-pulse-ring">
+              <Card className="border-2 border-amber-400 rounded-xl overflow-hidden shadow-md shadow-amber-100/50 dark:shadow-amber-900/20">
                 {/* Attention banner */}
-                <div className="bg-red-600 text-white px-5 py-3 flex items-center gap-3">
+                <div className="bg-amber-500 text-white px-5 py-3 flex items-center gap-3">
                   <CalendarDays className="h-6 w-6 shrink-0" />
                   <div>
                     <p className="font-extrabold text-base uppercase tracking-wide">
                       ⚠️ ACTION REQUISE — Effectif Weekend
                     </p>
-                    <p className="text-red-100 text-xs font-medium mt-0.5">
+                    <p className="text-amber-50 text-xs font-medium mt-0.5">
                       C'est jeudi — renseignez obligatoirement l'effectif présent ce week-end pour chaque dortoir.
                     </p>
                   </div>
@@ -657,8 +657,8 @@ export default function Absences() {
                             key={d.id}
                             className={`p-4 rounded-lg border-2 bg-card transition-colors ${
                               we
-                                ? "border-green-500 bg-white dark:bg-card"
-                                : "border-red-400 bg-white dark:bg-card"
+                                ? "border-green-400 bg-card"
+                                : "border-amber-300 bg-card"
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -674,13 +674,13 @@ export default function Absences() {
                                   </div>
                                 </div>
                               ) : (
-                                <span className="italic text-red-600 dark:text-red-400 font-medium">⚠️ Non renseigné</span>
+                                <span className="italic text-amber-700 dark:text-amber-400 font-medium">⚠️ Non renseigné</span>
                               )}
                             </div>
                             <Button
                               size="sm"
                               variant={we ? "outline" : "default"}
-                              className={`mt-3 w-full font-bold ${!we ? "bg-red-600 hover:bg-red-700 text-white border-0" : ""}`}
+                              className={`mt-3 w-full font-semibold ${!we ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
                               onClick={() => openWeekend(d.id)}
                             >
                               {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}

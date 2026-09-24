@@ -111,8 +111,8 @@
 
 /* Pulsing ring animation for weekend effectif alert */
 @keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.55); }
-  50%       { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.12); }
+  0%, 100% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.5); }
+  50%       { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.1); }
 }
 
 .animate-pulse-ring {

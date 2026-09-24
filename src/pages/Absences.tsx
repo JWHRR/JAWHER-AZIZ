@@ -629,57 +629,77 @@ export default function Absences() {
 
           {/* SECTION EFFECTIF WEEKEND */}
           {isThursday(parseLocalDate(date)) && !isAdmin && (
-            <Card className="border-primary">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-primary" /> Effectif Weekend
-                </CardTitle>
-                <CardDescription>Visualisation et saisie de l'effectif présent ce week-end</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {allDortoirs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
-                ) : (
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {allDortoirs.map((d) => {
-                      const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
-                      const isAssignedToMe = myDortoirs.some((myD) => myD.dortoir_id === d.id);
-                      const canEdit = isAdmin || isAssignedToMe;
-                      
-                      return (
-                        <li key={d.id} className="p-4 rounded-lg border bg-card">
-                          <div className="flex items-center justify-between">
-                            <div className="font-semibold">Dortoir {d.code}</div>
-                            <DoneBadge done={!!we} />
-                          </div>
-                          <div className="text-sm text-muted-foreground mt-2 min-h-[40px]">
-                            {we ? (
-                              <div>
-                                <span className="font-semibold text-foreground">{we.nombre_presents} présent(s)</span>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  Saisi par : {we.profiles?.full_name || "—"}
+            <div className="ring-4 ring-orange-400 ring-offset-2 rounded-xl animate-pulse-ring">
+              <Card className="border-2 border-orange-400 rounded-xl overflow-hidden shadow-lg shadow-orange-200/60 dark:shadow-orange-900/40">
+                {/* Attention banner */}
+                <div className="bg-orange-500 text-white px-5 py-3 flex items-center gap-3">
+                  <CalendarDays className="h-6 w-6 shrink-0" />
+                  <div>
+                    <p className="font-extrabold text-base uppercase tracking-wide">
+                      ⚠️ ACTION REQUISE — Effectif Weekend
+                    </p>
+                    <p className="text-orange-100 text-xs font-medium mt-0.5">
+                      C'est jeudi — renseignez obligatoirement l'effectif présent ce week-end pour chaque dortoir.
+                    </p>
+                  </div>
+                </div>
+                <CardContent className="pt-5">
+                  {allDortoirs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+                  ) : (
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {allDortoirs.map((d) => {
+                        const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
+                        const isAssignedToMe = myDortoirs.some((myD) => myD.dortoir_id === d.id);
+                        const canEdit = isAdmin || isAssignedToMe;
+
+                        return (
+                          <li
+                            key={d.id}
+                            className={`p-4 rounded-lg border-2 bg-card transition-colors ${
+                              we
+                                ? "border-green-400 bg-green-50/40 dark:bg-green-950/20"
+                                : "border-orange-300 bg-orange-50/40 dark:bg-orange-950/20"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="font-bold text-base">Dortoir {d.code}</div>
+                              <DoneBadge done={!!we} />
+                            </div>
+                            <div className="text-sm mt-2 min-h-[40px]">
+                              {we ? (
+                                <div>
+                                  <span className="font-bold text-green-700 dark:text-green-400 text-lg">{we.nombre_presents} présent(s)</span>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Saisi par : {we.profiles?.full_name || "—"}
+                                  </div>
                                 </div>
-                              </div>
+                              ) : (
+                                <span className="italic text-orange-600 dark:text-orange-400 font-medium">⚠️ Non renseigné</span>
+                              )}
+                            </div>
+                            {canEdit ? (
+                              <Button
+                                size="sm"
+                                variant={we ? "outline" : "default"}
+                                className={`mt-3 w-full font-bold ${!we ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
+                                onClick={() => openWeekend(d.id)}
+                              >
+                                {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
+                              </Button>
                             ) : (
-                              <span className="italic">Non renseigné</span>
+                              <Button size="sm" variant="ghost" disabled className="mt-3 w-full bg-muted/40 cursor-not-allowed">
+                                Lecture seule
+                              </Button>
                             )}
-                          </div>
-                          {canEdit ? (
-                            <Button size="sm" variant={we ? "outline" : "default"} className="mt-3 w-full" onClick={() => openWeekend(d.id)}>
-                              {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
-                            </Button>
-                          ) : (
-                            <Button size="sm" variant="ghost" disabled className="mt-3 w-full bg-muted/40 cursor-not-allowed">
-                              Lecture seule
-                            </Button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
         </>
       ) : (

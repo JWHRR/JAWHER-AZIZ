@@ -108,3 +108,13 @@
     @apply rounded-xl border bg-card shadow-sm;
   }
 }
+
+/* Pulsing ring animation for weekend effectif alert */
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(251, 146, 60, 0.6); }
+  50%       { box-shadow: 0 0 0 8px rgba(251, 146, 60, 0.15); }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-in-out infinite;
+}

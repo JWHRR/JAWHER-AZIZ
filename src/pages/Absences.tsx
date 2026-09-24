@@ -629,37 +629,36 @@ export default function Absences() {
 
           {/* SECTION EFFECTIF WEEKEND */}
           {isThursday(parseLocalDate(date)) && !isAdmin && (
-            <div className="ring-4 ring-orange-400 ring-offset-2 rounded-xl animate-pulse-ring">
-              <Card className="border-2 border-orange-400 rounded-xl overflow-hidden shadow-lg shadow-orange-200/60 dark:shadow-orange-900/40">
+            <div className="ring-4 ring-red-500 ring-offset-2 rounded-xl animate-pulse-ring">
+              <Card className="border-2 border-red-500 rounded-xl overflow-hidden shadow-lg shadow-red-100/60 dark:shadow-red-900/30">
                 {/* Attention banner */}
-                <div className="bg-orange-500 text-white px-5 py-3 flex items-center gap-3">
+                <div className="bg-red-600 text-white px-5 py-3 flex items-center gap-3">
                   <CalendarDays className="h-6 w-6 shrink-0" />
                   <div>
                     <p className="font-extrabold text-base uppercase tracking-wide">
                       ⚠️ ACTION REQUISE — Effectif Weekend
                     </p>
-                    <p className="text-orange-100 text-xs font-medium mt-0.5">
+                    <p className="text-red-100 text-xs font-medium mt-0.5">
                       C'est jeudi — renseignez obligatoirement l'effectif présent ce week-end pour chaque dortoir.
                     </p>
                   </div>
                 </div>
                 <CardContent className="pt-5">
-                  {allDortoirs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+                  {myDortoirs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Aucun dortoir affecté.</p>
                   ) : (
                     <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {allDortoirs.map((d) => {
+                      {myDortoirs.map((myD) => {
+                        const d = { id: myD.dortoir_id, code: myD.dortoirs.code };
                         const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
-                        const isAssignedToMe = myDortoirs.some((myD) => myD.dortoir_id === d.id);
-                        const canEdit = isAdmin || isAssignedToMe;
 
                         return (
                           <li
                             key={d.id}
                             className={`p-4 rounded-lg border-2 bg-card transition-colors ${
                               we
-                                ? "border-green-400 bg-green-50/40 dark:bg-green-950/20"
-                                : "border-orange-300 bg-orange-50/40 dark:bg-orange-950/20"
+                                ? "border-green-500 bg-white dark:bg-card"
+                                : "border-red-400 bg-white dark:bg-card"
                             }`}
                           >
                             <div className="flex items-center justify-between">
@@ -675,23 +674,17 @@ export default function Absences() {
                                   </div>
                                 </div>
                               ) : (
-                                <span className="italic text-orange-600 dark:text-orange-400 font-medium">⚠️ Non renseigné</span>
+                                <span className="italic text-red-600 dark:text-red-400 font-medium">⚠️ Non renseigné</span>
                               )}
                             </div>
-                            {canEdit ? (
-                              <Button
-                                size="sm"
-                                variant={we ? "outline" : "default"}
-                                className={`mt-3 w-full font-bold ${!we ? "bg-orange-500 hover:bg-orange-600 text-white border-0" : ""}`}
-                                onClick={() => openWeekend(d.id)}
-                              >
-                                {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="ghost" disabled className="mt-3 w-full bg-muted/40 cursor-not-allowed">
-                                Lecture seule
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant={we ? "outline" : "default"}
+                              className={`mt-3 w-full font-bold ${!we ? "bg-red-600 hover:bg-red-700 text-white border-0" : ""}`}
+                              onClick={() => openWeekend(d.id)}
+                            >
+                              {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
+                            </Button>
                           </li>
                         );
                       })}

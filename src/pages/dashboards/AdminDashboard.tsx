@@ -24,8 +24,12 @@ interface Stats {
   permanencesAujourdhui: number;
   permanencesLogsAujourdhui: number;
   inspectionsAujourdhui: number;
-  /** Élèves restant à l'internat pour la période jeudi → jeudi suivant. */
-  effectifWeekend: number;
+  /**
+   * Élèves restant à l'internat pour la période jeudi → jeudi suivant.
+   * null = aucune saisie : un vrai 0 signifierait « personne ne reste »,
+   * ce qui est une information toute différente.
+   */
+  effectifWeekend: number | null;
 }
 
 interface MissingTask {
@@ -124,7 +128,7 @@ export default function AdminDashboard() {
         permanencesAujourdhui: perm.count ?? 0,
         permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
-        effectifWeekend: we.total,
+        effectifWeekend: we.rows.length > 0 ? we.total : null,
       });
 
       // ---- Profile names cache
@@ -414,9 +418,15 @@ export default function AdminDashboard() {
                 {/* Les tuiles qui portent un chiffre l'affichent en grand ;
                     les autres gardent leur apparence d'origine. */}
                 {"value" in c && c.value !== undefined && (
-                  <div className={`text-3xl font-bold leading-tight mt-1 ${c.color}`}>
-                    {c.value}
-                  </div>
+                  c.value === null ? (
+                    <div className="text-xs italic text-muted-foreground mt-1.5">
+                      non saisi
+                    </div>
+                  ) : (
+                    <div className={`text-3xl font-bold leading-tight mt-1 ${c.color}`}>
+                      {c.value}
+                    </div>
+                  )
                 )}
                 {c.desc && (
                   <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>

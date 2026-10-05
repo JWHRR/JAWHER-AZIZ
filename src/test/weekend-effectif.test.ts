@@ -54,3 +54,27 @@ describe("une seule source pour l'effectif weekend", () => {
     }
   });
 });
+
+/**
+ * Un 0 affiché voudrait dire « personne ne reste ce weekend ».
+ * Aucune saisie est une tout autre information : les deux ne doivent pas
+ * se ressembler à l'écran.
+ */
+describe("aucune saisie ne doit pas s'afficher comme un zéro", () => {
+  it("la somme de zéro ligne vaut bien 0 — d'où le besoin de distinguer", () => {
+    expect(sumWeekendRows([])).toBe(0);
+  });
+
+  it("le tableau de bord admin distingue les deux cas", () => {
+    const src = read("src/pages/dashboards/AdminDashboard.tsx");
+    // null quand rien n'est saisi, le total sinon
+    expect(src).toContain("we.rows.length > 0 ? we.total : null");
+    expect(src).toContain("non saisi");
+  });
+
+  it("un vrai zéro reste affiché comme un chiffre", () => {
+    // un dortoir saisi à 0 est une information : personne ne reste dans
+    // ce dortoir, mais la saisie a bien eu lieu.
+    expect(sumWeekendRows([{ code: "A", nombre: 0 }])).toBe(0);
+  });
+});

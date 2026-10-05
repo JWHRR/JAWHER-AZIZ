@@ -33,10 +33,18 @@ describe("daysSince", () => {
     expect(daysSince("pas une date", now)).toBe(0);
   });
 
-  it("donne le même résultat quelle que soit l'heure de consultation", () => {
+  it("reste stable pendant toute la journée de travail (08h → minuit)", () => {
     const created = tunis(2026, 9, 18, 15);
-    const hours = [0, 6, 12, 18, 23].map((h) => daysSince(created, tunis(2026, 9, 21, h)));
+    const hours = [8, 12, 18, 23].map((h) => daysSince(created, tunis(2026, 9, 21, h)));
     expect(new Set(hours)).toEqual(new Set([3]));
+  });
+
+  it("compte un jour de moins avant 08h, la journée de travail n'ayant pas commencé", () => {
+    // WORK_DAY_START_HOUR = 8 : avant 08h on est encore sur la journée
+    // de travail précédente, donc l'ancienneté y est inférieure d'un jour.
+    const created = tunis(2026, 9, 18, 15);
+    expect(daysSince(created, tunis(2026, 9, 21, 2))).toBe(2);
+    expect(daysSince(created, tunis(2026, 9, 21, 8))).toBe(3);
   });
 });
 

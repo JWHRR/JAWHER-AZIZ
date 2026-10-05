@@ -9,7 +9,7 @@ import { Loader2, Utensils, CalendarDays, Sun, FileDown } from "lucide-react";
 import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
-import { getBusinessDate, parseLocalDate } from "@/lib/time";
+import { getBusinessDate, parseLocalDate, weekendAnchor } from "@/lib/time";
 import { generateTablePdf } from "@/lib/pdf";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,11 +25,9 @@ const isRedundantRestoSlot = (date: Date, repas: RepasType) => {
   return false;
 };
 
-export const weekendAnchor = (d: Date) => {
-  const monday = startOfWeek(d, { weekStartsOn: 1 });
-  const thursday = addDays(monday, 3);
-  return d < thursday ? subDays(thursday, 7) : thursday;
-};
+// Définie dans lib/time.ts pour être partagée avec le tableau de bord admin ;
+// ré-exportée ici car plusieurs modules l'importent depuis cette page.
+export { weekendAnchor };
 
 export interface DayRow {
   date: string;

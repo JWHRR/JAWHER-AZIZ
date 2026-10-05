@@ -13,6 +13,7 @@ import { dateToWeekday, SLOT_LABELS, REPAS_LABELS, PermanenceSlot, RepasType } f
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { getBusinessDate } from "@/lib/time";
+import { WeekendEffectifCard } from "@/components/WeekendEffectifCard";
 
 interface Stats {
   totalUsers: number;
@@ -469,6 +470,10 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Troisième colonne de la grille : effectif weekend, visible toute
+            la semaine jusqu'au jeudi suivant. */}
+        <WeekendEffectifCard />
       </div>
     </div>
   );

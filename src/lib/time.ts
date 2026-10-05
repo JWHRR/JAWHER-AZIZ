@@ -143,3 +143,26 @@ export const ageLabel = (value: string | Date, now?: Date): string => {
   if (d === 0) return "aujourd'hui";
   return d === 1 ? "1 jour" : `${d} jours`;
 };
+
+/**
+ * Jeudi sous lequel est enregistré l'effectif weekend d'une date donnée
+ * (colonne `semaine_du`), comme le fait la page Absences.
+ *
+ * L'effectif est relevé le jeudi et vaut jusqu'au jeudi suivant : avant
+ * jeudi, la période en cours est donc encore celle du jeudi précédent.
+ */
+export const weekendAnchor = (d: Date): Date => {
+  const base = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  // Lundi = 0 … dimanche = 6
+  const idx = (base.getDay() + 6) % 7;
+  const monday = new Date(base.getFullYear(), base.getMonth(), base.getDate() - idx);
+  const thursday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 3);
+  if (base < thursday) {
+    return new Date(thursday.getFullYear(), thursday.getMonth(), thursday.getDate() - 7);
+  }
+  return thursday;
+};
+
+/** Fin de la période couverte par un effectif weekend : le jeudi suivant. */
+export const weekendPeriodEnd = (anchor: Date): Date =>
+  new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + 7);

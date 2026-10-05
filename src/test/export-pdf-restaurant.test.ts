@@ -25,8 +25,10 @@ describe("export PDF des pointages", () => {
 
   it("distingue service non assuré et service non saisi", () => {
     const { rows } = buildWeekPdfTable(week, 1290);
-    expect(rows[1][3]).toBe("—"); // dîner du samedi : pas de service
-    expect(rows[2][1]).toBe("—"); // dimanche : aucun service
+    // Tiret simple, et non cadratin : le cadratin ne s'affiche pas
+    // correctement avec les polices standard de jsPDF.
+    expect(rows[1][3]).toBe("-"); // dîner du samedi : pas de service
+    expect(rows[2][1]).toBe("-"); // dimanche : aucun service
     expect(rows[3][1]).toBe("non saisi"); // mardi : le surveillant n'a pas compté
     expect(rows[0][2]).toBe("240"); // un vrai chiffre reste un chiffre
   });

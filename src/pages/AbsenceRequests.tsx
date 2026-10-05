@@ -233,10 +233,16 @@ function SurveillantView() {
                   {myRequests.map(r => (
                     <TableRow key={r.id} className="transition-colors hover:bg-muted/20">
                       <TableCell>
-                        <div className="font-medium">{r.reason}</div>
-                        {r.description && (
-                          <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{r.description}</div>
-                        )}
+                        <div className="min-w-[200px] max-w-[360px] space-y-1">
+                          <div className="font-medium leading-snug whitespace-pre-line break-words">
+                            {r.reason}
+                          </div>
+                          {r.description && (
+                            <div className="text-xs text-muted-foreground leading-snug whitespace-pre-line break-words">
+                              {r.description}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {format(parseISO(r.start_date), "dd MMM", { locale: fr })}
@@ -248,9 +254,11 @@ function SurveillantView() {
                         {r.replacement_name ?? <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell><AbsenceStatusBadge status={r.status} /></TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[200px]">
+                      <TableCell className="text-sm text-muted-foreground align-top py-3">
                         {r.admin_note ? (
-                          <span className="italic line-clamp-2">{r.admin_note}</span>
+                          <span className="italic block max-w-[280px] leading-snug whitespace-pre-line break-words">
+                            {r.admin_note}
+                          </span>
                         ) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
@@ -542,7 +550,9 @@ function AdminView() {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="space-y-1 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold">{r.reason}</span>
+                      <span className="font-semibold leading-snug whitespace-pre-line break-words">
+                        {r.reason}
+                      </span>
                       <AbsenceStatusBadge status={r.status} />
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -560,7 +570,9 @@ function AdminView() {
                       </p>
                     )}
                     {r.description && (
-                      <p className="text-sm italic text-muted-foreground line-clamp-2">{r.description}</p>
+                      <p className="text-sm italic text-muted-foreground leading-snug whitespace-pre-line break-words">
+                        {r.description}
+                      </p>
                     )}
 
                     {/* Expand tasks */}
@@ -668,8 +680,20 @@ function AdminView() {
                   {filtered.map(r => (
                     <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
                       <TableCell className="font-medium">{r.surveillant_name}</TableCell>
-                      <TableCell>
-                        <div className="font-medium max-w-[180px] truncate">{r.reason}</div>
+                      <TableCell className="align-top py-3">
+                        <div className="min-w-[200px] max-w-[360px] space-y-1">
+                          {/* break-words + whitespace-pre-line : l'objet s'affiche
+                              en entier, sur plusieurs lignes et en conservant les
+                              retours à la ligne saisis par le surveillant. */}
+                          <div className="font-medium leading-snug whitespace-pre-line break-words">
+                            {r.reason}
+                          </div>
+                          {r.description && (
+                            <div className="text-xs text-muted-foreground leading-snug whitespace-pre-line break-words">
+                              {r.description}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {format(parseISO(r.start_date), "dd/MM/yy")} → {format(parseISO(r.end_date), "dd/MM/yy")}
@@ -716,7 +740,7 @@ function AdminView() {
 
       {/* Review modal */}
       <Dialog open={!!reviewId} onOpenChange={v => !v && setReviewId(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className={cn("flex items-center gap-2", reviewMode === "approve" ? "text-emerald-600" : "text-rose-600")}>
               {reviewMode === "approve"
@@ -727,17 +751,42 @@ function AdminView() {
 
           {reviewReq && (
             <div className="space-y-4 py-2">
-              <div className="rounded-lg border bg-muted/30 p-3 space-y-1 text-sm">
-                <div className="font-semibold">{reviewReq.reason}</div>
-                <div className="text-muted-foreground">
-                  {reviewReq.surveillant_name} •{" "}
-                  {format(parseISO(reviewReq.start_date), "dd MMM", { locale: fr })} →{" "}
-                  {format(parseISO(reviewReq.end_date), "dd MMM yyyy", { locale: fr })}
-                  {" "}({duration(reviewReq.start_date, reviewReq.end_date)})
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-sm">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                    Motif
+                  </div>
+                  <div className="font-semibold leading-snug whitespace-pre-line break-words">
+                    {reviewReq.reason}
+                  </div>
                 </div>
-                {reviewReq.replacement_name && (
-                  <div className="text-muted-foreground">Remplaçant : {reviewReq.replacement_name}</div>
+
+                {/* La description n'était pas affichée : l'admin décidait sans
+                    voir l'explication rédigée par le surveillant. */}
+                {reviewReq.description && (
+                  <div className="pt-1 border-t">
+                    <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                      Description
+                    </div>
+                    <div className="leading-snug whitespace-pre-line break-words text-muted-foreground">
+                      {reviewReq.description}
+                    </div>
+                  </div>
                 )}
+
+                <div className="pt-1 border-t text-muted-foreground space-y-0.5">
+                  <div>
+                    <span className="font-medium text-foreground">{reviewReq.surveillant_name}</span>
+                  </div>
+                  <div>
+                    {format(parseISO(reviewReq.start_date), "dd MMM", { locale: fr })} →{" "}
+                    {format(parseISO(reviewReq.end_date), "dd MMM yyyy", { locale: fr })}
+                    {" "}({duration(reviewReq.start_date, reviewReq.end_date)})
+                  </div>
+                  {reviewReq.replacement_name && (
+                    <div>Remplaçant : {reviewReq.replacement_name}</div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">

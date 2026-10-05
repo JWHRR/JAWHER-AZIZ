@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
-  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap, Sun,
+  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -13,7 +13,6 @@ import { dateToWeekday, SLOT_LABELS, REPAS_LABELS, PermanenceSlot, RepasType } f
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { getBusinessDate } from "@/lib/time";
-import { loadWeekendEffectif } from "@/lib/weekend";
 import { WeekendEffectifCard } from "@/components/WeekendEffectifCard";
 
 interface Stats {
@@ -24,14 +23,6 @@ interface Stats {
   permanencesAujourdhui: number;
   permanencesLogsAujourdhui: number;
   inspectionsAujourdhui: number;
-  /**
-   * Élèves restant à l'internat pour la période jeudi → jeudi suivant.
-   * null = aucune saisie : un vrai 0 signifierait « personne ne reste »,
-   * ce qui est une information toute différente.
-   */
-  effectifWeekend: number | null;
-  /** Jeudi du relevé affiché, s'il est antérieur à la période en cours. */
-  effectifWeekendStaleDepuis: string | null;
 }
 
 interface MissingTask {
@@ -110,7 +101,7 @@ export default function AdminDashboard() {
 
     (async () => {
       // ---- Top stats
-      const [u, d, a, p, perm, pLogs, ins, we] = await Promise.all([
+      const [u, d, a, p, perm, pLogs, ins] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("dortoirs").select("*", { count: "exact", head: true }),
         supabase.from("absences").select("nombre_absents").eq("date", today),
@@ -118,9 +109,6 @@ export default function AdminDashboard() {
         supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
-        // Même source que le tableau de bord du responsable restaurant : les
-        // deux affichent donc forcément le même nombre.
-        loadWeekendEffectif(businessDate),
       ]);
       setStats({
         totalUsers: u.count ?? 0,
@@ -130,9 +118,6 @@ export default function AdminDashboard() {
         permanencesAujourdhui: perm.count ?? 0,
         permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
-        effectifWeekend: we.rows.length > 0 ? we.total : null,
-        effectifWeekendStaleDepuis:
-          we.isStale && we.shownFor ? format(we.shownFor, "d MMM", { locale: fr }) : null,
       });
 
       // ---- Profile names cache
@@ -342,7 +327,6 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
-    { label: "Effectif Weekend", icon: Sun, color: "text-amber-500", bg: "bg-amber-500/10", link: "/absences", desc: stats?.effectifWeekendStaleDepuis ? `relevé du ${stats.effectifWeekendStaleDepuis}` : "", value: stats?.effectifWeekend },
     { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
     { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
     { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/admin/permanences", desc: "Supervision des tours" },
@@ -421,20 +405,7 @@ export default function AdminDashboard() {
                 <div className="font-semibold text-sm text-foreground">{c.label}</div>
                 {/* Les tuiles qui portent un chiffre l'affichent en grand ;
                     les autres gardent leur apparence d'origine. */}
-                {"value" in c && c.value !== undefined && (
-                  c.value === null ? (
-                    <div className="text-xs italic text-muted-foreground mt-1.5">
-                      non saisi
-                    </div>
-                  ) : (
-                    <div className={`text-3xl font-bold leading-tight mt-1 ${c.color}`}>
-                      {c.value}
-                    </div>
-                  )
-                )}
-                {c.desc && (
-                  <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
-                )}
+                <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
               </div>
             </div>
           </Link>

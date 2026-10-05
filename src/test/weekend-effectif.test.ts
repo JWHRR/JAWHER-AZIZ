@@ -78,3 +78,33 @@ describe("aucune saisie ne doit pas s'afficher comme un zéro", () => {
     expect(sumWeekendRows([{ code: "A", nombre: 0 }])).toBe(0);
   });
 });
+
+/**
+ * Le tableau de bord ne doit pas se vider parce que la saisie du jeudi
+ * n'a pas encore eu lieu : il se replie sur le dernier relevé connu, en le
+ * datant pour qu'on ne le prenne pas pour celui de la semaine en cours.
+ */
+describe("repli sur le dernier relevé disponible", () => {
+  it("le chargeur cherche la dernière période au plus tard celle en cours", () => {
+    const src = read("src/lib/weekend.ts");
+    expect(src).toContain('.lte("semaine_du"');
+    expect(src).toContain('.order("semaine_du", { ascending: false })');
+  });
+
+  it("le repli est signalé par isStale et la période réelle par shownFor", () => {
+    const src = read("src/lib/weekend.ts");
+    expect(src).toContain("isStale:");
+    expect(src).toContain("shownFor");
+  });
+
+  it("la carte détaillée nomme la période affichée, pas celle demandée", () => {
+    const src = read("src/components/WeekendEffectifCard.tsx");
+    expect(src).toContain("shownFor ?? anchor");
+    expect(src).toContain("isStale &&");
+  });
+
+  it("la tuile admin date le chiffre quand il est ancien", () => {
+    const src = read("src/pages/dashboards/AdminDashboard.tsx");
+    expect(src).toContain("effectifWeekendStaleDepuis");
+  });
+});

@@ -30,6 +30,8 @@ interface Stats {
    * ce qui est une information toute différente.
    */
   effectifWeekend: number | null;
+  /** Jeudi du relevé affiché, s'il est antérieur à la période en cours. */
+  effectifWeekendStaleDepuis: string | null;
 }
 
 interface MissingTask {
@@ -129,6 +131,8 @@ export default function AdminDashboard() {
         permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
         effectifWeekend: we.rows.length > 0 ? we.total : null,
+        effectifWeekendStaleDepuis:
+          we.isStale && we.shownFor ? format(we.shownFor, "d MMM", { locale: fr }) : null,
       });
 
       // ---- Profile names cache
@@ -338,7 +342,7 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
-    { label: "Effectif Weekend", icon: Sun, color: "text-amber-500", bg: "bg-amber-500/10", link: "/absences", desc: "", value: stats?.effectifWeekend },
+    { label: "Effectif Weekend", icon: Sun, color: "text-amber-500", bg: "bg-amber-500/10", link: "/absences", desc: stats?.effectifWeekendStaleDepuis ? `relevé du ${stats.effectifWeekendStaleDepuis}` : "", value: stats?.effectifWeekend },
     { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
     { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
     { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/admin/permanences", desc: "Supervision des tours" },

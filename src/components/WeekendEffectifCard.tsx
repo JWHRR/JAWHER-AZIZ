@@ -21,6 +21,8 @@ export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<WeekendRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [shownFor, setShownFor] = useState<Date | null>(null);
+  const [isStale, setIsStale] = useState(false);
   const [anchor] = useState<Date>(() => weekendAnchor(getBusinessDate()));
   const periodEnd = weekendPeriodEnd(anchor);
 
@@ -37,6 +39,8 @@ export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
           setError(res.error);
         }
         setRows(res.rows);
+        setShownFor(res.shownFor);
+        setIsStale(res.isStale);
       } finally {
         setLoading(false);
       }
@@ -45,9 +49,12 @@ export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
 
   const total = sumWeekendRows(rows);
 
+  // On nomme la période réellement affichée, pas celle demandée : un relevé
+  // plus ancien ne doit pas passer pour celui de la semaine en cours.
+  const shown = shownFor ?? anchor;
   const periodLabel =
-    `du ${format(anchor, "EEEE d MMMM", { locale: fr })}` +
-    ` au ${format(periodEnd, "EEEE d MMMM yyyy", { locale: fr })}`;
+    `du ${format(shown, "EEEE d MMMM", { locale: fr })}` +
+    ` au ${format(weekendPeriodEnd(shown), "EEEE d MMMM yyyy", { locale: fr })}`;
 
   const exportPdf = () => {
     generateTablePdf({
@@ -70,6 +77,12 @@ export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
               <Sun className="h-4 w-4 text-amber-500" /> Effectif weekend
             </CardTitle>
             <CardDescription className="first-letter:uppercase">{periodLabel}</CardDescription>
+            {isStale && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                Dernier relevé disponible — l'effectif de la semaine en cours
+                n'a pas encore été saisi.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {!loading && rows.length > 0 && (

@@ -12,7 +12,8 @@ import { fr } from "date-fns/locale";
 import { dateToWeekday, SLOT_LABELS, REPAS_LABELS, PermanenceSlot, RepasType } from "@/lib/types";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getBusinessDate, weekendAnchor } from "@/lib/time";
+import { getBusinessDate } from "@/lib/time";
+import { loadWeekendEffectif } from "@/lib/weekend";
 import { WeekendEffectifCard } from "@/components/WeekendEffectifCard";
 
 interface Stats {
@@ -111,12 +112,9 @@ export default function AdminDashboard() {
         supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
         supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
-        // Effectif weekend de la période en cours : il est enregistré sous le
-        // jeudi de sa semaine et vaut jusqu'au jeudi suivant.
-        supabase
-          .from("weekend_effectifs")
-          .select("nombre_presents")
-          .eq("semaine_du", format(weekendAnchor(businessDate), "yyyy-MM-dd")),
+        // Même source que le tableau de bord du responsable restaurant : les
+        // deux affichent donc forcément le même nombre.
+        loadWeekendEffectif(businessDate),
       ]);
       setStats({
         totalUsers: u.count ?? 0,
@@ -126,7 +124,7 @@ export default function AdminDashboard() {
         permanencesAujourdhui: perm.count ?? 0,
         permanencesLogsAujourdhui: pLogs.count ?? 0,
         inspectionsAujourdhui: ins.count ?? 0,
-        effectifWeekend: (we.data ?? []).reduce((sum, r: any) => sum + (r.nombre_presents || 0), 0),
+        effectifWeekend: we.total,
       });
 
       // ---- Profile names cache
@@ -336,7 +334,7 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
-    { label: "Effectif Weekend", icon: Sun, color: "text-amber-500", bg: "bg-amber-500/10", link: "/absences", desc: "Élèves restant jeu. → jeu.", value: stats?.effectifWeekend },
+    { label: "Effectif Weekend", icon: Sun, color: "text-amber-500", bg: "bg-amber-500/10", link: "/absences", desc: "", value: stats?.effectifWeekend },
     { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
     { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/admin/inspections", desc: "État des chambres" },
     { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/admin/permanences", desc: "Supervision des tours" },
@@ -420,7 +418,9 @@ export default function AdminDashboard() {
                     {c.value}
                   </div>
                 )}
-                <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
+                {c.desc && (
+                  <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
+                )}
               </div>
             </div>
           </Link>

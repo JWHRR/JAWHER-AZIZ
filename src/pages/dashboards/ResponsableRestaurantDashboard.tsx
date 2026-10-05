@@ -10,6 +10,7 @@ import { addDays, format, startOfWeek, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { REPAS_LABELS, RepasType, dateToWeekday } from "@/lib/types";
 import { getBusinessDate, parseLocalDate, weekendAnchor } from "@/lib/time";
+import { loadWeekendEffectif, sumWeekendRows, type WeekendRow } from "@/lib/weekend";
 import { generateTablePdf } from "@/lib/pdf";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -54,7 +55,7 @@ export default function ResponsableRestaurantDashboard() {
   const [loading, setLoading] = useState(true);
   const [today, setToday] = useState<DayRow | null>(null);
   const [week, setWeek] = useState<DayRow[]>([]);
-  const [weekendRows, setWeekendRows] = useState<{ code: string; nombre: number }[]>([]);
+  const [weekendRows, setWeekendRows] = useState<WeekendRow[]>([]);
   const [weekendDate, setWeekendDate] = useState<Date>(() => weekendAnchor(getBusinessDate()));
   const [error, setError] = useState<string | null>(null);
 
@@ -71,14 +72,15 @@ export default function ResponsableRestaurantDashboard() {
         const anchor = weekendAnchor(businessDate);
         setWeekendDate(anchor);
 
-        const [logsRes, weRes, dortRes] = await Promise.all([
+        const [logsRes, weekend] = await Promise.all([
           supabase.from("restaurant_logs").select("date, repas, nombre_eleves").gte("date", weekStart).lte("date", weekEnd),
-          supabase.from("weekend_effectifs").select("dortoir_id, nombre_presents").eq("semaine_du", format(anchor, "yyyy-MM-dd")),
-          supabase.from("dortoirs").select("id, code"),
+          // Source partagée avec le tableau de bord admin : les deux affichent
+          // forcément le même effectif weekend.
+          loadWeekendEffectif(businessDate),
         ]);
 
-        const firstError = logsRes.error ?? weRes.error ?? dortRes.error;
-        if (firstError) { console.error("Chargement restaurant:", firstError); setError(firstError.message); }
+        const firstError = logsRes.error?.message ?? weekend.error;
+        if (firstError) { console.error("Chargement restaurant:", firstError); setError(firstError); }
 
         const byDate: Record<string, Record<string, number>> = {};
         for (const l of logsRes.data ?? []) {
@@ -103,8 +105,7 @@ export default function ResponsableRestaurantDashboard() {
         setWeek(rows);
         setToday(rows.find((r) => r.date === format(businessDate, "yyyy-MM-dd")) ?? null);
 
-        const codeById: Record<string, string> = Object.fromEntries((dortRes.data ?? []).map((d: any) => [d.id, d.code]));
-        setWeekendRows((weRes.data ?? []).map((w: any) => ({ code: codeById[w.dortoir_id] ?? "-", nombre: w.nombre_presents ?? 0 })));
+        setWeekendRows(weekend.rows);
       } finally {
         setLoading(false);
       }
@@ -121,7 +122,8 @@ export default function ResponsableRestaurantDashboard() {
   }
 
   const weekTotal = week.reduce((s, r) => s + r.total, 0);
-  const weekendTotal = weekendRows.reduce((s, r) => s + r.nombre, 0);
+  // Même fonction de somme que le tableau de bord admin.
+  const weekendTotal = sumWeekendRows(weekendRows);
   const todayTotal = today?.total ?? 0;
 
   const renderCount = (v: Count) => {

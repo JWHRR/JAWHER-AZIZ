@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,14 +6,9 @@ import { Loader2, Sun, FileDown, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { getBusinessDate, weekendAnchor, weekendPeriodEnd } from "@/lib/time";
+import { loadWeekendEffectif, sumWeekendRows, type WeekendRow } from "@/lib/weekend";
 import { generateTablePdf } from "@/lib/pdf";
 import { toast } from "sonner";
-
-interface Row {
-  code: string;
-  nombre: number;
-  saisiPar?: string;
-}
 
 /**
  * Effectif weekend : nombre d'élèves restant à l'internat, par dortoir.
@@ -25,7 +19,7 @@ interface Row {
  */
 export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<WeekendRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [anchor] = useState<Date>(() => weekendAnchor(getBusinessDate()));
   const periodEnd = weekendPeriodEnd(anchor);
@@ -35,58 +29,21 @@ export function WeekendEffectifCard({ showPdf = true }: { showPdf?: boolean }) {
       setLoading(true);
       setError(null);
       try {
-        // Jointures côté client : une jointure imbriquée PostgREST dépend des
-        // clés étrangères et des droits sur la table liée.
-        const [weRes, dortRes] = await Promise.all([
-          supabase
-            .from("weekend_effectifs")
-            .select("dortoir_id, nombre_presents, surveillant_id")
-            .eq("semaine_du", format(anchor, "yyyy-MM-dd")),
-          supabase.from("dortoirs").select("id, code").order("code"),
-        ]);
-
-        // Un refus RLS renvoie une liste vide sans erreur : on affiche le
-        // message plutôt que de laisser croire qu'aucun effectif n'est saisi.
-        const firstError = weRes.error ?? dortRes.error;
-        if (firstError) {
-          console.error("Effectif weekend:", firstError);
-          setError(firstError.message);
+        // Source partagée avec la tuile du tableau de bord admin et le
+        // tableau de bord du responsable restaurant.
+        const res = await loadWeekendEffectif();
+        if (res.error) {
+          console.error("Effectif weekend:", res.error);
+          setError(res.error);
         }
-
-        const codeById: Record<string, string> = Object.fromEntries(
-          (dortRes.data ?? []).map((d: any) => [d.id, d.code])
-        );
-
-        const ids = Array.from(
-          new Set((weRes.data ?? []).map((w: any) => w.surveillant_id).filter(Boolean))
-        );
-        let nameById: Record<string, string> = {};
-        if (ids.length) {
-          const { data: profs } = await supabase
-            .from("profiles")
-            .select("user_id, full_name")
-            .in("user_id", ids as string[]);
-          nameById = Object.fromEntries(
-            (profs ?? []).map((p: any) => [p.user_id, p.full_name || "—"])
-          );
-        }
-
-        setRows(
-          (weRes.data ?? [])
-            .map((w: any) => ({
-              code: codeById[w.dortoir_id] ?? "—",
-              nombre: w.nombre_presents ?? 0,
-              saisiPar: nameById[w.surveillant_id],
-            }))
-            .sort((a, b) => a.code.localeCompare(b.code))
-        );
+        setRows(res.rows);
       } finally {
         setLoading(false);
       }
     })();
   }, [anchor]);
 
-  const total = rows.reduce((s, r) => s + r.nombre, 0);
+  const total = sumWeekendRows(rows);
 
   const periodLabel =
     `du ${format(anchor, "EEEE d MMMM", { locale: fr })}` +

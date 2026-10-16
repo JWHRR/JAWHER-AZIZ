@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Briefcase } from "lucide-react";
+import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Briefcase, MessageSquare } from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -302,6 +302,21 @@ export default function SurveillantDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Messagerie quick-access */}
+        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" /> Messagerie
+            </CardTitle>
+            <CardDescription>Échangez avec l'administration et les autres surveillants</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/messagerie">Accéder à la messagerie</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>

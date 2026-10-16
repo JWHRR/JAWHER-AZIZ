@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
   Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap,
+  MessageSquare,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -332,6 +333,7 @@ export default function AdminDashboard() {
     { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/admin/permanences", desc: "Supervision des tours" },
     { label: "Étudiants", icon: GraduationCap, color: "text-primary", bg: "bg-primary-soft", link: "/etudiants", desc: "Liste des résidents" },
     { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Suivi des tickets" },
+    { label: "Messagerie", icon: MessageSquare, color: "text-primary", bg: "bg-primary-soft", link: "/messagerie", desc: "Échanges & alertes" },
     { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
     { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },
   ];

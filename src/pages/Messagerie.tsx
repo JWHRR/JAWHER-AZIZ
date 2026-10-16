@@ -112,6 +112,18 @@ const Messagerie = () => {
     setMobileSidebarOpen(false);
   }, [selectConversation, markRead]);
 
+  // Auto-open conversation: when conversations load, immediately open the first/most recent (or unread) conversation
+  useEffect(() => {
+    if (activeConversation || conversations.length === 0 || loadingConversations || pendingRef.current) return;
+    
+    // Prioritize conversation with unread messages, otherwise pick the most recent one
+    const convWithUnread = conversations.find((c) => (unreadMap[c.id] ?? 0) > 0);
+    const targetConv = convWithUnread || conversations[0];
+    if (targetConv) {
+      handleSelectConversation(targetConv);
+    }
+  }, [conversations, activeConversation, loadingConversations, unreadMap, handleSelectConversation]);
+
   const totalUnread = Object.values(unreadMap).reduce((a, b) => a + b, 0);
 
   const sidebarProps = {
@@ -172,6 +184,8 @@ const Messagerie = () => {
         onlineUsers={onlineUsers}
         currentUserId={userId ?? ''}
         draftMessage={draftMessage}
+        onOpenSidebar={() => setMobileSidebarOpen(true)}
+        onNewChat={() => setNewChatOpen(true)}
       />
 
       {/* New chat dialog */}

@@ -7,7 +7,8 @@ import { MessageInput } from './MessageInput';
 import { TypingBubble } from './TypingBubble';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
-import { MessageSquare, MoreVertical, Search, X, Trash2, LogOut, EyeOff } from 'lucide-react';
+import { MessageSquare, MoreVertical, Search, X, Trash2, LogOut, EyeOff, Menu, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +43,8 @@ interface ChatAreaProps {
   onlineUsers: Set<string>;
   currentUserId: string;
   draftMessage?: string;
+  onOpenSidebar?: () => void;
+  onNewChat?: () => void;
 }
 
 const groupByDate = (msgs: Message[]) => {
@@ -83,6 +86,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onlineUsers,
   currentUserId,
   draftMessage,
+  onOpenSidebar,
+  onNewChat,
 }) => {
   const { session, profile } = useAuth();
   const userId = session?.user?.id;
@@ -124,14 +129,26 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50">
-        <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mb-5">
-          <MessageSquare className="h-9 w-9 text-blue-500" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
+          <MessageSquare className="h-9 w-9 text-blue-600" />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 mb-1">Vos messages</h3>
-        <p className="text-sm text-gray-400 text-center max-w-xs px-6">
-          Sélectionnez une conversation ou créez-en une nouvelle.
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Messagerie</h3>
+        <p className="text-sm text-gray-500 text-center max-w-xs mb-6">
+          Aucune conversation ouverte. Démarrez un nouvel échange ou choisissez un contact.
         </p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {onOpenSidebar && (
+            <Button variant="outline" size="sm" onClick={onOpenSidebar} className="gap-2 md:hidden">
+              <Menu className="h-4 w-4" /> Voir mes conversations
+            </Button>
+          )}
+          {onNewChat && (
+            <Button size="sm" onClick={onNewChat} className="gap-2">
+              <Plus className="h-4 w-4" /> Nouveau message
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
@@ -181,6 +198,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         ) : (
           <>
             <div className="flex items-center gap-3">
+              {onOpenSidebar && (
+                <button
+                  type="button"
+                  onClick={onOpenSidebar}
+                  className="md:hidden h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-600 -ml-1"
+                  title="Toutes les conversations"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
               <div className="relative">
                 <Avatar className={cn('h-10 w-10', colorClass)}>
                   <AvatarFallback className={cn('text-white font-semibold text-sm', colorClass)}>

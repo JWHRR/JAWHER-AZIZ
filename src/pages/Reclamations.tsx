@@ -352,67 +352,107 @@ export default function Reclamations() {
 
       {/* Admin Dual-Version View Switcher & Credibility Card */}
       {isAdmin && (
-        <Card className="border-border/60 bg-muted/20">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm">Mode d'affichage administrateur</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Comparez la version standard validée par les surveillants et la version déclarée par le responsable réparation.
-                </p>
+        <Card className="border-2 border-border/80 bg-card shadow-sm overflow-hidden">
+          <div className="p-4 sm:p-5 space-y-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <h2 className="font-bold text-base">Contrôle Administrateur : Choisir la version à afficher</h2>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Basculez entre ce qui a été vérifié sur le terrain par les surveillants et ce qui est déclaré par le responsable réparation.
+              </p>
+            </div>
 
-              <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border/60 shrink-0 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setAdminViewMode("STANDARD")}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                    adminViewMode === "STANDARD"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Version Standard (Surveillants)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminViewMode("TECH")}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                    adminViewMode === "TECH"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Version Resp. Réparation
-                </button>
-              </div>
+            {/* Clear Big Action Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setAdminViewMode("STANDARD")}
+                className={`p-3.5 rounded-xl border-2 text-left transition-all flex items-start gap-3 relative ${
+                  adminViewMode === "STANDARD"
+                    ? "border-primary bg-primary/5 shadow-sm ring-2 ring-primary/20"
+                    : "border-border/70 hover:border-border hover:bg-muted/40"
+                }`}
+              >
+                <div className={`p-2 rounded-lg shrink-0 ${adminViewMode === "STANDARD" ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+                  <User className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm">Version Surveillants</span>
+                    {adminViewMode === "STANDARD" && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary text-white">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vérité terrain : tickets clôturés uniquement après vérification réelle par les surveillants.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminViewMode("TECH")}
+                className={`p-3.5 rounded-xl border-2 text-left transition-all flex items-start gap-3 relative ${
+                  adminViewMode === "TECH"
+                    ? "border-amber-500 bg-amber-500/5 shadow-sm ring-2 ring-amber-500/20"
+                    : "border-border/70 hover:border-border hover:bg-muted/40"
+                }`}
+              >
+                <div className={`p-2 rounded-lg shrink-0 ${adminViewMode === "TECH" ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground"}`}>
+                  <Wrench className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-sm">Version Responsable Réparation</span>
+                    {adminViewMode === "TECH" && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-white">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vue technicien : tickets considérés comme terminés selon ses propres déclarations.
+                  </p>
+                </div>
+              </button>
             </div>
 
             {/* Credibility Tracker Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/40 text-xs">
-              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Déclarées réparées</span>
-                <span className="font-bold text-base text-foreground">{totalTechDone}</span>
+            <div className="pt-3 border-t border-border/50">
+              <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                <span>Indicateurs de crédibilité du responsable réparation :</span>
+                {credibilityRate !== null && (
+                  <span className={`font-bold ${credibilityRate >= 70 ? "text-success" : "text-amber-600"}`}>
+                    Taux de validation : {credibilityRate} %
+                  </span>
+                )}
               </div>
-              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
-                <span className="text-muted-foreground block text-[11px] text-success">Confirmées surveillant</span>
-                <span className="font-bold text-base text-success">{techDoneConfirmed}</span>
-              </div>
-              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
-                <span className="text-muted-foreground block text-[11px] text-amber-600 dark:text-amber-400">En attente de vérification</span>
-                <span className="font-bold text-base text-amber-600 dark:text-amber-400">{techDonePending}</span>
-              </div>
-              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
-                <span className="text-muted-foreground block text-[11px]">Taux de confirmation</span>
-                <span className="font-bold text-base text-primary">
-                  {credibilityRate !== null ? `${credibilityRate} %` : "—"}
-                </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="p-2.5 rounded-lg bg-muted/40 border border-border/50">
+                  <span className="text-muted-foreground block text-[11px]">Déclarées réparées</span>
+                  <span className="font-bold text-base text-foreground">{totalTechDone}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-success-soft/30 border border-success/30">
+                  <span className="text-success font-medium block text-[11px]">Confirmées par surveillant</span>
+                  <span className="font-bold text-base text-success">{techDoneConfirmed}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <span className="text-amber-700 dark:text-amber-400 font-medium block text-[11px]">Non encore validées</span>
+                  <span className="font-bold text-base text-amber-700 dark:text-amber-400">{techDonePending}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-muted/40 border border-border/50">
+                  <span className="text-muted-foreground block text-[11px]">Fiabilité</span>
+                  <span className="font-bold text-base text-primary">
+                    {credibilityRate !== null ? `${credibilityRate} %` : "—"}
+                  </span>
+                </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
       )}
 

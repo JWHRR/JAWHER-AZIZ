@@ -125,7 +125,7 @@ const Messagerie = () => {
 
   return (
     <div
-      className="flex h-[calc(100vh-4rem)] -mt-6 -mx-6 overflow-hidden bg-background"
+      className="flex h-full w-full overflow-hidden bg-background"
       style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
       {/* Sidebar: visible on desktop, or on mobile when NO conversation is selected */}

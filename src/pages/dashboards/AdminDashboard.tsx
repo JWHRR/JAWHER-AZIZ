@@ -48,10 +48,55 @@ const isRedundantRestoSlot = (wd: string, repas: string) => {
 export default function AdminDashboard() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [missingYesterday, setMissingYesterday] = useState<MissingTask[]>([]);
+  const businessDate = getBusinessDate();
+  const today = format(businessDate, "yyyy-MM-dd");
+  const yesterday = format(subDays(businessDate, 1), "yyyy-MM-dd");
+  const todayWd = dateToWeekday(businessDate);
+  const yesterdayWd = dateToWeekday(subDays(businessDate, 1));
+
+  const [stats, setStats] = useState<Stats | null>(() => {
+    try {
+      const cached = localStorage.getItem(`admin_stats_${today}`);
+      return cached ? JSON.parse(cached) : {
+        totalUsers: 0,
+        totalDortoirs: 0,
+        absencesAujourdhui: 0,
+        restaurantLogsAujourdhui: 0,
+        permanencesAujourdhui: 0,
+        permanencesLogsAujourdhui: 0,
+        inspectionsAujourdhui: 0,
+      };
+    } catch {
+      return {
+        totalUsers: 0,
+        totalDortoirs: 0,
+        absencesAujourdhui: 0,
+        restaurantLogsAujourdhui: 0,
+        permanencesAujourdhui: 0,
+        permanencesLogsAujourdhui: 0,
+        inspectionsAujourdhui: 0,
+      };
+    }
+  });
+
+  const [missingYesterday, setMissingYesterday] = useState<MissingTask[]>(() => {
+    try {
+      const cached = localStorage.getItem(`admin_missing_tasks_${yesterday}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [missingOpen, setMissingOpen] = useState(false);
-  const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>({ done: [], pending: [], info: [] });
+  const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>(() => {
+    try {
+      const cached = localStorage.getItem(`admin_today_activity_${today}`);
+      return cached ? JSON.parse(cached) : { done: [], pending: [], info: [] };
+    } catch {
+      return { done: [], pending: [], info: [] };
+    }
+  });
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const timeOffsetRef = useRef(0); // ms offset: serverUTC - deviceUTC
@@ -65,11 +110,9 @@ export default function AdminDashboard() {
         const deviceAfter = Date.now();
         if (!res.ok) throw new Error("time API error");
         const data = await res.json();
-        // `unixtime` is guaranteed UTC seconds since epoch — no timezone ambiguity
         const serverMs = data.unixtime * 1000;
         const roundTripMid = deviceBefore + (deviceAfter - deviceBefore) / 2;
         timeOffsetRef.current = serverMs - roundTripMid;
-        // Store the user's real timezone from the API (e.g. "Africa/Algiers")
         if (data.timezone) timezoneRef.current = data.timezone;
         setCurrentTime(new Date(Date.now() + timeOffsetRef.current));
       } catch {
@@ -94,229 +137,211 @@ export default function AdminDashboard() {
   }).format(currentTime);
 
   useEffect(() => {
-    const businessDate = getBusinessDate();
-    const today = format(businessDate, "yyyy-MM-dd");
-    const yesterday = format(subDays(businessDate, 1), "yyyy-MM-dd");
-    const todayWd = dateToWeekday(businessDate);
-    const yesterdayWd = dateToWeekday(subDays(businessDate, 1));
+    // Clean old localStorage entries older than 2 days
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("admin_missing_tasks_") || k.startsWith("admin_today_activity_") || k.startsWith("admin_stats_"))) {
+          if (!k.includes(today) && !k.includes(yesterday)) {
+            localStorage.removeItem(k);
+          }
+        }
+      }
+    } catch {}
 
     (async () => {
-      // ---- Top stats
-      const [u, d, a, p, perm, pLogs, ins] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("dortoirs").select("*", { count: "exact", head: true }),
-        supabase.from("absences").select("nombre_absents").eq("date", today),
-        supabase.from("restaurant_logs").select("*", { count: "exact", head: true }).eq("date", today),
-        supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
-        supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
-        supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
-      ]);
-      setStats({
-        totalUsers: u.count ?? 0,
-        totalDortoirs: d.count ?? 0,
-        absencesAujourdhui: (a.data ?? []).reduce((s, r: any) => s + (r.nombre_absents || 0), 0),
-        restaurantLogsAujourdhui: p.count ?? 0,
-        permanencesAujourdhui: perm.count ?? 0,
-        permanencesLogsAujourdhui: pLogs.count ?? 0,
-        inspectionsAujourdhui: ins.count ?? 0,
-      });
+      try {
+        // Fetch ALL dashboard data in parallel in a single roundtrip
+        const [
+          u, d, a, p, perm, pLogs, ins,
+          allProfsRes,
+          dortoirAssignsRes,
+          yAbsRes,
+          tplRRes,
+          ovRRes,
+          yLogsRes,
+          yInsRes,
+          tAbsRes,
+          tplR2Res,
+          ovR2Res,
+          tLogsRes,
+          tplPRes,
+          ovPRes,
+        ] = await Promise.all([
+          supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
+          supabase.from("dortoirs").select("*", { count: "exact", head: true }),
+          supabase.from("absences").select("nombre_absents").eq("date", today),
+          supabase.from("restaurant_logs").select("*", { count: "exact", head: true }).eq("date", today),
+          supabase.from("permanences").select("*", { count: "exact", head: true }).eq("date", today),
+          supabase.from("permanence_logs").select("*", { count: "exact", head: true }).eq("date", today),
+          supabase.from("chambre_inspections").select("*", { count: "exact", head: true }).eq("date", today),
+          // Profiles & Dortoirs
+          supabase.from("profiles").select("user_id, full_name, is_active").eq("is_active", true),
+          supabase.from("dortoir_assignments").select("dortoir_id, surveillant_id, dortoirs(code)"),
+          // Yesterday tasks
+          supabase.from("absences").select("dortoir_id").eq("date", yesterday),
+          supabase.from("restaurant_template").select("surveillant_id, repas").eq("weekday", yesterdayWd),
+          supabase.from("restaurant_assignments").select("surveillant_id, repas").eq("date", yesterday),
+          supabase.from("restaurant_logs").select("surveillant_id, repas").eq("date", yesterday),
+          supabase.from("chambre_inspections").select("chambres!inner(dortoir_id)").eq("date", yesterday),
+          // Today tasks
+          supabase.from("absences").select("dortoir_id").eq("date", today),
+          supabase.from("restaurant_template").select("surveillant_id, repas").eq("weekday", todayWd),
+          supabase.from("restaurant_assignments").select("surveillant_id, repas").eq("date", today),
+          supabase.from("restaurant_logs").select("surveillant_id, repas").eq("date", today),
+          supabase.from("permanence_template").select("surveillant_id, slot").eq("weekday", todayWd),
+          supabase.from("permanences").select("surveillant_id, slot").eq("date", today),
+        ]);
 
-      // ---- Profile names cache
-      const { data: allProfs } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, is_active")
-        .eq("is_active", true);
-      const nameById: Record<string, string> = Object.fromEntries(
-        (allProfs ?? []).map((p: any) => [p.user_id, p.full_name || "(sans nom)"])
-      );
+        const newStats = {
+          totalUsers: u.count ?? 0,
+          totalDortoirs: d.count ?? 0,
+          absencesAujourdhui: (a.data ?? []).reduce((s, r: any) => s + (r.nombre_absents || 0), 0),
+          restaurantLogsAujourdhui: p.count ?? 0,
+          permanencesAujourdhui: perm.count ?? 0,
+          permanencesLogsAujourdhui: pLogs.count ?? 0,
+          inspectionsAujourdhui: ins.count ?? 0,
+        };
+        setStats(newStats);
+        try { localStorage.setItem(`admin_stats_${today}`, JSON.stringify(newStats)); } catch {}
 
-      // ---- Compute missing tasks for YESTERDAY
-      const missing: MissingTask[] = [];
+        const allProfs = allProfsRes.data ?? [];
+        const nameById: Record<string, string> = Object.fromEntries(
+          allProfs.map((p: any) => [p.user_id, p.full_name || "(sans nom)"])
+        );
+        const dortoirAssigns = dortoirAssignsRes.data ?? [];
 
-      // 1. Absences yesterday: every dortoir-assigned surveillant should have logged for each of his dortoirs
-      const { data: dortoirAssigns } = await supabase
-        .from("dortoir_assignments")
-        .select("dortoir_id, surveillant_id, dortoirs(code)");
-      const { data: yAbs } = await supabase
-        .from("absences")
-        .select("dortoir_id")
-        .eq("date", yesterday);
-      const absDoneSet = new Set((yAbs ?? []).map((x: any) => x.dortoir_id));
-      (dortoirAssigns ?? []).forEach((da: any) => {
-        if (nameById[da.surveillant_id] && !absDoneSet.has(da.dortoir_id)) {
-          missing.push({
+        // 1. Absences yesterday
+        const missing: MissingTask[] = [];
+        const absDoneSet = new Set((yAbsRes.data ?? []).map((x: any) => x.dortoir_id));
+        dortoirAssigns.forEach((da: any) => {
+          if (nameById[da.surveillant_id] && !absDoneSet.has(da.dortoir_id)) {
+            missing.push({
+              type: "ABSENCE",
+              surveillant_id: da.surveillant_id,
+              surveillantName: nameById[da.surveillant_id],
+              detail: `Absences Dortoir ${da.dortoirs?.code ?? "?"}`,
+            });
+          }
+        });
+
+        // 2. Restaurant yesterday
+        const rawExpectedResto = [
+          ...((tplRRes.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
+          ...((ovRRes.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
+        ];
+        const expectedResto = Array.from(
+          new Map(
+            rawExpectedResto
+              .filter((e) => !isRedundantRestoSlot(yesterdayWd, e.r))
+              .map((e) => [`${e.s}:${e.r}`, e])
+          ).values()
+        );
+        const restoDoneSet = new Set((yLogsRes.data ?? []).map((x: any) => `${x.surveillant_id}:${x.repas}`));
+        expectedResto.forEach((e) => {
+          if (nameById[e.s] && !restoDoneSet.has(`${e.s}:${e.r}`)) {
+            missing.push({
+              type: "RESTAURANT",
+              surveillant_id: e.s,
+              surveillantName: nameById[e.s],
+              detail: `Effectif ${REPAS_LABELS[e.r as RepasType] ?? e.r}`,
+            });
+          }
+        });
+
+        // 3. Inspections yesterday
+        const inspDoneSet = new Set((yInsRes.data ?? []).map((x: any) => x.chambres?.dortoir_id).filter(Boolean));
+        dortoirAssigns.forEach((da: any) => {
+          if (nameById[da.surveillant_id] && !inspDoneSet.has(da.dortoir_id)) {
+            missing.push({
+              type: "INSPECTION",
+              surveillant_id: da.surveillant_id,
+              surveillantName: nameById[da.surveillant_id],
+              detail: `Inspection Dortoir ${da.dortoirs?.code ?? "?"}`,
+            });
+          }
+        });
+
+        setMissingYesterday(missing);
+        try { localStorage.setItem(`admin_missing_tasks_${yesterday}`, JSON.stringify(missing)); } catch {}
+
+        // ---- Compute TODAY pending vs done
+        const done: MissingTask[] = [];
+        const pending: MissingTask[] = [];
+        const info: MissingTask[] = [];
+
+        // Today absences
+        const tAbsSet = new Set((tAbsRes.data ?? []).map((x: any) => x.dortoir_id));
+        dortoirAssigns.forEach((da: any) => {
+          const name = nameById[da.surveillant_id];
+          if (!name) return;
+          const item: MissingTask = {
             type: "ABSENCE",
             surveillant_id: da.surveillant_id,
-            surveillantName: nameById[da.surveillant_id],
-            detail: `Absences Dortoir ${da.dortoirs?.code ?? "?"}`,
-          });
-        }
-      });
+            surveillantName: name,
+            detail: `Absences D. ${da.dortoirs?.code ?? "?"}`,
+          };
+          if (tAbsSet.has(da.dortoir_id)) done.push(item);
+          else pending.push(item);
+        });
 
-      // 2. Restaurant: from template for yesterday's weekday + overrides
-      const { data: tplR } = await supabase
-        .from("restaurant_template")
-        .select("surveillant_id, repas")
-        .eq("weekday", yesterdayWd);
-      const { data: ovR } = await supabase
-        .from("restaurant_assignments")
-        .select("surveillant_id, repas")
-        .eq("date", yesterday);
-      const rawExpectedResto = [
-        ...((tplR ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
-        ...((ovR ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
-      ];
-      // Filter out redundant slots and deduplicate
-      const expectedResto = Array.from(
-        new Map(
-          rawExpectedResto
-            .filter((e) => !isRedundantRestoSlot(yesterdayWd, e.r))
-            .map((e) => [`${e.s}:${e.r}`, e])
-        ).values()
-      );
-      const { data: yLogs } = await supabase
-        .from("restaurant_logs")
-        .select("surveillant_id, repas")
-        .eq("date", yesterday);
-      const restoDoneSet = new Set((yLogs ?? []).map((x: any) => `${x.surveillant_id}:${x.repas}`));
-      expectedResto.forEach((e) => {
-        if (nameById[e.s] && !restoDoneSet.has(`${e.s}:${e.r}`)) {
-          missing.push({
+        // Today restaurant
+        const rawExpectedToday = [
+          ...((tplR2Res.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
+          ...((ovR2Res.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
+        ];
+        const expectedToday = Array.from(
+          new Map(
+            rawExpectedToday
+              .filter((e) => !isRedundantRestoSlot(todayWd, e.r))
+              .map((e) => [`${e.s}:${e.r}`, e])
+          ).values()
+        );
+        const tLogsSet = new Set((tLogsRes.data ?? []).map((x: any) => `${x.surveillant_id}:${x.repas}`));
+        expectedToday.forEach((e) => {
+          const name = nameById[e.s];
+          if (!name) return;
+          const item: MissingTask = {
             type: "RESTAURANT",
             surveillant_id: e.s,
-            surveillantName: nameById[e.s],
-            detail: `Effectif ${REPAS_LABELS[e.r as RepasType] ?? e.r}`,
-          });
-        }
-      });
-
-      // 3. Inspections: each dortoir must have at least 1 inspection yesterday
-      const { data: yIns } = await supabase
-        .from("chambre_inspections")
-        .select("chambres!inner(dortoir_id)")
-        .eq("date", yesterday);
-      const inspDoneSet = new Set((yIns ?? []).map((x: any) => x.chambres?.dortoir_id).filter(Boolean));
-      (dortoirAssigns ?? []).forEach((da: any) => {
-        if (nameById[da.surveillant_id] && !inspDoneSet.has(da.dortoir_id)) {
-          missing.push({
-            type: "INSPECTION",
-            surveillant_id: da.surveillant_id,
-            surveillantName: nameById[da.surveillant_id],
-            detail: `Inspection Dortoir ${da.dortoirs?.code ?? "?"}`,
-          });
-        }
-      });
-      setMissingYesterday(missing);
-
-      // ---- Compute TODAY pending vs done at a glance
-      const done: MissingTask[] = [];
-      const pending: MissingTask[] = [];
-      const info: MissingTask[] = [];
-
-      // Today absences
-      const { data: tAbs } = await supabase
-        .from("absences")
-        .select("dortoir_id")
-        .eq("date", today);
-      const tAbsSet = new Set((tAbs ?? []).map((x: any) => x.dortoir_id));
-      (dortoirAssigns ?? []).forEach((da: any) => {
-        const name = nameById[da.surveillant_id];
-        if (!name) return;
-        const item: MissingTask = {
-          type: "ABSENCE",
-          surveillant_id: da.surveillant_id,
-          surveillantName: name,
-          detail: `Absences D. ${da.dortoirs?.code ?? "?"}`,
-        };
-        if (tAbsSet.has(da.dortoir_id)) done.push(item);
-        else pending.push(item);
-      });
-
-      // Today restaurant
-      const { data: tplR2 } = await supabase
-        .from("restaurant_template")
-        .select("surveillant_id, repas")
-        .eq("weekday", todayWd);
-      const { data: ovR2 } = await supabase
-        .from("restaurant_assignments")
-        .select("surveillant_id, repas")
-        .eq("date", today);
-      const rawExpectedToday = [
-        ...((tplR2 ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
-        ...((ovR2 ?? []) as any[]).map((x) => ({ s: x.surveillant_id, r: x.repas })),
-      ];
-      // Filter out redundant slots and deduplicate
-      const expectedToday = Array.from(
-        new Map(
-          rawExpectedToday
-            .filter((e) => !isRedundantRestoSlot(todayWd, e.r))
-            .map((e) => [`${e.s}:${e.r}`, e])
-        ).values()
-      );
-      const { data: tLogs } = await supabase
-        .from("restaurant_logs")
-        .select("surveillant_id, repas")
-        .eq("date", today);
-      const tLogsSet = new Set((tLogs ?? []).map((x: any) => `${x.surveillant_id}:${x.repas}`));
-      expectedToday.forEach((e) => {
-        const name = nameById[e.s];
-        if (!name) return;
-        const item: MissingTask = {
-          type: "RESTAURANT",
-          surveillant_id: e.s,
-          surveillantName: name,
-          detail: REPAS_LABELS[e.r as RepasType] ?? e.r,
-        };
-        if (tLogsSet.has(`${e.s}:${e.r}`)) done.push(item);
-        else pending.push(item);
-      });
-
-      // Today permanences
-      const { data: tplP } = await supabase
-        .from("permanence_template")
-        .select("surveillant_id, slot")
-        .eq("weekday", todayWd);
-      const { data: ovP } = await supabase
-        .from("permanences")
-        .select("surveillant_id, slot")
-        .eq("date", today);
-      
-      const rawExpectedPerms = [
-        ...((tplP ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
-        ...((ovP ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
-      ];
-
-      // Filter out redundant slots and deduplicate
-      const uniquePerms = Array.from(
-        new Map(
-          rawExpectedPerms
-            .filter((e) => !isRedundantSlot(todayWd, e.slot))
-            .map((p) => [`${p.s}:${p.slot}`, p])
-        ).values()
-      );
-
-      uniquePerms.forEach((e) => {
-        const name = nameById[e.s];
-        if (!name) return;
-        info.push({
-          type: "PERMANENCE",
-          surveillant_id: e.s,
-          surveillantName: name,
-          detail: `Permanence ${SLOT_LABELS[e.slot as PermanenceSlot]?.split(" (")[0] ?? e.slot}`,
+            surveillantName: name,
+            detail: REPAS_LABELS[e.r as RepasType] ?? e.r,
+          };
+          if (tLogsSet.has(`${e.s}:${e.r}`)) done.push(item);
+          else pending.push(item);
         });
-      });
 
-      setTodayActivity({ done, pending, info });
+        // Today permanences
+        const rawExpectedPerms = [
+          ...((tplPRes.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
+          ...((ovPRes.data ?? []) as any[]).map((x) => ({ s: x.surveillant_id, slot: x.slot })),
+        ];
+        const uniquePerms = Array.from(
+          new Map(
+            rawExpectedPerms
+              .filter((e) => !isRedundantSlot(todayWd, e.slot))
+              .map((p) => [`${p.s}:${p.slot}`, p])
+          ).values()
+        );
+        uniquePerms.forEach((e) => {
+          const name = nameById[e.s];
+          if (!name) return;
+          info.push({
+            type: "PERMANENCE",
+            surveillant_id: e.s,
+            surveillantName: name,
+            detail: `Permanence ${SLOT_LABELS[e.slot as PermanenceSlot]?.split(" (")[0] ?? e.slot}`,
+          });
+        });
+
+        const newActivity = { done, pending, info };
+        setTodayActivity(newActivity);
+        try { localStorage.setItem(`admin_today_activity_${today}`, JSON.stringify(newActivity)); } catch {}
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      }
     })();
   }, []);
-
-  if (!stats) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const handleContactSurveillant = (surveillantId: string, surveillantName: string) => {
     const tasks = missingYesterday.filter(m => m.surveillant_id === surveillantId);

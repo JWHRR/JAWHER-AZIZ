@@ -6,10 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatArea } from '@/components/chat/ChatArea';
 import { NewChatDialog } from '@/components/chat/NewChatDialog';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Menu } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLocation } from 'react-router-dom';
 import { useNewConversation } from '@/hooks/useNewConversation';
@@ -43,7 +39,6 @@ const Messagerie = () => {
   const pendingRef = useRef<{ userId: string; draft: string } | null>(null);
 
   const [newChatOpen, setNewChatOpen] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleSendMessage = useCallback(async (content: string, file?: File | null) => {
     let imageUrl: string | null = null;
@@ -109,20 +104,11 @@ const Messagerie = () => {
   const handleSelectConversation = useCallback((conv: any) => {
     selectConversation(conv);
     markRead(conv.id);
-    setMobileSidebarOpen(false);
   }, [selectConversation, markRead]);
 
-  // Auto-open conversation: when conversations load, immediately open the first/most recent (or unread) conversation
-  useEffect(() => {
-    if (activeConversation || conversations.length === 0 || loadingConversations || pendingRef.current) return;
-    
-    // Prioritize conversation with unread messages, otherwise pick the most recent one
-    const convWithUnread = conversations.find((c) => (unreadMap[c.id] ?? 0) > 0);
-    const targetConv = convWithUnread || conversations[0];
-    if (targetConv) {
-      handleSelectConversation(targetConv);
-    }
-  }, [conversations, activeConversation, loadingConversations, unreadMap, handleSelectConversation]);
+  const handleBackToList = useCallback(() => {
+    selectConversation(null as any);
+  }, [selectConversation]);
 
   const totalUnread = Object.values(unreadMap).reduce((a, b) => a + b, 0);
 
@@ -130,7 +116,7 @@ const Messagerie = () => {
     conversations,
     activeConversation,
     onSelectConversation: handleSelectConversation,
-    onNewChat: () => { setNewChatOpen(true); setMobileSidebarOpen(false); },
+    onNewChat: () => setNewChatOpen(true),
     loading: loadingConversations,
     currentUserId: userId ?? '',
     onlineUsers,
@@ -142,51 +128,38 @@ const Messagerie = () => {
       className="flex h-[calc(100vh-4rem)] -mt-6 -mx-6 overflow-hidden bg-background"
       style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
     >
-      {/* Desktop sidebar */}
-      <div className="hidden md:flex h-full">
+      {/* Sidebar: visible on desktop, or on mobile when NO conversation is selected */}
+      <div
+        className={cn(
+          "h-full w-full md:w-[320px] xl:w-[340px] shrink-0 border-r border-gray-100 bg-white",
+          activeConversation ? "hidden md:flex" : "flex w-full"
+        )}
+      >
         <ChatSidebar {...sidebarProps} />
       </div>
 
-      {/* Mobile floating button + Sheet */}
-      <div className="md:hidden">
-        <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="fixed bottom-20 left-4 z-50 h-12 w-12 rounded-full shadow-xl border bg-background"
-            >
-              <div className="relative">
-                <Menu className="h-5 w-5" />
-                {totalUnread > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-4 w-4 p-0 text-[9px] flex items-center justify-center rounded-full bg-primary text-primary-foreground border-2 border-background">
-                    {totalUnread > 9 ? '9+' : totalUnread}
-                  </Badge>
-                )}
-              </div>
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-[300px] sm:w-[340px]">
-            <ChatSidebar {...sidebarProps} />
-          </SheetContent>
-        </Sheet>
+      {/* Chat area: visible on desktop, or on mobile when a conversation IS selected */}
+      <div
+        className={cn(
+          "h-full flex-1 bg-white overflow-hidden",
+          !activeConversation ? "hidden md:flex" : "flex w-full"
+        )}
+      >
+        <ChatArea
+          conversation={activeConversation}
+          messages={messages}
+          loadingMessages={loadingMessages}
+          onSendMessage={handleSendMessage}
+          onDeleteMessage={deleteMessage}
+          onDeleteConversation={deleteConversation}
+          onMarkUnread={markUnread}
+          onlineUsers={onlineUsers}
+          currentUserId={userId ?? ''}
+          draftMessage={draftMessage}
+          onOpenSidebar={handleBackToList}
+          onNewChat={() => setNewChatOpen(true)}
+        />
       </div>
-
-      {/* Chat area */}
-      <ChatArea
-        conversation={activeConversation}
-        messages={messages}
-        loadingMessages={loadingMessages}
-        onSendMessage={handleSendMessage}
-        onDeleteMessage={deleteMessage}
-        onDeleteConversation={deleteConversation}
-        onMarkUnread={markUnread}
-        onlineUsers={onlineUsers}
-        currentUserId={userId ?? ''}
-        draftMessage={draftMessage}
-        onOpenSidebar={() => setMobileSidebarOpen(true)}
-        onNewChat={() => setNewChatOpen(true)}
-      />
 
       {/* New chat dialog */}
       {userId && (

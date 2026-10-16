@@ -7,7 +7,7 @@ import { MessageInput } from './MessageInput';
 import { TypingBubble } from './TypingBubble';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTypingIndicator } from '@/hooks/useTypingIndicator';
-import { MessageSquare, MoreVertical, Search, X, Trash2, LogOut, EyeOff, Menu, Plus } from 'lucide-react';
+import { MessageSquare, MoreVertical, Search, X, Trash2, LogOut, EyeOff, Menu, Plus, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
@@ -202,10 +202,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={onOpenSidebar}
-                  className="md:hidden h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-600 -ml-1"
-                  title="Toutes les conversations"
+                  className="md:hidden h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-700 -ml-1"
+                  title="Retour aux conversations"
                 >
-                  <Menu className="h-5 w-5" />
+                  <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
               <div className="relative">

@@ -170,10 +170,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const grouped = groupByDate(displayMessages);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden relative">
 
-      {/* Header */}
-      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-gray-100 bg-white">
+      {/* Header — Solid and sticky with shadow so it never scrolls away */}
+      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-gray-200 bg-white sticky top-0 z-30 shadow-xs">
         {showSearch ? (
           <div className="flex-1 flex items-center gap-2">
             <Search className="h-4 w-4 text-gray-400 shrink-0" />
@@ -351,7 +351,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Input */}
       {!showSearch && (
-        <div className="shrink-0 border-t border-gray-100 bg-white">
+        <div className="shrink-0 border-t border-gray-200 bg-white sticky bottom-0 z-30">
           <MessageInput onSendMessage={onSendMessage} onTyping={sendTyping} draftMessage={draftMessage} />
         </div>
       )}

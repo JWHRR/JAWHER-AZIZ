@@ -55,6 +55,46 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         !isFirst && isLast && 'rounded-bl-[4px]',
       );
 
+  const isActionsVisible = hovered || showReactionPicker;
+
+  const actionsNode = (
+    <div
+      className={cn(
+        'items-center gap-0.5 transition-all duration-150',
+        isActionsVisible
+          ? 'flex opacity-100'
+          : 'hidden sm:flex sm:opacity-0 sm:pointer-events-none'
+      )}
+    >
+      {onReact && (
+        <button
+          type="button"
+          className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowReactionPicker(v => !v);
+          }}
+          title="Réagir"
+        >
+          <SmilePlus className="h-4 w-4" />
+        </button>
+      )}
+      {isOwn && onDelete && (
+        <button
+          type="button"
+          className="h-7 w-7 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(message.id);
+          }}
+          title="Supprimer"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={cn(
@@ -64,20 +104,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setShowReactionPicker(false); }}
+      onClick={() => setHovered(v => !v)}
     >
-      {/* Avatar — only for others, only on last message in group */}
-      <div className="shrink-0 w-8 self-end mb-0.5">
-        {!isOwn && isLast ? (
-          <Avatar className={cn('h-8 w-8', colorClass)}>
-            <AvatarFallback className={cn('text-white text-xs font-semibold', colorClass)}>
-              {getInitials(senderName)}
-            </AvatarFallback>
-          </Avatar>
-        ) : null}
-      </div>
+      {/* Avatar — only for other users */}
+      {!isOwn && (
+        <div className="shrink-0 w-8 self-end mb-0.5">
+          {isLast ? (
+            <Avatar className={cn('h-8 w-8', colorClass)}>
+              <AvatarFallback className={cn('text-white text-xs font-semibold', colorClass)}>
+                {getInitials(senderName)}
+              </AvatarFallback>
+            </Avatar>
+          ) : null}
+        </div>
+      )}
 
       {/* Content column */}
-      <div className={cn('flex flex-col max-w-[70%] sm:max-w-[420px]', isOwn ? 'items-end' : 'items-start')}>
+      <div className={cn('flex flex-col max-w-[85%] sm:max-w-[480px]', isOwn ? 'items-end' : 'items-start')}>
         {/* Sender name for groups — only on first message */}
         {!isOwn && isFirst && (
           <span className="text-[11px] font-semibold text-gray-500 mb-1 ml-1">
@@ -86,36 +129,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         )}
 
         {/* Bubble row */}
-        <div className={cn('flex items-center gap-1.5', isOwn ? 'flex-row-reverse' : 'flex-row')}>
-
-          {/* Hover actions */}
-          <div className={cn(
-            'flex items-center gap-0.5 transition-opacity duration-100',
-            hovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          )}>
-            {onReact && (
-              <button
-                className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
-                onClick={() => setShowReactionPicker(v => !v)}
-                title="Réagir"
-              >
-                <SmilePlus className="h-4 w-4" />
-              </button>
-            )}
-            {isOwn && onDelete && (
-              <button
-                className="h-7 w-7 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
-                onClick={() => onDelete(message.id)}
-                title="Supprimer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-1.5">
+          {isOwn && actionsNode}
 
           {/* Bubble */}
           <div className={cn(
-            'relative px-3 py-2 text-sm',
+            'relative px-3.5 py-2.5 text-sm',
             bubbleRadius,
             isOwn
               ? 'bg-blue-500 text-white'
@@ -126,20 +145,25 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 src={message.image_url}
                 alt="Image"
                 className="max-w-[220px] sm:max-w-xs rounded-xl mb-1.5 object-cover cursor-zoom-in"
-                onClick={() => window.open(message.image_url!, '_blank')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(message.image_url!, '_blank');
+                }}
               />
             )}
             {message.content && (
               <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
             )}
           </div>
+
+          {!isOwn && actionsNode}
         </div>
 
         {/* Timestamp — only on last in group, visible on hover */}
         {isLast && (
           <span className={cn(
             'text-[10px] text-gray-400 mt-1 px-1 transition-opacity duration-100',
-            hovered ? 'opacity-100' : 'opacity-0'
+            isActionsVisible ? 'opacity-100' : 'opacity-0'
           )}>
             {format(new Date(message.created_at), 'HH:mm')}
             {message.is_edited && ' · modifié'}
@@ -152,7 +176,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             <MessageReactionBar
               messageId={message.id}
               reactions={reactions}
-              onReact={onReact}
+              onReact={(id, emoji) => {
+                onReact(id, emoji);
+                setShowReactionPicker(false);
+              }}
               visible={showReactionPicker}
               isOwn={isOwn}
             />

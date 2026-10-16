@@ -64,7 +64,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   );
 
   return (
-    <div className="w-[300px] xl:w-[320px] shrink-0 flex flex-col bg-white h-full border-r border-gray-100">
+    <div className="w-full flex flex-col bg-white h-full">
       {/* Header */}
       <div className="px-5 pt-5 pb-3 shrink-0">
         <div className="flex items-center justify-between mb-4">

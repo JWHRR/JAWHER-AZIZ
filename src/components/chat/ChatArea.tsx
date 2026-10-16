@@ -283,9 +283,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col bg-white">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col bg-white w-full">
         {loadingMessages ? (
-          <div className="flex flex-col gap-3 mt-auto">
+          <div className="flex flex-col gap-3 mt-auto w-full">
             {[...Array(5)].map((_, i) => (
               <div key={i} className={cn('flex gap-2', i % 2 !== 0 && 'flex-row-reverse')}>
                 <Skeleton className="h-8 w-8 rounded-full shrink-0 self-end" />
@@ -294,7 +294,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             ))}
           </div>
         ) : (
-          <div className="mt-auto">
+          <div className="mt-auto w-full">
             {displayMessages.length === 0 && (
               <div className="text-center py-16">
                 <div className={cn('h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4', colorClass)}>
@@ -312,7 +312,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             )}
 
             {grouped.map(group => (
-              <div key={group.label}>
+              <div key={group.label} className="w-full">
                 <div className="flex items-center justify-center my-4">
                   <span className="text-[11px] text-gray-400 bg-white px-2">
                     {group.label}

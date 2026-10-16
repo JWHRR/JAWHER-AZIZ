@@ -182,3 +182,27 @@ export interface PermanenceLog {
  * détecte qu'un rappel est déjà parti dans la journée.
  */
 export const RECLAMATION_REMINDER_TITLE = "Réclamations à vérifier";
+
+export interface ReclamationItem {
+  id: string;
+  titre: string;
+  description: string | null;
+  lieu: string | null;
+  dortoir_id: string | null;
+  status: ReclamationStatus;
+  priority: ReclamationPriority;
+  type: string;
+  created_by: string;
+  assigned_to: string | null;
+  resolved_at: string | null;
+  notes_technicien: string | null;
+  tech_done: boolean;
+  tech_done_at: string | null;
+  tech_done_by: string | null;
+  created_at: string;
+  updated_at: string;
+  dortoirs?: { id: string; code: string } | null;
+  creator?: { full_name: string };
+  techUser?: { full_name: string };
+}
+

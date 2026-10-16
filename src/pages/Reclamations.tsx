@@ -11,14 +11,15 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Loader2, Plus, Search, Trash2, FileDown, Pencil, AlertTriangle,
-  MapPin, User, Clock, Wrench, Zap, Droplets, Hammer
+  MapPin, User, Clock, Wrench, Zap, Droplets, Hammer, CheckCircle2, ShieldCheck, HelpCircle
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { ReclamationStatus, ReclamationPriority, STATUS_LABELS, PRIORITY_LABELS } from "@/lib/types";
+import { ReclamationStatus, ReclamationPriority, STATUS_LABELS, PRIORITY_LABELS, ReclamationItem } from "@/lib/types";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { ReclamationAge } from "@/components/ReclamationAge";
 import { generateTablePdf } from "@/lib/pdf";
@@ -47,14 +48,18 @@ const TypeIcon = ({ type, className }: { type: string; className?: string }) => 
     default: return <Wrench className={className} />;
   }
 };
+
 export default function Reclamations() {
   const { user, primaryRole } = useAuth();
-  const canEditStatus = primaryRole === "ADMIN" || primaryRole === "TECHNICIEN" || primaryRole === "SURVEILLANT";
   const isAdmin = primaryRole === "ADMIN";
+  const isTechnicien = primaryRole === "TECHNICIEN";
+  const isSurveillant = primaryRole === "SURVEILLANT";
+  const canEditStatus = isAdmin || isSurveillant;
+
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<ReclamationItem[]>([]);
   const [dortoirs, setDortoirs] = useState<{ id: string; code: string }[]>([]);
   const [tab, setTab] = useState<ReclamationStatus | "ALL">("EN_ATTENTE");
   const [search, setSearch] = useState("");
@@ -65,6 +70,9 @@ export default function Reclamations() {
   const [openExport, setOpenExport] = useState(false);
   const [exportTypes, setExportTypes] = useState<Set<string>>(new Set(RECLAMATION_TYPES));
 
+  // Admin view mode: "STANDARD" (surveillants/real) or "TECH" (claims of responsable reparation)
+  const [adminViewMode, setAdminViewMode] = useState<"STANDARD" | "TECH">("STANDARD");
+
   const load = async () => {
     setLoading(true);
     setLoadError(null);
@@ -73,14 +81,22 @@ export default function Reclamations() {
       supabase.from("dortoirs").select("id, code").order("code"),
     ]);
     if (r.error) { setLoadError(r.error.message); setItems([]); setDortoirs(d.data ?? []); setLoading(false); return; }
-    const reclamations = r.data ?? [];
-    const creatorIds = Array.from(new Set(reclamations.map((x: any) => x.created_by).filter(Boolean)));
+    const reclamations = (r.data ?? []) as any[];
+    const userIds = Array.from(new Set([
+      ...reclamations.map((x) => x.created_by),
+      ...reclamations.map((x) => x.tech_done_by),
+    ].filter(Boolean)));
+    
     let nameById: Record<string, string> = {};
-    if (creatorIds.length > 0) {
-      const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", creatorIds);
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase.from("profiles").select("user_id, full_name").in("user_id", userIds);
       nameById = Object.fromEntries((profs ?? []).map((p: any) => [p.user_id, p.full_name]));
     }
-    setItems(reclamations.map((x: any) => ({ ...x, creator: { full_name: nameById[x.created_by] ?? "—" } })));
+    setItems(reclamations.map((x: any) => ({
+      ...x,
+      creator: { full_name: nameById[x.created_by] ?? "—" },
+      techUser: x.tech_done_by ? { full_name: nameById[x.tech_done_by] ?? "—" } : undefined,
+    })));
     setDortoirs(d.data ?? []);
     setLoading(false);
   };
@@ -131,6 +147,7 @@ export default function Reclamations() {
     setOpenCreate(true);
   };
 
+  // Standard status change (for Surveillants and Admin)
   const updateStatus = async (r: any, status: ReclamationStatus) => {
     if (r.status === status) return;
     const payload: any = { status, resolved_at: status === "TERMINEE" ? new Date().toISOString() : null };
@@ -142,6 +159,31 @@ export default function Reclamations() {
       await supabase.from("notifications").insert({ user_id: r.created_by, title: "Réclamation mise à jour", message: `${r.titre} → ${STATUS_LABELS[status]}`, link: "/reclamations" });
     }
     await supabase.from("activity_logs").insert({ user_id: user?.id ?? null, action: `Statut → ${STATUS_LABELS[status]}`, entity: "reclamations", entity_id: r.id });
+    load();
+  };
+
+  // Responsable Réparation marks work done or pending
+  const toggleTechDone = async (r: any, done: boolean) => {
+    if (!user) return;
+    const payload: any = {
+      tech_done: done,
+      tech_done_at: done ? new Date().toISOString() : null,
+      tech_done_by: done ? user.id : null,
+    };
+    // Also if tech starts work, set status to EN_COURS if currently EN_ATTENTE
+    if (!done && r.status === "EN_ATTENTE") {
+      payload.status = "EN_COURS";
+    }
+    const { data, error } = await supabase.from("reclamations").update(payload).eq("id", r.id).select("id");
+    if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) { toast.error("Mise à jour refusée : droits insuffisants."); return; }
+    toast.success(done ? "Marqué comme réparé (en attente de confirmation surveillant)" : "Remis en cours");
+    await supabase.from("activity_logs").insert({
+      user_id: user.id,
+      action: done ? "Technicien a marqué la réclamation réparée" : "Technicien a annulé l'état réparé",
+      entity: "reclamations",
+      entity_id: r.id,
+    });
     load();
   };
 
@@ -159,9 +201,36 @@ export default function Reclamations() {
     return haystack.includes(search.trim().toLowerCase());
   };
 
-  const visible = items.filter((r) => { if (typeFilter !== "ALL" && (r.type || "Autre") !== typeFilter) return false; return matchesSearch(r); });
-  const filtered = visible.filter((r) => tab === "ALL" || r.status === tab);
-  const countFor = (s: ReclamationStatus | "ALL") => s === "ALL" ? visible.length : visible.filter((r) => r.status === s).length;
+  // Helper to determine effective status based on viewer / mode
+  const getEffectiveStatus = (r: ReclamationItem): ReclamationStatus => {
+    if (isTechnicien || (isAdmin && adminViewMode === "TECH")) {
+      if (r.tech_done || r.status === "TERMINEE") return "TERMINEE";
+      return r.status;
+    }
+    // Standard version (Surveillant or Admin in STANDARD mode):
+    return r.status;
+  };
+
+  const visible = items.filter((r) => {
+    if (typeFilter !== "ALL" && (r.type || "Autre") !== typeFilter) return false;
+    return matchesSearch(r);
+  });
+
+  const filtered = visible.filter((r) => {
+    if (tab === "ALL") return true;
+    return getEffectiveStatus(r) === tab;
+  });
+
+  const countFor = (s: ReclamationStatus | "ALL") => {
+    if (s === "ALL") return visible.length;
+    return visible.filter((r) => getEffectiveStatus(r) === s).length;
+  };
+
+  // Credibility analytics for Admin
+  const totalTechDone = items.filter((r) => r.tech_done).length;
+  const techDoneConfirmed = items.filter((r) => r.tech_done && r.status === "TERMINEE").length;
+  const techDonePending = items.filter((r) => r.tech_done && r.status !== "TERMINEE").length;
+  const credibilityRate = totalTechDone > 0 ? Math.round((techDoneConfirmed / totalTechDone) * 100) : null;
 
   const exportTodayPdf = () => {
     if (exportTypes.size === 0) { toast.error("Sélectionnez au moins un type."); return; }
@@ -281,6 +350,82 @@ export default function Reclamations() {
         </div>
       </div>
 
+      {/* Admin Dual-Version View Switcher & Credibility Card */}
+      {isAdmin && (
+        <Card className="border-border/60 bg-muted/20">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm">Mode d'affichage administrateur</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Comparez la version standard validée par les surveillants et la version déclarée par le responsable réparation.
+                </p>
+              </div>
+
+              <div className="flex bg-muted/80 p-0.5 rounded-lg border border-border/60 shrink-0 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setAdminViewMode("STANDARD")}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    adminViewMode === "STANDARD"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Version Standard (Surveillants)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdminViewMode("TECH")}
+                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
+                    adminViewMode === "TECH"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Version Resp. Réparation
+                </button>
+              </div>
+            </div>
+
+            {/* Credibility Tracker Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/40 text-xs">
+              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
+                <span className="text-muted-foreground block text-[11px]">Déclarées réparées</span>
+                <span className="font-bold text-base text-foreground">{totalTechDone}</span>
+              </div>
+              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
+                <span className="text-muted-foreground block text-[11px] text-success">Confirmées surveillant</span>
+                <span className="font-bold text-base text-success">{techDoneConfirmed}</span>
+              </div>
+              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
+                <span className="text-muted-foreground block text-[11px] text-amber-600 dark:text-amber-400">En attente de vérification</span>
+                <span className="font-bold text-base text-amber-600 dark:text-amber-400">{techDonePending}</span>
+              </div>
+              <div className="p-2.5 rounded-md bg-background/60 border border-border/50">
+                <span className="text-muted-foreground block text-[11px]">Taux de confirmation</span>
+                <span className="font-bold text-base text-primary">
+                  {credibilityRate !== null ? `${credibilityRate} %` : "—"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Info notice for Technicien */}
+      {isTechnicien && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-center gap-2">
+          <Wrench className="h-4 w-4 text-primary shrink-0" />
+          <span>
+            Lorsque vous marquez une réclamation comme « Réparée », l'administration est informée et le surveillant procédera à la vérification sur place pour clore définitivement le ticket.
+          </span>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -330,84 +475,154 @@ export default function Reclamations() {
         <div className="text-center py-12 text-muted-foreground text-sm">Aucune réclamation.</div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((r) => (
-            <div
-              key={r.id}
-              className={`rounded-xl border bg-card p-4 transition-shadow hover:shadow-sm ${r.priority === "HAUTE" && r.status !== "TERMINEE" ? "border-destructive/30" : "border-border/60"}`}
-            >
-              {/* Top row: title + badges */}
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0">
-                  <div className="mt-0.5 shrink-0 bg-muted/50 p-2 rounded-md">
-                    <TypeIcon type={r.type} className="h-4 w-4 text-muted-foreground" />
+          {filtered.map((r) => {
+            const effectiveStatus = getEffectiveStatus(r);
+            return (
+              <div
+                key={r.id}
+                className={`rounded-xl border bg-card p-4 transition-shadow hover:shadow-sm ${
+                  r.priority === "HAUTE" && effectiveStatus !== "TERMINEE"
+                    ? "border-destructive/30"
+                    : "border-border/60"
+                }`}
+              >
+                {/* Top row: title + badges */}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <div className="mt-0.5 shrink-0 bg-muted/50 p-2 rounded-md">
+                      <TypeIcon type={r.type} className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm leading-tight">{r.titre}</div>
+                      {r.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{r.description}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-sm leading-tight">{r.titre}</div>
-                    {r.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{r.description}</p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={effectiveStatus} />
+                    <span className="text-muted-foreground/40 text-[10px]">•</span>
+                    <PriorityBadge priority={r.priority} />
+                  </div>
+                </div>
+
+                {/* Meta row */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
+                  {(r.dortoirs?.code || r.lieu) && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      {r.dortoirs?.code ? `Dortoir ${r.dortoirs.code}` : r.lieu}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <User className="h-3 w-3 shrink-0" />
+                    {r.creator?.full_name ?? "—"}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 shrink-0" />
+                    {format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}
+                  </span>
+                  {effectiveStatus !== "TERMINEE" && (
+                    <ReclamationAge createdAt={r.created_at} status={r.status} resolvedAt={r.resolved_at} />
+                  )}
+                </div>
+
+                {/* Admin Credibility Inspection Badges (ONLY visible to ADMIN) */}
+                {isAdmin && (
+                  <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 text-[11px] border-t border-border/30">
+                    <span className="text-muted-foreground font-medium">Contrôle Admin :</span>
+                    {r.tech_done ? (
+                      r.status === "TERMINEE" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300">
+                          <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          Réparation confirmée par surveillant
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                          <AlertTriangle className="h-3 w-3 text-amber-600" />
+                          Déclaré réparé par technicien — Non validé par surveillant
+                        </span>
+                      )
+                    ) : (
+                      r.status === "TERMINEE" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+                          <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                          Clôturé directement sans déclaration technicien
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground">
+                          Non déclaré réparé
+                        </span>
+                      )
+                    )}
+                    {r.tech_done && r.techUser && (
+                      <span className="text-muted-foreground">
+                        ({r.techUser.full_name}{r.tech_done_at ? ` le ${format(new Date(r.tech_done_at), "dd/MM HH:mm")}` : ""})
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-border/40">
+                  <Badge variant="outline" className="text-[11px] text-muted-foreground border-border">
+                    <Wrench className="h-3 w-3 mr-1" />{r.type || "Autre"}
+                  </Badge>
+
+                  <div className="flex items-center gap-1.5">
+                    {/* TECHNICIEN (Responsable Réparation) action */}
+                    {isTechnicien && (
+                      <Button
+                        size="sm"
+                        variant={r.tech_done ? "outline" : "default"}
+                        className={`h-7 text-xs font-semibold ${
+                          !r.tech_done ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""
+                        }`}
+                        onClick={() => toggleTechDone(r, !r.tech_done)}
+                      >
+                        {r.tech_done ? (
+                          <>
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-green-600" />
+                            Réparation déclarée (Annuler)
+                          </>
+                        ) : (
+                          <>
+                            <Wrench className="h-3.5 w-3.5 mr-1" />
+                            Marquer comme réparé
+                          </>
+                        )}
+                      </Button>
+                    )}
+
+                    {/* SURVEILLANT & ADMIN status updater */}
+                    {canEditStatus && (
+                      <Select value={r.status} onValueChange={(v) => updateStatus(r, v as ReclamationStatus)}>
+                        <SelectTrigger className="h-7 w-[130px] text-xs border-border/60">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(STATUS_LABELS) as ReclamationStatus[]).map((s) => (
+                            <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+
+                    {(isAdmin || r.created_by === user?.id) && (
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)}>
+                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    )}
+                    {(isAdmin || r.created_by === user?.id) && (
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(r.id)}>
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={r.status} />
-                  <span className="text-muted-foreground/40 text-[10px]">•</span>
-                  <PriorityBadge priority={r.priority} />
-                </div>
               </div>
-
-              {/* Meta row */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
-                {(r.dortoirs?.code || r.lieu) && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    {r.dortoirs?.code ? `Dortoir ${r.dortoirs.code}` : r.lieu}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3 shrink-0" />
-                  {r.creator?.full_name ?? "—"}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 shrink-0" />
-                  {format(new Date(r.created_at), "dd/MM/yyyy HH:mm")}
-                </span>
-                {r.status !== "TERMINEE" && (
-                  <ReclamationAge createdAt={r.created_at} status={r.status} resolvedAt={r.resolved_at} />
-                )}
-              </div>
-
-              {/* Actions row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-border/40">
-                <Badge variant="outline" className="text-[11px] text-muted-foreground border-border">
-                  <Wrench className="h-3 w-3 mr-1" />{r.type || "Autre"}
-                </Badge>
-                <div className="flex items-center gap-1">
-                  {canEditStatus && (
-                    <Select value={r.status} onValueChange={(v) => updateStatus(r, v as ReclamationStatus)}>
-                      <SelectTrigger className="h-7 w-[130px] text-xs border-border/60">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(STATUS_LABELS) as ReclamationStatus[]).map((s) => (
-                          <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {(isAdmin || r.created_by === user?.id) && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)}>
-                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                    </Button>
-                  )}
-                  {(isAdmin || r.created_by === user?.id) && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(r.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

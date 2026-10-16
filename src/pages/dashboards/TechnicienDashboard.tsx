@@ -16,12 +16,14 @@ export default function TechnicienDashboard() {
 
   useEffect(() => {
     (async () => {
-      const [p, pr, d] = await Promise.all([
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "EN_ATTENTE"),
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "EN_COURS"),
-        supabase.from("reclamations").select("*", { count: "exact", head: true }).eq("status", "TERMINEE"),
+      const [allRecs] = await Promise.all([
+        supabase.from("reclamations").select("id, status, tech_done"),
       ]);
-      setCounts({ pending: p.count ?? 0, progress: pr.count ?? 0, done: d.count ?? 0 });
+      const list = (allRecs.data ?? []) as { id: string; status: string; tech_done?: boolean }[];
+      const done = list.filter((r) => r.tech_done || r.status === "TERMINEE").length;
+      const progress = list.filter((r) => !r.tech_done && r.status === "EN_COURS").length;
+      const pending = list.filter((r) => !r.tech_done && r.status === "EN_ATTENTE").length;
+      setCounts({ pending, progress, done });
       setLoading(false);
     })();
   }, []);

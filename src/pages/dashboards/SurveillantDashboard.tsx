@@ -274,131 +274,10 @@ export default function SurveillantDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BedDouble className="h-4 w-4 text-primary" /> Mes dortoirs
-            </CardTitle>
-            <CardDescription>Effectif absences quotidien</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {myDortoirs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun dortoir affecté. Contactez l'administrateur.</p>
-            ) : (
-              <ul className="space-y-2">
-                {myDortoirs.map((d: any) => (
-                  <li key={d.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                    <div>
-                      <div className="font-semibold">Dortoir {d.dortoirs.code}</div>
-                      <div className="text-xs text-muted-foreground">Effectif du soir</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DoneBadge done={absenceDoneToday[d.dortoir_id]} />
-                      <Button asChild size="sm" variant={absenceDoneToday[d.dortoir_id] ? "outline" : "default"}>
-                        <Link to="/absences">{absenceDoneToday[d.dortoir_id] ? "Voir" : "Saisir les absences"}</Link>
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardList className="h-4 w-4 text-primary" /> Inspections de chambres
-            </CardTitle>
-            <CardDescription>Vos inspections quotidiennes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {myDortoirs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun dortoir affecté pour l'inspection.</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                  <div>
-                    <div className="font-semibold">Inspections d'aujourd'hui</div>
-                    <div className="text-xs text-muted-foreground">{todayInspections.length} chambre(s) inspectée(s)</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DoneBadge done={todayInspections.length > 0} />
-                    <Button asChild size="sm" variant={todayInspections.length > 0 ? "outline" : "default"}>
-                      <Link to="/absences?view=inspections">{todayInspections.length > 0 ? "Voir" : "Inspecter"}</Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalIcon className="h-4 w-4 text-primary" /> Permanences aujourd'hui
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayPerms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune permanence aujourd'hui.</p>
-            ) : (
-              <ul className="space-y-2">
-                {todayPerms.map((p: any) => {
-                  const isDone = logsAssigned.some(l => 
-                    l.start_time.startsWith(SLOT_TIMES[p.slot as keyof typeof SLOT_TIMES]?.start.split(':')[0] || "00")
-                  );
-                  return (
-                    <li key={p.id} className="p-3 rounded-lg border bg-primary-soft">
-                      <div className="font-semibold text-primary">{SLOT_LABELS[p.slot as keyof typeof SLOT_LABELS] || p.slot}</div>
-                      <div className="flex items-center justify-between mt-2">
-                        <DoneBadge done={isDone} />
-                        <Button asChild size="sm" variant={isDone ? "outline" : "default"}>
-                          <Link to="/permanences">{isDone ? "Voir" : "Confirmer"}</Link>
-                        </Button>
-                      </div>
-                      {p.notes && <div className="text-xs text-muted-foreground mt-1">{p.notes}</div>}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Utensils className="h-4 w-4 text-primary" /> Restaurant aujourd'hui
-            </CardTitle>
-            <CardDescription>Effectif des élèves au restaurant</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {todayResto.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucun effectif restaurant affecté aujourd'hui.</p>
-            ) : (
-              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {todayResto.map((r: any) => (
-                  <li key={r.id} className="p-3 rounded-lg border bg-muted/30">
-                    <div className="font-semibold">{REPAS_LABELS[r.repas as keyof typeof REPAS_LABELS]}</div>
-                    <div className="flex items-center justify-between mt-2">
-                      <DoneBadge done={restoLogs[r.repas]} />
-                      <Button asChild size="sm" variant={restoLogs[r.repas] ? "outline" : "default"}>
-                        <Link to="/restaurant">{restoLogs[r.repas] ? "Voir" : "Suivi & validation"}</Link>
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="space-y-4">
         {/* Delegated tasks quick-access */}
         {pendingTaskCount > 0 && (
-          <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-blue-500/5 border-blue-200/60 shadow-sm transition-all hover:shadow-md">
+          <Card className="relative overflow-hidden backdrop-blur-xl bg-blue-500/5 border-blue-200/60 shadow-sm transition-all hover:shadow-md">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2 text-blue-600 dark:text-blue-400">
                 <Briefcase className="h-4 w-4" /> Tâches déléguées
@@ -416,7 +295,7 @@ export default function SurveillantDashboard() {
           </Card>
         )}
 
-        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
+        <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-primary" /> Rappels

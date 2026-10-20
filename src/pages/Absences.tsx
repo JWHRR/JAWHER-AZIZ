@@ -257,6 +257,14 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
   const [consecutiveLoading, setConsecutiveLoading] = useState(false);
   const [consecutiveSearch, setConsecutiveSearch] = useState("");
   const view = searchParams.get("view") || defaultView || "daily";
+  const [consecutiveModalOpen, setConsecutiveModalOpen] = useState(
+    searchParams.get("view") === "consecutive" || defaultView === "consecutive"
+  );
+  const [mobileTab, setMobileTab] = useState<"absences" | "inspections">(
+    searchParams.get("view") === "inspections" || defaultView === "inspections"
+      ? "inspections"
+      : "absences"
+  );
 
   const filteredConsecutiveAbsences = consecutiveAbsencesList.filter((item) => {
     const query = consecutiveSearch.trim().toLowerCase();
@@ -421,10 +429,8 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
   };
 
   useEffect(() => {
-    if (view === "consecutive") {
-      loadConsecutiveAbsences();
-    }
-  }, [view, user, date, isAdmin, absences, myDortoirs]);
+    loadConsecutiveAbsences();
+  }, [user, date, isAdmin, absences, myDortoirs]);
 
   const save = async () => {
     if (!user) return;
@@ -542,315 +548,361 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
 
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-5 max-w-7xl mx-auto">
+      {/* Top Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Absences & Inspections</h1>
-          <p className="text-muted-foreground mt-1">Pointage des dortoirs et contrôle de l'état des chambres</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Absences & Inspections</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Pointage des dortoirs et contrôle de l'état des chambres sur une seule page</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setConsecutiveModalOpen(true)}
+            className={`gap-1.5 font-medium transition-colors ${
+              consecutiveAbsencesList.length > 0
+                ? "border-amber-400 bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 hover:bg-amber-100/60"
+                : ""
+            }`}
+          >
+            <AlertTriangle className={`h-4 w-4 ${consecutiveAbsencesList.length > 0 ? "text-amber-500 animate-pulse" : "text-muted-foreground"}`} />
+            <span>3+ nuits consécutives</span>
+            {consecutiveAbsencesList.length > 0 && (
+              <span className="inline-flex items-center justify-center bg-amber-500 text-white rounded-full text-[11px] font-bold h-4 px-1.5">
+                {consecutiveAbsencesList.length}
+              </span>
+            )}
+          </Button>
+
           {isAdmin && <WeeklyAbsenceHistory />}
           {(isThursday(parseLocalDate(date)) || isFriday(parseLocalDate(date)) || isSaturday(parseLocalDate(date)) || isSunday(parseLocalDate(date)) || isMonday(parseLocalDate(date))) && (
             <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="border-primary text-primary">
-              <FileDown className="h-4 w-4 mr-1" /> Effectif weekend (PDF)
+              <FileDown className="h-4 w-4 mr-1" /> Weekend (PDF)
             </Button>
           )}
-          <Label htmlFor="date" className="text-sm">Date</Label>
-          <Input id="date" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
+
+          <div className="flex items-center gap-1.5 bg-card border rounded-md px-2.5 py-1 shadow-sm">
+            <Label htmlFor="date" className="text-xs font-medium text-muted-foreground">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="h-7 w-auto border-0 p-0 text-sm focus-visible:ring-0 font-medium cursor-pointer bg-transparent"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Top Toggle Controls */}
-      <div className="flex border-b border-border/80 gap-6">
+      {/* Mobile Switcher (< lg screens) */}
+      <div className="flex lg:hidden bg-muted/70 p-1 rounded-lg border gap-1">
         <button
-          onClick={() => setSearchParams({ date, view: "daily" })}
-          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
-            view === "daily" || (view !== "consecutive" && view !== "inspections")
-              ? "text-primary border-b-2 border-primary"
+          onClick={() => setMobileTab("absences")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-semibold rounded-md transition-all ${
+            mobileTab === "absences"
+              ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <div className="flex items-center gap-1.5">
-            <Users className="h-4 w-4" />
-            Effectif Quotidien
-          </div>
+          <Users className="h-4 w-4 text-primary" />
+          <span>Pointage Absences ({absences.length}/{dortoirsToShow.length})</span>
         </button>
         <button
-          onClick={() => setSearchParams({ date, view: "inspections" })}
-          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
-            view === "inspections"
-              ? "text-primary border-b-2 border-primary"
+          onClick={() => setMobileTab("inspections")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-semibold rounded-md transition-all ${
+            mobileTab === "inspections"
+              ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <div className="flex items-center gap-1.5">
-            <ClipboardCheck className="h-4 w-4" />
-            Inspections des Chambres
-          </div>
-        </button>
-        <button
-          onClick={() => setSearchParams({ date, view: "consecutive" })}
-          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
-            view === "consecutive"
-              ? "text-primary border-b-2 border-primary"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <div className="flex items-center gap-1.5">
-            <History className="h-4 w-4" />
-            Absences Consécutives (3+ nuits)
-          </div>
+          <ClipboardCheck className="h-4 w-4 text-primary" />
+          <span>Inspections Chambres</span>
         </button>
       </div>
 
-      {view === "inspections" ? (
-        <Inspections embeddedDate={date} hideHeader={true} />
-      ) : view !== "consecutive" ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{format(parseLocalDate(date), "EEEE d MMMM yyyy", { locale: fr })}</CardTitle>
-              <CardDescription>{isAdmin ? "Tous les dortoirs" : "Vos dortoirs affectés"}</CardDescription>
+      {/* Main 2-Column Side-by-Side Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* COLONNE 1 : POINTAGE ABSENCES */}
+        <div className={mobileTab === "inspections" ? "hidden lg:block space-y-4" : "space-y-4"}>
+          <Card className="shadow-sm border">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  Pointage des Absences
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {isAdmin ? "Tous les dortoirs" : "Vos dortoirs d'affectation"}
+                </CardDescription>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                absences.length === dortoirsToShow.length && dortoirsToShow.length > 0
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                  : "bg-muted text-muted-foreground border-border"
+              }`}>
+                {absences.length} / {dortoirsToShow.length} pointé(s)
+              </span>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               {loading ? (
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
               ) : dortoirsToShow.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucun dortoir disponible.</p>
+                <p className="text-sm text-muted-foreground italic py-4">Aucun dortoir disponible.</p>
               ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="space-y-2.5">
                   {dortoirsToShow.map((d) => {
                     const a = absences.find((x) => x.dortoir_id === d.id);
                     return (
-                      <li key={d.id} className="p-4 rounded-lg border bg-card">
-                        <div className="flex items-center justify-between">
-                          <div className="font-semibold">Dortoir {d.code}</div>
-                          <DoneBadge done={!!a} />
-                        </div>
-                        {a && (
-                          <div className="text-sm text-muted-foreground mt-2">
-                            {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
+                      <div
+                        key={d.id}
+                        className={`p-3.5 rounded-lg border transition-all flex items-center justify-between gap-3 ${
+                          a
+                            ? "bg-card border-border/80 hover:border-primary/40"
+                            : "bg-amber-50/40 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/60"
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-base">Dortoir {d.code}</span>
+                            <DoneBadge done={!!a} />
                           </div>
-                        )}
-                        <Button size="sm" variant={a ? "outline" : "default"} className="mt-3 w-full" onClick={() => openNew(d.id)}>
-                          {a ? <><Eye className="h-3.5 w-3.5 mr-1" /> Voir / modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Tournée & Inspection</>}
+                          <div className="text-xs mt-0.5">
+                            {a ? (
+                              <span className={a.nombre_absents > 0 ? "text-destructive font-medium" : "text-emerald-600 dark:text-emerald-400 font-medium"}>
+                                {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
+                              </span>
+                            ) : (
+                              <span className="text-amber-600 dark:text-amber-400 font-medium">Pointage non effectué</span>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={a ? "outline" : "default"}
+                          className="shrink-0 font-medium"
+                          onClick={() => openNew(d.id)}
+                        >
+                          {a ? (
+                            <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</>
+                          ) : (
+                            <><Plus className="h-3.5 w-3.5 mr-1" /> Saisir absents</>
+                          )}
                         </Button>
-                      </li>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* SECTION EFFECTIF WEEKEND */}
+          {/* SECTION EFFECTIF WEEKEND (JEUDI) */}
           {isThursday(parseLocalDate(date)) && !isAdmin && (
-            <div className="ring-4 ring-amber-400 ring-offset-2 rounded-xl animate-pulse-ring">
-              <Card className="border-2 border-amber-400 rounded-xl overflow-hidden shadow-md shadow-amber-100/50 dark:shadow-amber-900/20">
-                {/* Attention banner */}
-                <div className="bg-amber-500 text-white px-5 py-3 flex items-center gap-3">
-                  <CalendarDays className="h-6 w-6 shrink-0" />
+            <div className="ring-2 ring-amber-400/80 rounded-xl">
+              <Card className="border border-amber-400 rounded-xl overflow-hidden shadow-sm">
+                <div className="bg-amber-500 text-white px-4 py-2.5 flex items-center gap-2.5">
+                  <CalendarDays className="h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-extrabold text-base uppercase tracking-wide">
-                      ⚠️ ACTION REQUISE — Effectif Weekend
+                    <p className="font-bold text-sm uppercase tracking-wide">
+                      Effectif Weekend (Jeudi)
                     </p>
-                    <p className="text-amber-50 text-xs font-medium mt-0.5">
-                      C'est jeudi — renseignez obligatoirement l'effectif présent ce week-end pour chaque dortoir.
+                    <p className="text-amber-100 text-xs">
+                      Renseignez l'effectif présent ce week-end pour chaque dortoir.
                     </p>
                   </div>
                 </div>
-                <CardContent className="pt-5">
+                <CardContent className="pt-4">
                   {myDortoirs.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Aucun dortoir affecté.</p>
                   ) : (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="space-y-2">
                       {myDortoirs.map((myD) => {
                         const d = { id: myD.dortoir_id, code: myD.dortoirs.code };
                         const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
 
                         return (
-                          <li
+                          <div
                             key={d.id}
-                            className={`p-4 rounded-lg border-2 bg-card transition-colors ${
-                              we
-                                ? "border-green-400 bg-card"
-                                : "border-amber-300 bg-card"
+                            className={`p-3 rounded-lg border flex items-center justify-between gap-2 ${
+                              we ? "border-green-400 bg-card" : "border-amber-300 bg-amber-50/30 dark:bg-amber-950/20"
                             }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="font-bold text-base">Dortoir {d.code}</div>
-                              <DoneBadge done={!!we} />
-                            </div>
-                            <div className="text-sm mt-2 min-h-[40px]">
-                              {we ? (
-                                <div>
-                                  <span className="font-bold text-green-700 dark:text-green-400 text-lg">{we.nombre_presents} présent(s)</span>
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    Saisi par : {we.profiles?.full_name || "—"}
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="italic text-amber-700 dark:text-amber-400 font-medium">⚠️ Non renseigné</span>
-                              )}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm">Dortoir {d.code}</span>
+                                <DoneBadge done={!!we} />
+                              </div>
+                              <div className="text-xs mt-0.5">
+                                {we ? (
+                                  <span className="font-semibold text-green-700 dark:text-green-400">
+                                    {we.nombre_presents} présent(s)
+                                  </span>
+                                ) : (
+                                  <span className="italic text-amber-700 dark:text-amber-400">⚠️ Non renseigné</span>
+                                )}
+                              </div>
                             </div>
                             <Button
                               size="sm"
                               variant={we ? "outline" : "default"}
-                              className={`mt-3 w-full font-semibold ${!we ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
+                              className={`h-8 text-xs font-semibold ${!we ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
                               onClick={() => openWeekend(d.id)}
                             >
-                              {we ? <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</> : <><Plus className="h-3.5 w-3.5 mr-1" /> Renseigner</>}
+                              {we ? "Modifier" : "Renseigner"}
                             </Button>
-                          </li>
+                          </div>
                         );
                       })}
-                    </ul>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </div>
           )}
-        </>
-      ) : (
-        <div className="space-y-6">
-          {consecutiveLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+
+        {/* COLONNE 2 : INSPECTIONS DES CHAMBRES */}
+        <div className={mobileTab === "absences" ? "hidden lg:block space-y-4" : "space-y-4"}>
+          <Inspections embeddedDate={date} hideHeader={true} />
+        </div>
+      </div>
+
+      {/* DIALOG ABSENCES CONSECUTIVES (3+ NUITS) */}
+      <Dialog open={consecutiveModalOpen} onOpenChange={setConsecutiveModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Absences Consécutives (3+ nuits)
+            </DialogTitle>
+            <DialogDescription>
+              Étudiants absents depuis 3 nuits consécutives ou plus (hors week-ends).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            <div className="relative">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9 text-sm"
+                placeholder="Rechercher un étudiant par nom ou numéro de chambre..."
+                value={consecutiveSearch}
+                onChange={(e) => setConsecutiveSearch(e.target.value)}
+              />
             </div>
-          ) : consecutiveAbsencesList.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertTriangle className="h-10 w-10 text-amber-500 mb-3 animate-pulse" />
-                <h3 className="font-semibold text-lg">Aucune alerte active</h3>
-                <p className="text-muted-foreground max-w-sm mt-1">
+
+            {consecutiveLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              </div>
+            ) : filteredConsecutiveAbsences.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center border rounded-lg border-dashed">
+                <AlertTriangle className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                <h4 className="font-semibold text-sm">Aucune alerte active</h4>
+                <p className="text-xs text-muted-foreground max-w-sm mt-0.5">
                   Aucun étudiant n'a été absent plus de 3 nuits consécutives dans vos dortoirs d'affectation.
                 </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="relative">
-                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  placeholder="Rechercher un étudiant par nom ou numéro de chambre..."
-                  value={consecutiveSearch}
-                  onChange={(e) => setConsecutiveSearch(e.target.value)}
-                />
               </div>
+            ) : isAdmin ? (
+              (() => {
+                const grouped: Record<string, any[]> = {};
+                filteredConsecutiveAbsences.forEach((item) => {
+                  const code = item.dortoirCode || "Inconnu";
+                  if (!grouped[code]) grouped[code] = [];
+                  grouped[code].push(item);
+                });
 
-              {filteredConsecutiveAbsences.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground italic">
-                    Aucun résultat ne correspond à votre recherche.
-                  </CardContent>
-                </Card>
-              ) : isAdmin ? (
-                // Group by Dortoir for Admin
-                (() => {
-                  const grouped: Record<string, any[]> = {};
-                  filteredConsecutiveAbsences.forEach(item => {
-                    const code = item.dortoirCode || "Inconnu";
-                    if (!grouped[code]) grouped[code] = [];
-                    grouped[code].push(item);
-                  });
-
-                  return Object.entries(grouped)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([code, list]) => (
-                      <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
-                        <CardHeader className="pb-3 border-b">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <CalendarDays className="h-5 w-5 text-primary" />
-                            Dortoir {code}
-                          </CardTitle>
-                          <CardDescription>{list.length} alerte(s) active(s)</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 sm:p-4">
-                          <div className="rounded-md border overflow-hidden">
-                            <Table>
-                              <TableHeader className="bg-muted/50">
-                                <TableRow>
-                                  <TableHead>Étudiant</TableHead>
-                                  <TableHead>Téléphone</TableHead>
-                                  <TableHead>Chambre</TableHead>
-                                  <TableHead>Nombre de Nuits</TableHead>
-                                  <TableHead>Période d'Absence</TableHead>
+                return Object.entries(grouped)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([code, list]) => (
+                    <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
+                      <CardHeader className="py-2.5 px-4 border-b">
+                        <CardTitle className="text-base flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-primary" /> Dortoir {code}
+                          </span>
+                          <span className="text-xs font-normal text-muted-foreground">{list.length} alerte(s)</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader className="bg-muted/50 text-xs">
+                              <TableRow>
+                                <TableHead>Étudiant</TableHead>
+                                <TableHead>Téléphone</TableHead>
+                                <TableHead>Chambre</TableHead>
+                                <TableHead>Nuits</TableHead>
+                                <TableHead>Période</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody className="text-xs">
+                              {list.map((item, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="font-semibold py-2.5">{item.nom_complet}</TableCell>
+                                  <TableCell className="py-2.5">{item.telephone || "—"}</TableCell>
+                                  <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
+                                  <TableCell className="py-2.5">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                                      <AlertTriangle className="h-3 w-3" /> {item.count} nuits
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
+                                    Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}
+                                  </TableCell>
                                 </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {list.map((item, idx) => (
-                                  <TableRow key={idx} className="hover:bg-accent/40">
-                                    <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
-                                    <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                                    <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
-                                    <TableCell className="py-3">
-                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
-                                        <AlertTriangle className="h-3 w-3 animate-bounce" /> {item.count} nuits consécutives
-                                      </span>
-                                    </TableCell>
-                                    <TableCell className="font-mono text-xs py-3 text-muted-foreground">
-                                      Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ));
-                })()
-              ) : (
-                // Single flat table for Surveillant (their own assigned dorms)
-                <Card className="border-l-4 border-l-amber-500 shadow-sm">
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-amber-500" />
-                      Alertes Absences Consécutives
-                    </CardTitle>
-                    <CardDescription>Étudiants absents depuis 3 nuits consécutives ou plus.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0 sm:p-4">
-                    <div className="rounded-md border overflow-hidden">
-                      <Table>
-                        <TableHeader className="bg-muted/50">
-                          <TableRow>
-                            <TableHead>Étudiant</TableHead>
-                            <TableHead>Téléphone</TableHead>
-                            <TableHead>Dortoir</TableHead>
-                            <TableHead>Chambre</TableHead>
-                            <TableHead>Nombre de Nuits</TableHead>
-                            <TableHead>Période d'Absence</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredConsecutiveAbsences.map((item, idx) => (
-                            <TableRow key={idx} className="hover:bg-accent/40">
-                              <TableCell className="font-semibold py-3">{item.nom_complet}</TableCell>
-                              <TableCell className="py-3">{item.telephone || <span className="text-muted-foreground italic">-</span>}</TableCell>
-                              <TableCell className="py-3">Dortoir {item.dortoirCode}</TableCell>
-                              <TableCell className="py-3">Chambre {item.chambreNumero}</TableCell>
-                              <TableCell className="py-3">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200/50">
-                                  <AlertTriangle className="h-3 w-3" /> {item.count} nuits consécutives
-                                </span>
-                              </TableCell>
-                              <TableCell className="font-mono text-xs py-3 text-muted-foreground">
-                                Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </div>
-      )}
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ));
+              })()
+            ) : (
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50 text-xs">
+                    <TableRow>
+                      <TableHead>Étudiant</TableHead>
+                      <TableHead>Téléphone</TableHead>
+                      <TableHead>Dortoir</TableHead>
+                      <TableHead>Chambre</TableHead>
+                      <TableHead>Nuits</TableHead>
+                      <TableHead>Période</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs">
+                    {filteredConsecutiveAbsences.map((item, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-semibold py-2.5">{item.nom_complet}</TableCell>
+                        <TableCell className="py-2.5">{item.telephone || "—"}</TableCell>
+                        <TableCell className="py-2.5">Dortoir {item.dortoirCode}</TableCell>
+                        <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
+                        <TableCell className="py-2.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                            <AlertTriangle className="h-3 w-3" /> {item.count} nuits
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
+                          Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setConsecutiveModalOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* DIALOG ABSENCES */}
       <Dialog open={open} onOpenChange={setOpen}>

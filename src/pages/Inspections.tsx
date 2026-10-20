@@ -14,7 +14,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Save, DoorOpen, AlertTriangle, Star, Pencil, Trash2, ClipboardCheck } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -272,7 +272,7 @@ export default function Inspections({ embeddedDate, hideHeader }: InspectionsPro
   const remainingChambres = chambres.filter((c) => !inspectedChambreIds.has(c.id));
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className={hideHeader ? "space-y-4" : "space-y-6 max-w-6xl"}>
       {!hideHeader && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
@@ -292,113 +292,232 @@ export default function Inspections({ embeddedDate, hideHeader }: InspectionsPro
           </div>
         </div>
       )}
-      {hideHeader && !isAdmin && (
-        <div className="flex justify-end">
-          <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre affectée" : "Ajouter une inspection"}>
-            <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection
-          </Button>
-        </div>
-      )}
 
-      {!isAdmin && (
-        <Card className={inspections.length > 0 ? "border-success" : (chambres.length === 0 ? "border-destructive" : "border-warning")}>
-          <CardContent className="pt-4 flex items-center gap-3">
-            <DoorOpen className={`h-5 w-5 ${inspections.length > 0 ? "text-success" : (chambres.length === 0 ? "text-destructive" : "text-warning")}`} />
-            <div className="flex-1">
-              <div className="font-medium text-sm">
-                {chambres.length === 0 
-                  ? "⚠ Vous n'êtes affecté à aucun dortoir pour le moment."
-                  : inspections.length > 0
-                  ? `✓ Vous avez inspecté ${inspections.length} chambre(s) pour ce jour`
-                  : "Vous devez inspecter au moins une chambre pour ce jour"}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {chambres.length} chambre(s) disponible(s) dans vos dortoirs · {remainingChambres.length} restantes
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-      ) : (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">
-                Inspections du {format(parseLocalDate(date), "d MMMM yyyy", { locale: fr })}
+      {hideHeader ? (
+        <Card className="shadow-sm border">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4 text-primary" />
+                Inspections des Chambres
               </CardTitle>
-              <CardDescription>{inspections.length} inspection(s) ce jour</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {inspections.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucune inspection.</p>
-              ) : (
-                <ul className="divide-y">
-                  {inspections.map((i) => (
-                    <li key={i.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="font-medium">
-                          Chambre {i.chambre_numero} · Dortoir {i.dortoir_code}
-                          {i.degats && <Badge variant="destructive" className="ml-2"><AlertTriangle className="h-3 w-3 mr-1" />Dégâts</Badge>}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          Par {i.surveillant_name}
-                        </div>
-                        {i.observations && (
-                          <div className="text-sm mt-1 text-muted-foreground">{i.observations}</div>
+              <CardDescription className="text-xs">
+                {inspections.length} inspection(s) effectuée(s)
+              </CardDescription>
+            </div>
+            {!isAdmin && (
+              <Button size="sm" onClick={openNew} disabled={chambres.length === 0} className="font-medium shrink-0">
+                <Plus className="h-3.5 w-3.5 mr-1" /> Inspecter
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {!isAdmin && (
+              <div
+                className={`p-3 rounded-lg border text-xs flex items-center gap-2.5 transition-colors ${
+                  inspections.length > 0
+                    ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
+                    : chambres.length === 0
+                    ? "bg-muted text-muted-foreground border-border"
+                    : "bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+                }`}
+              >
+                <DoorOpen className="h-4 w-4 shrink-0 text-primary" />
+                <div className="flex-1">
+                  {chambres.length === 0 ? (
+                    "Aucune chambre disponible dans vos dortoirs d'affectation."
+                  ) : inspections.length > 0 ? (
+                    <span>
+                      <strong>{inspections.length}</strong> chambre(s) inspectée(s) · {remainingChambres.length} restante(s)
+                    </span>
+                  ) : (
+                    <span>
+                      À inspecter aujourd'hui ({remainingChambres.length} chambre(s) dans vos dortoirs)
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+            ) : inspections.length === 0 ? (
+              <div className="p-6 text-center border rounded-lg border-dashed text-muted-foreground">
+                <DoorOpen className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                <p className="text-sm font-medium">Aucune inspection ce jour</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {!isAdmin ? "Enregistrez le contrôle d'hygiène et d'ordre d'une chambre." : "Aucune inspection enregistrée pour cette date."}
+                </p>
+                {!isAdmin && (
+                  <Button size="sm" variant="outline" className="mt-3 text-xs" onClick={openNew} disabled={chambres.length === 0}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Commencer une inspection
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <ul className="divide-y max-h-[460px] overflow-y-auto pr-1">
+                {inspections.map((i) => (
+                  <li key={i.id} className="py-2.5 flex items-start justify-between gap-2 hover:bg-muted/30 px-1 rounded transition-colors">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm flex items-center gap-1.5 flex-wrap">
+                        <span>Chambre {i.chambre_numero}</span>
+                        <Badge variant="outline" className="text-[11px] font-normal py-0">D. {i.dortoir_code}</Badge>
+                        {i.degats && (
+                          <Badge variant="destructive" className="text-[10px] h-4 px-1 py-0">
+                            <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> Dégâts
+                          </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 shrink-0">
-                        <div className="flex flex-col gap-1 text-xs">
-                          <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Propreté</span><Stars n={i.proprete} /></div>
-                          <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Ordre</span><Stars n={i.ordre} /></div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {(isAdmin || i.surveillant_id === user?.id) && (
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(i)}>
-                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                            </Button>
-                          )}
-                          {isAdmin && (
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(i.id)}>
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">Par {i.surveillant_name}</div>
+                      {i.observations && i.observations !== "RAS" && (
+                        <div className="text-xs text-foreground/80 mt-1 bg-muted/60 p-1.5 rounded">{i.observations}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex flex-col gap-0.5 text-[10px]">
+                        <div className="flex items-center gap-1"><span className="text-muted-foreground w-8">Prop.</span><Stars n={i.proprete} /></div>
+                        <div className="flex items-center gap-1"><span className="text-muted-foreground w-8">Ordre</span><Stars n={i.ordre} /></div>
                       </div>
+                      <div className="flex items-center">
+                        {(isAdmin || i.surveillant_id === user?.id) && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(i)} title="Modifier">
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove(i.id)} title="Supprimer">
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {isAdmin && recentInspections.length > 0 && (
+              <details className="text-xs text-muted-foreground pt-2 border-t">
+                <summary className="cursor-pointer font-medium hover:text-foreground">
+                  Historique récent ({recentInspections.length} sur les 7 derniers jours)
+                </summary>
+                <ul className="mt-2 space-y-1 divide-y max-h-40 overflow-y-auto">
+                  {recentInspections.map((i) => (
+                    <li key={i.id} className="pt-1.5 flex justify-between gap-1">
+                      <span>{format(new Date(i.date), "dd/MM")} · Ch. {i.chambre_numero} (D. {i.dortoir_code}) · {i.surveillant_name}</span>
+                      <span>P:{i.proprete} O:{i.ordre}</span>
                     </li>
                   ))}
                 </ul>
-              )}
-            </CardContent>
-          </Card>
-
-          {isAdmin && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">7 derniers jours</CardTitle>
-                <CardDescription>Historique récent</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {recentInspections.length === 0 ? (
-                  <p className="text-sm text-muted-foreground italic">Aucune inspection.</p>
-                ) : (
-                  <ul className="text-sm divide-y">
-                    {recentInspections.map((i) => (
-                      <li key={i.id} className="py-2 flex justify-between gap-2">
-                        <span>
-                          {format(new Date(i.date), "dd/MM")} · Ch. {i.chambre_numero} (D. {i.dortoir_code}) · {i.surveillant_name}
-                          {i.degats && <span className="ml-2 text-destructive text-xs">⚠ dégâts</span>}
-                        </span>
-                        <span className="text-xs text-muted-foreground">P:{i.proprete} O:{i.ordre}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              </details>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {!isAdmin && (
+            <Card className={inspections.length > 0 ? "border-success" : (chambres.length === 0 ? "border-destructive" : "border-warning")}>
+              <CardContent className="pt-4 flex items-center gap-3">
+                <DoorOpen className={`h-5 w-5 ${inspections.length > 0 ? "text-success" : (chambres.length === 0 ? "text-destructive" : "text-warning")}`} />
+                <div className="flex-1">
+                  <div className="font-medium text-sm">
+                    {chambres.length === 0 
+                      ? "⚠ Vous n'êtes affecté à aucun dortoir pour le moment."
+                      : inspections.length > 0
+                      ? `✓ Vous avez inspecté ${inspections.length} chambre(s) pour ce jour`
+                      : "Vous devez inspecter au moins une chambre pour ce jour"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {chambres.length} chambre(s) disponible(s) dans vos dortoirs · {remainingChambres.length} restantes
+                  </div>
+                </div>
               </CardContent>
             </Card>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Inspections du {format(parseLocalDate(date), "d MMMM yyyy", { locale: fr })}
+                  </CardTitle>
+                  <CardDescription>{inspections.length} inspection(s) ce jour</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {inspections.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">Aucune inspection.</p>
+                  ) : (
+                    <ul className="divide-y">
+                      {inspections.map((i) => (
+                        <li key={i.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="font-medium">
+                              Chambre {i.chambre_numero} · Dortoir {i.dortoir_code}
+                              {i.degats && <Badge variant="destructive" className="ml-2"><AlertTriangle className="h-3 w-3 mr-1" />Dégâts</Badge>}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              Par {i.surveillant_name}
+                            </div>
+                            {i.observations && (
+                              <div className="text-sm mt-1 text-muted-foreground">{i.observations}</div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 shrink-0">
+                            <div className="flex flex-col gap-1 text-xs">
+                              <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Propreté</span><Stars n={i.proprete} /></div>
+                              <div className="flex items-center gap-2"><span className="text-muted-foreground w-16">Ordre</span><Stars n={i.ordre} /></div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              {(isAdmin || i.surveillant_id === user?.id) && (
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => openEdit(i)}>
+                                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => remove(i.id)}>
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+
+              {isAdmin && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">7 derniers jours</CardTitle>
+                    <CardDescription>Historique récent</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {recentInspections.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">Aucune inspection.</p>
+                    ) : (
+                      <ul className="text-sm divide-y">
+                        {recentInspections.map((i) => (
+                          <li key={i.id} className="py-2 flex justify-between gap-2">
+                            <span>
+                              {format(new Date(i.date), "dd/MM")} · Ch. {i.chambre_numero} (D. {i.dortoir_code}) · {i.surveillant_name}
+                              {i.degats && <span className="ml-2 text-destructive text-xs">⚠ dégâts</span>}
+                            </span>
+                            <span className="text-xs text-muted-foreground">P:{i.proprete} O:{i.ordre}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </>
       )}

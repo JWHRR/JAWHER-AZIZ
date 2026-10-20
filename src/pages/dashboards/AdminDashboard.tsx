@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
   Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap,
-  MessageSquare,
+  MessageSquare, CalendarOff,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -48,8 +48,7 @@ const isRedundantRestoSlot = (wd: string, repas: string) => {
 
 export default function AdminDashboard() {
   const { profile, session } = useAuth();
-  const { unreadMap } = useUnreadCounts(session?.user?.id ?? profile?.user_id ?? null);
-  const totalUnreadMessages = Object.values(unreadMap).reduce((acc, count) => acc + count, 0);
+  const { totalUnread: totalUnreadMessages, pendingAbsenceRequestsCount } = useUnreadCounts(session?.user?.id ?? profile?.user_id ?? null);
   const navigate = useNavigate();
   const businessDate = getBusinessDate();
   const today = format(businessDate, "yyyy-MM-dd");
@@ -370,6 +369,16 @@ export default function AdminDashboard() {
       desc: totalUnreadMessages > 0 ? `${totalUnreadMessages} message(s) non lu(s)` : "Échanges & alertes",
       badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined,
       isUnread: totalUnreadMessages > 0,
+    },
+    {
+      label: "Demandes d'absence",
+      icon: CalendarOff,
+      color: "text-warning",
+      bg: "bg-warning-soft",
+      link: "/demandes-absence",
+      desc: pendingAbsenceRequestsCount > 0 ? `${pendingAbsenceRequestsCount} demande(s) en attente` : "Congés & délégations",
+      badge: pendingAbsenceRequestsCount > 0 ? pendingAbsenceRequestsCount : undefined,
+      isUnread: pendingAbsenceRequestsCount > 0,
     },
     { label: "Utilisateurs", icon: Users, color: "text-primary", bg: "bg-primary-soft", link: "/utilisateurs", desc: "Gestion des accès" },
     { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Configuration" },

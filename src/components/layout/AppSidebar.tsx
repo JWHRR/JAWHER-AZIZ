@@ -55,8 +55,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const { primaryRole, session } = useAuth();
   const location = useLocation();
-  const { unreadMap } = useUnreadCounts(session?.user?.id ?? null);
-  const totalUnreadMessages = Object.values(unreadMap).reduce((acc, count) => acc + count, 0);
+  const { totalUnread: totalUnreadMessages, pendingAbsenceRequestsCount } = useUnreadCounts();
 
   const visible = items
     .filter((i) => {
@@ -110,6 +109,11 @@ export function AppSidebar() {
                         {item.url === "/messagerie" && totalUnreadMessages > 0 && (
                           <span className="ml-auto flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
                             {totalUnreadMessages}
+                          </span>
+                        )}
+                        {item.url === "/demandes-absence" && primaryRole === "ADMIN" && pendingAbsenceRequestsCount > 0 && (
+                          <span className="ml-auto flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                            {pendingAbsenceRequestsCount}
                           </span>
                         )}
                       </NavLink>

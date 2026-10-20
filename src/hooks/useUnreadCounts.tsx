@@ -5,9 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 interface UnreadCountsContextValue {
   unreadMap: Record<string, number>;
   totalUnread: number;
+  pendingAbsenceRequestsCount: number;
   markRead: (conversationId: string) => Promise<void>;
   markUnread: (conversationId: string) => Promise<void>;
   fetchUnread: () => Promise<void>;
+  fetchPendingAbsenceRequests: () => Promise<void>;
 }
 
 const UnreadCountsContext = createContext<UnreadCountsContextValue | null>(null);
@@ -16,6 +18,22 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
   const { session } = useAuth();
   const userId = session?.user?.id ?? null;
   const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+  const [pendingAbsenceRequestsCount, setPendingAbsenceRequestsCount] = useState<number>(0);
+
+  const fetchPendingAbsenceRequests = useCallback(async () => {
+    try {
+      const { count, error } = await supabase
+        .from('absence_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'PENDING');
+
+      if (!error && count !== null) {
+        setPendingAbsenceRequestsCount(count);
+      }
+    } catch (err) {
+      console.warn('Error fetching pending absence requests:', err);
+    }
+  }, []);
 
   const fetchUnread = useCallback(async () => {
     if (!userId) {
@@ -59,6 +77,7 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchUnread();
+    fetchPendingAbsenceRequests();
 
     if (!userId) return;
 
@@ -69,6 +88,9 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
         .channel(channelName)
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
           fetchUnread();
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'absence_requests' }, () => {
+          fetchPendingAbsenceRequests();
         });
 
       channel.subscribe((status: string) => {
@@ -77,7 +99,7 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
         }
       });
     } catch (err) {
-      console.warn('Failed to subscribe to unread messages channel:', err);
+      console.warn('Failed to subscribe to unread channel:', err);
     }
 
     return () => {
@@ -87,7 +109,7 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
         } catch {}
       }
     };
-  }, [userId, fetchUnread]);
+  }, [userId, fetchUnread, fetchPendingAbsenceRequests]);
 
   const markRead = useCallback(async (conversationId: string) => {
     if (!userId) return;
@@ -135,7 +157,17 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
   const totalUnread = Object.values(unreadMap).reduce((sum, count) => sum + count, 0);
 
   return (
-    <UnreadCountsContext.Provider value={{ unreadMap, totalUnread, markRead, markUnread, fetchUnread }}>
+    <UnreadCountsContext.Provider
+      value={{
+        unreadMap,
+        totalUnread,
+        pendingAbsenceRequestsCount,
+        markRead,
+        markUnread,
+        fetchUnread,
+        fetchPendingAbsenceRequests,
+      }}
+    >
       {children}
     </UnreadCountsContext.Provider>
   );
@@ -151,8 +183,10 @@ export const useUnreadCounts = (_userId?: string | null) => {
   return {
     unreadMap: {},
     totalUnread: 0,
+    pendingAbsenceRequestsCount: 0,
     markRead: async () => {},
     markUnread: async () => {},
     fetchUnread: async () => {},
+    fetchPendingAbsenceRequests: async () => {},
   };
 };

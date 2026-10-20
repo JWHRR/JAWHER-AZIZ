@@ -16,6 +16,7 @@ import { format, subDays, isThursday, isFriday, isSaturday, isSunday, isMonday }
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { DoneBadge } from "@/components/StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";

@@ -1,6 +1,6 @@
 // Service Worker — caches the app shell for fast/offline loading on mobile
 
-const CACHE_NAME = 'app-shell-v2';
+const CACHE_NAME = 'app-shell-v3';
 
 // App shell files to pre-cache
 const PRECACHE_URLS = ['/', '/index.html'];

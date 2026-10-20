@@ -62,17 +62,30 @@ export const UnreadCountsProvider = ({ children }: { children: ReactNode }) => {
 
     if (!userId) return;
 
-    // A single channel per provider lifecycle with unique identifier
-    const channelName = `unread_global_${userId}_${Math.random().toString(36).substring(2, 9)}`;
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
-        fetchUnread();
-      })
-      .subscribe();
+    let channel: any = null;
+    try {
+      const channelName = `unread_${userId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      channel = supabase
+        .channel(channelName)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+          fetchUnread();
+        });
+
+      channel.subscribe((status: string) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('Realtime channel error for unread counts');
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to subscribe to unread messages channel:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          supabase.removeChannel(channel);
+        } catch {}
+      }
     };
   }, [userId, fetchUnread]);
 

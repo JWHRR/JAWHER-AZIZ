@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Briefcase, MessageSquare } from "lucide-react";
+import {
+  Loader2, ClipboardList, Utensils, Calendar as CalIcon, BedDouble, Clock, Briefcase, MessageSquare,
+  UserX, ClipboardCheck, Calendar, GraduationCap, Wrench, CalendarOff,
+} from "lucide-react";
 import { format, startOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
@@ -133,15 +136,53 @@ export default function SurveillantDashboard() {
     );
   }
 
+  const cards = [
+    { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/absences", desc: "Saisie & pointage" },
+    { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/restaurant", desc: "Effectifs repas" },
+    { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/inspections", desc: "État des chambres" },
+    { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/permanences", desc: "Pointage des tours" },
+    { label: "Calendrier", icon: Calendar, color: "text-primary", bg: "bg-primary-soft", link: "/calendrier", desc: "Planning & relèves" },
+    { label: "Étudiants", icon: GraduationCap, color: "text-primary", bg: "bg-primary-soft", link: "/etudiants", desc: "Liste des résidents" },
+    { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Signalement pannes" },
+    { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Chambres & lits" },
+    { label: "Délégations", icon: CalendarOff, color: "text-warning", bg: "bg-warning-soft", link: "/demandes-absence", desc: "Congés & passations", badge: pendingTaskCount > 0 ? pendingTaskCount : undefined },
+    { label: "Messagerie", icon: MessageSquare, color: "text-primary", bg: "bg-primary-soft", link: "/messagerie", desc: "Échanges & alertes" },
+  ];
+
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div className="mb-6">
+    <div className="space-y-6 max-w-7xl">
+      <div className="mb-2">
         <h1 className="text-4xl font-extrabold tracking-tight">
           Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
         <p className="text-muted-foreground mt-2 text-lg">
           {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+        {cards.map((c) => (
+          <Link
+            key={c.label}
+            to={c.link}
+            className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-1 hover:shadow-md"
+          >
+            {c.badge != null && c.badge > 0 && (
+              <span className="absolute top-2 right-2 h-5 min-w-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-sm">
+                {c.badge}
+              </span>
+            )}
+            <div className="flex flex-col items-center justify-center text-center space-y-3">
+              <div className={`h-12 w-12 rounded-full ${c.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                <c.icon className={`h-6 w-6 ${c.color}`} />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">{c.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -241,23 +282,6 @@ export default function SurveillantDashboard() {
         <Card className="relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" /> Permanences
-            </CardTitle>
-            <CardDescription>Enregistrez vos heures de service</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-3">
-              <p className="text-sm text-muted-foreground">Pensez à pointer vos heures de début et de fin pour chaque permanence.</p>
-              <Button asChild className="w-full">
-                <Link to="/permanences">Accéder aux permanences</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
               <Utensils className="h-4 w-4 text-primary" /> Restaurant aujourd'hui
             </CardTitle>
             <CardDescription>Effectif des élèves au restaurant</CardDescription>
@@ -266,7 +290,7 @@ export default function SurveillantDashboard() {
             {todayResto.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucun effectif restaurant affecté aujourd'hui.</p>
             ) : (
-              <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {todayResto.map((r: any) => (
                   <li key={r.id} className="p-3 rounded-lg border bg-muted/30">
                     <div className="font-semibold">{REPAS_LABELS[r.repas as keyof typeof REPAS_LABELS]}</div>
@@ -302,21 +326,6 @@ export default function SurveillantDashboard() {
             </CardContent>
           </Card>
         )}
-
-        {/* Messagerie quick-access */}
-        <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-primary" /> Messagerie
-            </CardTitle>
-            <CardDescription>Échangez avec l'administration et les autres surveillants</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/messagerie">Accéder à la messagerie</Link>
-            </Button>
-          </CardContent>
-        </Card>
 
         <Card className="md:col-span-2 relative overflow-hidden backdrop-blur-xl bg-card/90 border-border/50 shadow-sm transition-all hover:shadow-md">
           <CardHeader>

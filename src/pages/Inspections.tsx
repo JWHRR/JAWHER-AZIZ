@@ -319,7 +319,7 @@ export default function Inspections({ embeddedDate, hideHeader }: InspectionsPro
                     ? "bg-emerald-50/70 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200"
                     : chambres.length === 0
                     ? "bg-muted text-muted-foreground border-border"
-                    : "bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+                    : "bg-muted/50 border-border text-foreground/80"
                 }`}
               >
                 <DoorOpen className="h-4 w-4 shrink-0 text-primary" />

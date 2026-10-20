@@ -548,9 +548,9 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
 
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Top Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Absences & Inspections</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Pointage des dortoirs et contrôle de l'état des chambres sur une seule page</p>
@@ -560,29 +560,25 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
             variant="outline"
             size="sm"
             onClick={() => setConsecutiveModalOpen(true)}
-            className={`gap-1.5 font-medium transition-colors ${
-              consecutiveAbsencesList.length > 0
-                ? "border-amber-400 bg-amber-50/50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 hover:bg-amber-100/60"
-                : ""
-            }`}
+            className="h-8 text-xs font-medium gap-1.5"
           >
-            <AlertTriangle className={`h-4 w-4 ${consecutiveAbsencesList.length > 0 ? "text-amber-500 animate-pulse" : "text-muted-foreground"}`} />
+            <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
             <span>3+ nuits consécutives</span>
             {consecutiveAbsencesList.length > 0 && (
-              <span className="inline-flex items-center justify-center bg-amber-500 text-white rounded-full text-[11px] font-bold h-4 px-1.5">
+              <Badge variant="secondary" className="h-4.5 px-1.5 text-[10px] font-semibold">
                 {consecutiveAbsencesList.length}
-              </span>
+              </Badge>
             )}
           </Button>
 
           {isAdmin && <WeeklyAbsenceHistory />}
           {(isThursday(parseLocalDate(date)) || isFriday(parseLocalDate(date)) || isSaturday(parseLocalDate(date)) || isSunday(parseLocalDate(date)) || isMonday(parseLocalDate(date))) && (
-            <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="border-primary text-primary">
-              <FileDown className="h-4 w-4 mr-1" /> Weekend (PDF)
+            <Button variant="outline" size="sm" onClick={exportWeekendPdf} className="h-8 text-xs font-medium border-primary text-primary">
+              <FileDown className="h-3.5 w-3.5 mr-1" /> Weekend (PDF)
             </Button>
           )}
 
-          <div className="flex items-center gap-1.5 bg-card border rounded-md px-2.5 py-1 shadow-sm">
+          <div className="flex items-center gap-1.5 bg-card border rounded-md px-2.5 py-1 shadow-xs">
             <Label htmlFor="date" className="text-xs font-medium text-muted-foreground">Date</Label>
             <Input
               id="date"
@@ -595,185 +591,135 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
         </div>
       </div>
 
-      {/* Mobile Switcher (< lg screens) */}
-      <div className="flex lg:hidden bg-muted/70 p-1 rounded-lg border gap-1">
-        <button
-          onClick={() => setMobileTab("absences")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-semibold rounded-md transition-all ${
-            mobileTab === "absences"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Users className="h-4 w-4 text-primary" />
-          <span>Pointage Absences ({absences.length}/{dortoirsToShow.length})</span>
-        </button>
-        <button
-          onClick={() => setMobileTab("inspections")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs sm:text-sm font-semibold rounded-md transition-all ${
-            mobileTab === "inspections"
-              ? "bg-card text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <ClipboardCheck className="h-4 w-4 text-primary" />
-          <span>Inspections Chambres</span>
-        </button>
-      </div>
-
-      {/* Main 2-Column Side-by-Side Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* COLONNE 1 : POINTAGE ABSENCES */}
-        <div className={mobileTab === "inspections" ? "hidden lg:block space-y-4" : "space-y-4"}>
-          <Card className="shadow-sm border">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  Pointage des Absences
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {isAdmin ? "Tous les dortoirs" : "Vos dortoirs d'affectation"}
-                </CardDescription>
-              </div>
-              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                absences.length === dortoirsToShow.length && dortoirsToShow.length > 0
-                  ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
-                  : "bg-muted text-muted-foreground border-border"
-              }`}>
-                {absences.length} / {dortoirsToShow.length} pointé(s)
-              </span>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {loading ? (
-                <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
-              ) : dortoirsToShow.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic py-4">Aucun dortoir disponible.</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {dortoirsToShow.map((d) => {
-                    const a = absences.find((x) => x.dortoir_id === d.id);
-                    return (
-                      <div
-                        key={d.id}
-                        className={`p-3.5 rounded-lg border transition-all flex items-center justify-between gap-3 ${
-                          a
-                            ? "bg-card border-border/80 hover:border-primary/40"
-                            : "bg-amber-50/40 dark:bg-amber-950/20 border-amber-300/80 dark:border-amber-800/60"
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-base">Dortoir {d.code}</span>
-                            <DoneBadge done={!!a} />
-                          </div>
-                          <div className="text-xs mt-0.5">
-                            {a ? (
-                              <span className={a.nombre_absents > 0 ? "text-destructive font-medium" : "text-emerald-600 dark:text-emerald-400 font-medium"}>
-                                {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
-                              </span>
-                            ) : (
-                              <span className="text-amber-600 dark:text-amber-400 font-medium">Pointage non effectué</span>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant={a ? "outline" : "default"}
-                          className="shrink-0 font-medium"
-                          onClick={() => openNew(d.id)}
-                        >
-                          {a ? (
-                            <><Eye className="h-3.5 w-3.5 mr-1" /> Modifier</>
-                          ) : (
-                            <><Plus className="h-3.5 w-3.5 mr-1" /> Saisir absents</>
-                          )}
-                        </Button>
+      {/* SECTION 1 : POINTAGE DES ABSENCES (DORTOIRS) */}
+      <Card className="shadow-xs border">
+        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between space-y-0 border-b">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base font-semibold">Pointage des Dortoirs</CardTitle>
+            <span className="text-xs text-muted-foreground ml-1">
+              ({isAdmin ? "Tous les dortoirs" : "Vos affectations"})
+            </span>
+          </div>
+          <Badge variant="outline" className="text-xs font-medium">
+            {absences.length} / {dortoirsToShow.length} pointé(s)
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-4">
+          {loading ? (
+            <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          ) : dortoirsToShow.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic py-3">Aucun dortoir disponible.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {dortoirsToShow.map((d) => {
+                const a = absences.find((x) => x.dortoir_id === d.id);
+                return (
+                  <div
+                    key={d.id}
+                    className="p-3 rounded-lg border bg-card flex items-center justify-between gap-3 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm">Dortoir {d.code}</span>
+                        <DoneBadge done={!!a} />
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* SECTION EFFECTIF WEEKEND (JEUDI) */}
-          {isThursday(parseLocalDate(date)) && !isAdmin && (
-            <div className="ring-2 ring-amber-400/80 rounded-xl">
-              <Card className="border border-amber-400 rounded-xl overflow-hidden shadow-sm">
-                <div className="bg-amber-500 text-white px-4 py-2.5 flex items-center gap-2.5">
-                  <CalendarDays className="h-5 w-5 shrink-0" />
-                  <div>
-                    <p className="font-bold text-sm uppercase tracking-wide">
-                      Effectif Weekend (Jeudi)
-                    </p>
-                    <p className="text-amber-100 text-xs">
-                      Renseignez l'effectif présent ce week-end pour chaque dortoir.
-                    </p>
-                  </div>
-                </div>
-                <CardContent className="pt-4">
-                  {myDortoirs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucun dortoir affecté.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {myDortoirs.map((myD) => {
-                        const d = { id: myD.dortoir_id, code: myD.dortoirs.code };
-                        const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
-
-                        return (
-                          <div
-                            key={d.id}
-                            className={`p-3 rounded-lg border flex items-center justify-between gap-2 ${
-                              we ? "border-green-400 bg-card" : "border-amber-300 bg-amber-50/30 dark:bg-amber-950/20"
-                            }`}
-                          >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm">Dortoir {d.code}</span>
-                                <DoneBadge done={!!we} />
-                              </div>
-                              <div className="text-xs mt-0.5">
-                                {we ? (
-                                  <span className="font-semibold text-green-700 dark:text-green-400">
-                                    {we.nombre_presents} présent(s)
-                                  </span>
-                                ) : (
-                                  <span className="italic text-amber-700 dark:text-amber-400">⚠️ Non renseigné</span>
-                                )}
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant={we ? "outline" : "default"}
-                              className={`h-8 text-xs font-semibold ${!we ? "bg-amber-500 hover:bg-amber-600 text-white border-0" : ""}`}
-                              onClick={() => openWeekend(d.id)}
-                            >
-                              {we ? "Modifier" : "Renseigner"}
-                            </Button>
-                          </div>
-                        );
-                      })}
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {a ? (
+                          <span className={a.nombre_absents > 0 ? "text-destructive font-medium" : "text-emerald-600 dark:text-emerald-400 font-medium"}>
+                            {a.nombre_absents} absent{a.nombre_absents > 1 ? "s" : ""}
+                          </span>
+                        ) : (
+                          <span>Non pointé</span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
+                    <Button
+                      size="sm"
+                      variant={a ? "outline" : "default"}
+                      className="h-7 text-xs font-medium shrink-0"
+                      onClick={() => openNew(d.id)}
+                    >
+                      {a ? (
+                        <><Eye className="h-3 w-3 mr-1" /> Modifier</>
+                      ) : (
+                        <><Plus className="h-3 w-3 mr-1" /> Pointer</>
+                      )}
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* COLONNE 2 : INSPECTIONS DES CHAMBRES */}
-        <div className={mobileTab === "absences" ? "hidden lg:block space-y-4" : "space-y-4"}>
-          <Inspections embeddedDate={date} hideHeader={true} />
-        </div>
-      </div>
+      {/* SECTION EFFECTIF WEEKEND (JEUDI) */}
+      {isThursday(parseLocalDate(date)) && !isAdmin && (
+        <Card className="border shadow-xs overflow-hidden">
+          <div className="bg-primary/10 border-b border-primary/20 px-4 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-primary">
+              <CalendarDays className="h-4 w-4 shrink-0" />
+              <p className="font-semibold text-xs sm:text-sm">
+                Effectif Weekend (Jeudi) — Renseignez l'effectif présent ce week-end
+              </p>
+            </div>
+          </div>
+          <CardContent className="p-3 sm:p-4">
+            {myDortoirs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aucun dortoir affecté.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {myDortoirs.map((myD) => {
+                  const d = { id: myD.dortoir_id, code: myD.dortoirs.code };
+                  const we = weekendEffectifs.find((x) => x.dortoir_id === d.id);
+
+                  return (
+                    <div
+                      key={d.id}
+                      className="p-3 rounded-lg border bg-card flex items-center justify-between gap-2"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm">Dortoir {d.code}</span>
+                          <DoneBadge done={!!we} />
+                        </div>
+                        <div className="text-xs mt-0.5">
+                          {we ? (
+                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                              {we.nombre_presents} présent(s)
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">Non renseigné</span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={we ? "outline" : "default"}
+                        className="h-7 text-xs font-medium"
+                        onClick={() => openWeekend(d.id)}
+                      >
+                        {we ? "Modifier" : "Renseigner"}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* SECTION 2 : INSPECTIONS DES CHAMBRES (PLEINE LARGEUR) */}
+      <Inspections embeddedDate={date} hideHeader={true} />
 
       {/* DIALOG ABSENCES CONSECUTIVES (3+ NUITS) */}
       <Dialog open={consecutiveModalOpen} onOpenChange={setConsecutiveModalOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
               Absences Consécutives (3+ nuits)
             </DialogTitle>
             <DialogDescription>
@@ -816,7 +762,7 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                 return Object.entries(grouped)
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([code, list]) => (
-                    <Card key={code} className="border-l-4 border-l-amber-500 shadow-sm">
+                    <Card key={code} className="border shadow-xs">
                       <CardHeader className="py-2.5 px-4 border-b">
                         <CardTitle className="text-base flex items-center justify-between">
                           <span className="flex items-center gap-2">
@@ -844,9 +790,9 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                                   <TableCell className="py-2.5">{item.telephone || "—"}</TableCell>
                                   <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
                                   <TableCell className="py-2.5">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                                      <AlertTriangle className="h-3 w-3" /> {item.count} nuits
-                                    </span>
+                                    <Badge variant="secondary" className="gap-1 text-xs">
+                                      <AlertTriangle className="h-3 w-3 text-muted-foreground" /> {item.count} nuits
+                                    </Badge>
                                   </TableCell>
                                   <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
                                     Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}
@@ -881,9 +827,9 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                         <TableCell className="py-2.5">Dortoir {item.dortoirCode}</TableCell>
                         <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
                         <TableCell className="py-2.5">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
-                            <AlertTriangle className="h-3 w-3" /> {item.count} nuits
-                          </span>
+                          <Badge variant="secondary" className="gap-1 text-xs">
+                            <AlertTriangle className="h-3 w-3 text-muted-foreground" /> {item.count} nuits
+                          </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
                           Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}

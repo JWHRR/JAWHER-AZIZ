@@ -25,6 +25,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { AppRole } from "@/lib/types";
 
 interface NavItem {
@@ -52,12 +53,21 @@ const items: NavItem[] = [
 export function AppSidebar() {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === "collapsed";
-  const { primaryRole } = useAuth();
+  const { primaryRole, session } = useAuth();
   const location = useLocation();
+  const { unreadMap } = useUnreadCounts(session?.user?.id ?? null);
+  const totalUnreadMessages = Object.values(unreadMap).reduce((acc, count) => acc + count, 0);
 
   const visible = items
-    .filter((i) => primaryRole && i.roles.includes(primaryRole))
+    .filter((i) => {
+      if (!primaryRole || !i.roles.includes(primaryRole)) return false;
+      if (primaryRole === "SURVEILLANT" && i.title === "Inspections") return false;
+      return true;
+    })
     .map((item) => {
+      if (primaryRole === "SURVEILLANT" && item.title === "Absences") {
+        return { ...item, title: "Absences & Inspections" };
+      }
       if (primaryRole === "ADMIN") {
         if (item.title === "Absences") return { ...item, url: "/admin/absences" };
         if (item.title === "Inspections") return { ...item, url: "/admin/inspections" };
@@ -94,9 +104,14 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                      <NavLink to={item.url} end={item.url === "/"} onClick={() => isMobile && setOpenMobile(false)}>
+                      <NavLink to={item.url} end={item.url === "/"} onClick={() => isMobile && setOpenMobile(false)} className="flex items-center w-full">
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="flex-1 truncate">{item.title}</span>
+                        {item.url === "/messagerie" && totalUnreadMessages > 0 && (
+                          <span className="ml-auto flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-pulse">
+                            {totalUnreadMessages}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

@@ -41,12 +41,23 @@ interface Inspection {
   dortoir_code?: string;
 }
 
-export default function Inspections() {
+interface InspectionsProps {
+  embeddedDate?: string;
+  hideHeader?: boolean;
+}
+
+export default function Inspections({ embeddedDate, hideHeader }: InspectionsProps = {}) {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState(searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
+  const [date, setDate] = useState(embeddedDate || searchParams.get("date") || format(getBusinessDate(), "yyyy-MM-dd"));
+
+  useEffect(() => {
+    if (embeddedDate && embeddedDate !== date) {
+      setDate(embeddedDate);
+    }
+  }, [embeddedDate]);
 
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
@@ -262,23 +273,32 @@ export default function Inspections() {
 
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">Inspections de chambres</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAdmin ? "Suivi des inspections quotidiennes" : "Inspectez une chambre par jour"}
-          </p>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold">Inspections de chambres</h1>
+            <p className="text-muted-foreground mt-1">
+              {isAdmin ? "Suivi des inspections quotidiennes" : "Inspectez une chambre par jour"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="d" className="text-sm">Date</Label>
+            <Input id="d" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
+            {!isAdmin && (
+              <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre affectée" : "Ajouter une inspection"}>
+                <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="d" className="text-sm">Date</Label>
-          <Input id="d" type="date" value={date} onChange={(e) => handleDateChange(e.target.value)} className="w-auto" />
-          {!isAdmin && (
-            <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre affectée" : "Ajouter une inspection"}>
-              <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection
-            </Button>
-          )}
+      )}
+      {hideHeader && !isAdmin && (
+        <div className="flex justify-end">
+          <Button onClick={openNew} disabled={chambres.length === 0} title={chambres.length === 0 ? "Aucune chambre affectée" : "Ajouter une inspection"}>
+            <Plus className="h-4 w-4 mr-1" /> Nouvelle inspection
+          </Button>
         </div>
-      </div>
+      )}
 
       {!isAdmin && (
         <Card className={inspections.length > 0 ? "border-success" : (chambres.length === 0 ? "border-destructive" : "border-warning")}>

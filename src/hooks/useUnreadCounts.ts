@@ -23,14 +23,18 @@ export const useUnreadCounts = (userId: string | null) => {
 
     await Promise.all(
       memberships.map(async (m) => {
-        const { count } = await supabase
+        let q = supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
           .eq('conversation_id', m.conversation_id)
           .is('deleted_at', null)
-          .neq('sender_id', userId)
-          .gt('created_at', m.last_read_at);
+          .neq('sender_id', userId);
 
+        if (m.last_read_at) {
+          q = q.gt('created_at', m.last_read_at);
+        }
+
+        const { count } = await q;
         counts[m.conversation_id] = count ?? 0;
       })
     );
@@ -41,9 +45,11 @@ export const useUnreadCounts = (userId: string | null) => {
   useEffect(() => {
     fetchUnread();
 
+    if (!userId) return;
+
     // Re-fetch when a new message arrives
     const channel = supabase
-      .channel('unread:messages')
+      .channel(`unread:messages:${userId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
         fetchUnread();
       })

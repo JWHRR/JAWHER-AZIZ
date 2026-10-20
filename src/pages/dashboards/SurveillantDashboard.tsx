@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SLOT_LABELS, REPAS_LABELS, dateToWeekday, PermanenceSlot } from "@/lib/types";
 import { useAbsenceRequests } from "@/hooks/useAbsenceRequests";
+import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { DoneBadge } from "@/components/StatusBadge";
 import { getBusinessDate } from "@/lib/time";
 
@@ -36,6 +37,8 @@ const isRedundantRestoSlot = (wd: string, repas: string) => {
 export default function SurveillantDashboard() {
   const { user, profile } = useAuth();
   const { pendingTaskCount } = useAbsenceRequests();
+  const { unreadMap } = useUnreadCounts(user?.id ?? null);
+  const totalUnreadMessages = Object.values(unreadMap).reduce((acc, count) => acc + count, 0);
   const [loading, setLoading] = useState(true);
   const [myDortoirs, setMyDortoirs] = useState<any[]>([]);
   const [todayPerms, setTodayPerms] = useState<any[]>([]);
@@ -137,16 +140,81 @@ export default function SurveillantDashboard() {
   }
 
   const cards = [
-    { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/absences", desc: "Saisie & pointage" },
-    { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/restaurant", desc: "Effectifs repas" },
-    { label: "Inspections", icon: ClipboardCheck, color: "text-info", bg: "bg-accent", link: "/inspections", desc: "État des chambres" },
-    { label: "Permanences", icon: Clock, color: "text-primary", bg: "bg-primary-soft", link: "/permanences", desc: "Pointage des tours" },
-    { label: "Calendrier", icon: Calendar, color: "text-primary", bg: "bg-primary-soft", link: "/calendrier", desc: "Planning & relèves" },
-    { label: "Étudiants", icon: GraduationCap, color: "text-primary", bg: "bg-primary-soft", link: "/etudiants", desc: "Liste des résidents" },
-    { label: "Réclamations", icon: Wrench, color: "text-destructive", bg: "bg-destructive/10", link: "/reclamations", desc: "Signalement pannes" },
-    { label: "Dortoirs", icon: BedDouble, color: "text-info", bg: "bg-accent", link: "/dortoirs", desc: "Chambres & lits" },
-    { label: "Délégations", icon: CalendarOff, color: "text-warning", bg: "bg-warning-soft", link: "/demandes-absence", desc: "Congés & passations", badge: pendingTaskCount > 0 ? pendingTaskCount : undefined },
-    { label: "Messagerie", icon: MessageSquare, color: "text-primary", bg: "bg-primary-soft", link: "/messagerie", desc: "Échanges & alertes" },
+    {
+      label: "Absences & Inspections",
+      icon: ClipboardCheck,
+      color: "text-warning",
+      bg: "bg-warning-soft",
+      link: "/absences",
+      desc: "Appel & état des lieux",
+    },
+    {
+      label: "Restaurant",
+      icon: Utensils,
+      color: "text-success",
+      bg: "bg-success-soft",
+      link: "/restaurant",
+      desc: "Effectifs repas",
+    },
+    {
+      label: "Permanences",
+      icon: Clock,
+      color: "text-primary",
+      bg: "bg-primary-soft",
+      link: "/permanences",
+      desc: "Pointage des tours",
+    },
+    {
+      label: "Messagerie",
+      icon: MessageSquare,
+      color: "text-primary",
+      bg: "bg-primary-soft",
+      link: "/messagerie",
+      desc: totalUnreadMessages > 0 ? `${totalUnreadMessages} message(s) non lu(s)` : "Échanges & alertes",
+      badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined,
+      isUnread: totalUnreadMessages > 0,
+    },
+    {
+      label: "Réclamations",
+      icon: Wrench,
+      color: "text-destructive",
+      bg: "bg-destructive/10",
+      link: "/reclamations",
+      desc: "Signalement pannes",
+    },
+    {
+      label: "Étudiants",
+      icon: GraduationCap,
+      color: "text-primary",
+      bg: "bg-primary-soft",
+      link: "/etudiants",
+      desc: "Liste des résidents",
+    },
+    {
+      label: "Demandes d'absence",
+      icon: CalendarOff,
+      color: "text-warning",
+      bg: "bg-warning-soft",
+      link: "/demandes-absence",
+      desc: "Congés & délégations",
+      badge: pendingTaskCount > 0 ? pendingTaskCount : undefined,
+    },
+    {
+      label: "Dortoirs",
+      icon: BedDouble,
+      color: "text-info",
+      bg: "bg-accent",
+      link: "/dortoirs",
+      desc: "Chambres & lits",
+    },
+    {
+      label: "Calendrier",
+      icon: Calendar,
+      color: "text-primary",
+      bg: "bg-primary-soft",
+      link: "/calendrier",
+      desc: "Planning & relèves",
+    },
   ];
 
   return (
@@ -160,25 +228,46 @@ export default function SurveillantDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
         {cards.map((c) => (
           <Link
             key={c.label}
             to={c.link}
-            className="group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-1 hover:shadow-md"
+            className={`group relative overflow-hidden rounded-xl border bg-card p-4 transition-all hover:-translate-y-1 hover:shadow-md ${
+              c.isUnread ? "border-destructive/80 ring-2 ring-destructive/40 shadow-sm" : ""
+            }`}
           >
-            {c.badge != null && c.badge > 0 && (
+            {c.isUnread && c.badge != null && c.badge > 0 && (
+              <span className="absolute top-2 right-2 flex h-5 min-w-5 items-center justify-center">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                <span className="relative inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold shadow-sm">
+                  {c.badge}
+                </span>
+              </span>
+            )}
+            {!c.isUnread && c.badge != null && c.badge > 0 && (
               <span className="absolute top-2 right-2 h-5 min-w-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center shadow-sm">
                 {c.badge}
               </span>
             )}
             <div className="flex flex-col items-center justify-center text-center space-y-3">
-              <div className={`h-12 w-12 rounded-full ${c.bg} flex items-center justify-center transition-transform group-hover:scale-110`}>
+              <div
+                className={`h-12 w-12 rounded-full ${c.bg} flex items-center justify-center transition-transform group-hover:scale-110 relative ${
+                  c.isUnread ? "animate-bounce ring-2 ring-destructive ring-offset-2" : ""
+                }`}
+              >
                 <c.icon className={`h-6 w-6 ${c.color}`} />
               </div>
               <div>
-                <div className="font-semibold text-sm text-foreground">{c.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{c.desc}</div>
+                <div className="font-semibold text-sm text-foreground flex items-center justify-center gap-1.5">
+                  {c.label}
+                  {c.isUnread && (
+                    <span className="inline-block h-2 w-2 rounded-full bg-destructive animate-ping" />
+                  )}
+                </div>
+                <div className={`text-xs mt-0.5 ${c.isUnread ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                  {c.desc}
+                </div>
               </div>
             </div>
           </Link>
@@ -237,7 +326,7 @@ export default function SurveillantDashboard() {
                   <div className="flex items-center gap-2">
                     <DoneBadge done={todayInspections.length > 0} />
                     <Button asChild size="sm" variant={todayInspections.length > 0 ? "outline" : "default"}>
-                      <Link to="/inspections">{todayInspections.length > 0 ? "Voir" : "Inspecter"}</Link>
+                      <Link to="/absences?view=inspections">{todayInspections.length > 0 ? "Voir" : "Inspecter"}</Link>
                     </Button>
                   </div>
                 </div>

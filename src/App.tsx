@@ -82,7 +82,7 @@ const App = () => (
               path="/inspections"
               element={
                 <ProtectedRoute roles={["ADMIN", "SURVEILLANT"]}>
-                  <AppLayout><Inspections /></AppLayout>
+                  <AppLayout><Absences defaultView="inspections" /></AppLayout>
                 </ProtectedRoute>
               }
             />

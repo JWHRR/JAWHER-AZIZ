@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users, Search } from "lucide-react";
+import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users, Search, ClipboardCheck } from "lucide-react";
 import { format, subDays, isThursday, isFriday, isSaturday, isSunday, isMonday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
+import Inspections from "./Inspections";
 
 interface DortoirAssign {
   id: string;
@@ -27,7 +28,7 @@ interface DortoirAssign {
   dortoirs: { id: string; code: string };
 }
 
-export default function Absences() {
+export default function Absences({ defaultView }: { defaultView?: string } = {}) {
   const { user, primaryRole } = useAuth();
   const isAdmin = primaryRole === "ADMIN";
   const [searchParams, setSearchParams] = useSearchParams();
@@ -255,7 +256,7 @@ export default function Absences() {
   const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<any[]>([]);
   const [consecutiveLoading, setConsecutiveLoading] = useState(false);
   const [consecutiveSearch, setConsecutiveSearch] = useState("");
-  const view = searchParams.get("view") || "daily";
+  const view = searchParams.get("view") || defaultView || "daily";
 
   const filteredConsecutiveAbsences = consecutiveAbsencesList.filter((item) => {
     const query = consecutiveSearch.trim().toLowerCase();
@@ -544,8 +545,8 @@ export default function Absences() {
     <div className="space-y-6 max-w-6xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Absences</h1>
-          <p className="text-muted-foreground mt-1">Effectif quotidien par dortoir</p>
+          <h1 className="text-3xl font-bold">Absences & Inspections</h1>
+          <p className="text-muted-foreground mt-1">Pointage des dortoirs et contrôle de l'état des chambres</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && <WeeklyAbsenceHistory />}
@@ -564,7 +565,7 @@ export default function Absences() {
         <button
           onClick={() => setSearchParams({ date, view: "daily" })}
           className={`pb-2.5 text-sm font-semibold transition-colors relative ${
-            view !== "consecutive"
+            view === "daily" || (view !== "consecutive" && view !== "inspections")
               ? "text-primary border-b-2 border-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
@@ -572,6 +573,19 @@ export default function Absences() {
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />
             Effectif Quotidien
+          </div>
+        </button>
+        <button
+          onClick={() => setSearchParams({ date, view: "inspections" })}
+          className={`pb-2.5 text-sm font-semibold transition-colors relative ${
+            view === "inspections"
+              ? "text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-1.5">
+            <ClipboardCheck className="h-4 w-4" />
+            Inspections des Chambres
           </div>
         </button>
         <button
@@ -589,7 +603,9 @@ export default function Absences() {
         </button>
       </div>
 
-      {view !== "consecutive" ? (
+      {view === "inspections" ? (
+        <Inspections embeddedDate={date} hideHeader={true} />
+      ) : view !== "consecutive" ? (
         <>
           <Card>
             <CardHeader>

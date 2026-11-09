@@ -68,12 +68,12 @@ const groupByDate = (msgs: Message[]) => {
 };
 
 const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500',
-  'bg-pink-500', 'bg-teal-500', 'bg-red-500', 'bg-indigo-500',
+  'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-orange-500',
+  'bg-pink-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500',
 ];
 const avatarColor = (id: string) => AVATAR_COLORS[id.charCodeAt(0) % AVATAR_COLORS.length];
 const getInitials = (name: string) =>
-  name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
   conversation,
@@ -112,7 +112,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   } = useMessageSearch(conversation?.id ?? null);
 
   useEffect(() => {
-    const ids = messages.map(m => m.id);
+    const ids = messages.map((m) => m.id);
     if (ids.length > 0) loadReactions(ids);
   }, [messages, loadReactions]);
 
@@ -129,22 +129,22 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-6">
-        <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
-          <MessageSquare className="h-9 w-9 text-blue-600" />
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#F0F2F5]/40 dark:bg-[#18191A] p-6 text-center select-none">
+        <div className="h-20 w-20 bg-blue-50 dark:bg-blue-950/50 rounded-full flex items-center justify-center mb-4 shadow-xs">
+          <MessageSquare className="h-10 w-10 text-[#0084FF]" />
         </div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">Messagerie</h3>
-        <p className="text-sm text-gray-500 text-center max-w-xs mb-6">
-          Aucune conversation ouverte. Démarrez un nouvel échange ou choisissez un contact.
+        <h3 className="text-2xl font-bold text-[#050505] dark:text-white mb-2">Discussions</h3>
+        <p className="text-sm text-[#65676B] dark:text-gray-400 max-w-sm mb-6">
+          Sélectionnez une discussion ou commencez une nouvelle conversation.
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
           {onOpenSidebar && (
-            <Button variant="outline" size="sm" onClick={onOpenSidebar} className="gap-2 md:hidden">
-              <Menu className="h-4 w-4" /> Voir mes conversations
+            <Button variant="outline" size="sm" onClick={onOpenSidebar} className="gap-2 md:hidden rounded-full">
+              <Menu className="h-4 w-4" /> Voir mes discussions
             </Button>
           )}
           {onNewChat && (
-            <Button size="sm" onClick={onNewChat} className="gap-2">
+            <Button size="sm" onClick={onNewChat} className="gap-2 rounded-full bg-[#0084FF] hover:bg-[#0073E6] text-white">
               <Plus className="h-4 w-4" /> Nouveau message
             </Button>
           )}
@@ -153,13 +153,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     );
   }
 
-  const otherMember = conversation.type === 'private'
-    ? conversation.members?.find(m => m.user_id !== userId)
-    : null;
+  const otherMember =
+    conversation.type === 'private'
+      ? conversation.members?.find((m) => m.user_id !== userId)
+      : null;
 
-  const convName = conversation.type === 'private'
-    ? (otherMember?.full_name ?? 'Conversation')
-    : (conversation.name ?? 'Groupe');
+  const convName =
+    conversation.type === 'private'
+      ? (otherMember?.full_name ?? 'Conversation')
+      : (conversation.name ?? 'Groupe');
 
   const otherUserId = otherMember?.user_id;
   const isOnline = otherUserId ? onlineUsers.has(otherUserId) : false;
@@ -170,26 +172,28 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const grouped = groupByDate(displayMessages);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden relative">
-
-      {/* Header — Solid and sticky with shadow so it never scrolls away */}
-      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-gray-200 bg-white sticky top-0 z-30 shadow-xs">
+    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#242526] overflow-hidden relative">
+      {/* Messenger Top Navigation Bar */}
+      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-[#E4E6EB] dark:border-gray-800 bg-white dark:bg-[#242526] sticky top-0 z-30 shadow-xs">
         {showSearch ? (
           <div className="flex-1 flex items-center gap-2">
-            <Search className="h-4 w-4 text-gray-400 shrink-0" />
+            <Search className="h-4 w-4 text-[#8A8D91] shrink-0" />
             <Input
               autoFocus
-              placeholder="Rechercher dans la conversation..."
+              placeholder="Rechercher dans la discussion..."
               className="border-none bg-transparent focus-visible:ring-0 text-sm flex-1 h-9 p-0"
               value={searchQuery}
-              onChange={e => search(e.target.value)}
+              onChange={(e) => search(e.target.value)}
             />
-            {searching && <span className="text-xs text-gray-400 shrink-0">...</span>}
+            {searching && <span className="text-xs text-[#8A8D91] shrink-0">...</span>}
             {searchQuery && !searching && (
-              <span className="text-xs text-gray-400 shrink-0">{searchResults.length} résultat{searchResults.length !== 1 ? 's' : ''}</span>
+              <span className="text-xs text-[#8A8D91] shrink-0">
+                {searchResults.length} résultat{searchResults.length !== 1 ? 's' : ''}
+              </span>
             )}
             <button
-              className="h-8 w-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+              type="button"
+              className="h-8 w-8 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors"
               onClick={() => setShowSearch(false)}
             >
               <X className="h-4 w-4 text-gray-500" />
@@ -197,60 +201,69 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               {onOpenSidebar && (
                 <button
                   type="button"
                   onClick={onOpenSidebar}
-                  className="md:hidden h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-gray-700 -ml-1"
-                  title="Retour aux conversations"
+                  className="md:hidden h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-gray-700 dark:text-gray-200 -ml-1 shrink-0"
+                  title="Retour aux discussions"
                 >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
               )}
-              <div className="relative">
+              <div className="relative shrink-0">
                 <Avatar className={cn('h-10 w-10', colorClass)}>
-                  <AvatarFallback className={cn('text-white font-semibold text-sm', colorClass)}>
+                  <AvatarFallback className={cn('text-white font-bold text-sm', colorClass)}>
                     {getInitials(convName)}
                   </AvatarFallback>
                 </Avatar>
                 {conversation.type === 'private' && isOnline && (
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#31A24C] border-2 border-white dark:border-[#242526]" />
                 )}
               </div>
-              <div>
-                <p className="font-semibold text-gray-900 text-sm leading-tight">{convName}</p>
-                <p className="text-[11px] text-gray-400 leading-tight">
+              <div className="min-w-0">
+                <p className="font-bold text-[#050505] dark:text-white text-sm sm:text-[15px] leading-tight truncate">
+                  {convName}
+                </p>
+                <p className="text-[12px] text-[#65676B] dark:text-gray-400 leading-tight truncate mt-0.5">
                   {conversation.type === 'private'
-                    ? (isOnline ? 'En ligne' : 'Hors ligne')
+                    ? isOnline
+                      ? 'Actif(ve) maintenant'
+                      : 'Hors ligne'
                     : `${memberCount} membre${memberCount > 1 ? 's' : ''}`}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <button
-                className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-blue-500"
+                type="button"
+                className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-[#0084FF]"
                 onClick={() => setShowSearch(true)}
-                title="Rechercher"
+                title="Rechercher dans la discussion"
               >
                 <Search className="h-4.5 w-4.5" />
               </button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors text-blue-500">
-                    <MoreVertical className="h-4 w-4" />
+                  <button
+                    type="button"
+                    className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-[#0084FF]"
+                    title="Options"
+                  >
+                    <MoreVertical className="h-4.5 w-4.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuItem onClick={() => setShowSearch(true)} className="gap-2 cursor-pointer">
+                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                  <DropdownMenuItem onClick={() => setShowSearch(true)} className="gap-2.5 cursor-pointer">
                     <Search className="h-4 w-4" />
                     Rechercher
                   </DropdownMenuItem>
                   {onMarkUnread && (
                     <DropdownMenuItem
-                      className="gap-2 cursor-pointer"
+                      className="gap-2.5 cursor-pointer"
                       onClick={() => onMarkUnread(conversation.id)}
                     >
                       <EyeOff className="h-4 w-4" />
@@ -259,7 +272,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   )}
                   {onDeleteConversation && conversation.type !== 'private' && conversation.created_by !== currentUserId && (
                     <DropdownMenuItem
-                      className="gap-2 cursor-pointer text-orange-500 focus:text-orange-500"
+                      className="gap-2.5 cursor-pointer text-orange-600 focus:text-orange-600"
                       onClick={() => setConfirmDelete(true)}
                     >
                       <LogOut className="h-4 w-4" />
@@ -268,7 +281,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   )}
                   {onDeleteConversation && (conversation.type === 'private' || conversation.created_by === currentUserId) && (
                     <DropdownMenuItem
-                      className="gap-2 cursor-pointer text-red-500 focus:text-red-500"
+                      className="gap-2.5 cursor-pointer text-red-600 focus:text-red-600"
                       onClick={() => setConfirmDelete(true)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -282,39 +295,44 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col bg-white w-full">
+      {/* Message Feed */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col bg-white dark:bg-[#242526] w-full">
         {loadingMessages ? (
           <div className="flex flex-col gap-3 mt-auto w-full">
             {[...Array(5)].map((_, i) => (
               <div key={i} className={cn('flex gap-2', i % 2 !== 0 && 'flex-row-reverse')}>
-                <Skeleton className="h-8 w-8 rounded-full shrink-0 self-end" />
-                <Skeleton className="h-9 rounded-2xl" style={{ width: `${[140, 200, 160, 220, 120][i]}px` }} />
+                <Skeleton className="h-7 w-7 rounded-full shrink-0 self-end" />
+                <Skeleton className="h-9 rounded-[18px]" style={{ width: `${[140, 200, 160, 220, 120][i]}px` }} />
               </div>
             ))}
           </div>
         ) : (
           <div className="mt-auto w-full">
+            {/* Messenger Conversation Initial Profile Banner */}
             {displayMessages.length === 0 && (
-              <div className="text-center py-16">
-                <div className={cn('h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-4', colorClass)}>
-                  <span className="text-white text-xl font-bold">{getInitials(convName)}</span>
-                </div>
-                <p className="font-semibold text-gray-800 text-sm">
+              <div className="text-center py-12 flex flex-col items-center select-none">
+                <Avatar className={cn('h-20 w-20 mb-3 shadow-sm', colorClass)}>
+                  <AvatarFallback className={cn('text-white font-extrabold text-2xl', colorClass)}>
+                    {getInitials(convName)}
+                  </AvatarFallback>
+                </Avatar>
+                <h4 className="font-bold text-[#050505] dark:text-white text-lg">
                   {showSearch && searchQuery ? 'Aucun résultat' : convName}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
+                </h4>
+                <p className="text-xs text-[#65676B] dark:text-gray-400 mt-1 max-w-xs">
                   {showSearch && searchQuery
                     ? `Aucun message ne contient "${searchQuery}"`
-                    : 'Commencez la conversation !'}
+                    : conversation.type === 'private'
+                    ? 'Vous êtes connecté(e) sur Messenger. Envoyez un message ou appuyez sur 👍 pour dire bonjour !'
+                    : 'Bienvenue dans le groupe ! Envoyez le premier message.'}
                 </p>
               </div>
             )}
 
-            {grouped.map(group => (
+            {grouped.map((group) => (
               <div key={group.label} className="w-full">
-                <div className="flex items-center justify-center my-4">
-                  <span className="text-[11px] text-gray-400 bg-white px-2">
+                <div className="flex items-center justify-center my-3">
+                  <span className="text-[11px] font-semibold text-[#8A8D91] px-2 uppercase tracking-wide">
                     {group.label}
                   </span>
                 </div>
@@ -340,7 +358,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             ))}
 
             {!showSearch && (
-              <div className="pl-10 mt-1">
+              <div className="pl-9 mt-1">
                 <TypingBubble label={typingLabel} />
               </div>
             )}
@@ -349,36 +367,40 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      {/* Input */}
+      {/* Messenger Input Bottom Bar */}
       {!showSearch && (
-        <div className="shrink-0 border-t border-gray-200 bg-white sticky bottom-0 z-30">
-          <MessageInput onSendMessage={onSendMessage} onTyping={sendTyping} draftMessage={draftMessage} />
+        <div className="shrink-0 border-t border-[#E4E6EB] dark:border-gray-800 bg-white dark:bg-[#242526] sticky bottom-0 z-30">
+          <MessageInput
+            onSendMessage={onSendMessage}
+            onTyping={sendTyping}
+            draftMessage={draftMessage}
+          />
         </div>
       )}
 
-      {/* Delete / Leave confirmation */}
+      {/* Delete / Leave Dialog */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {conversation.type === 'group' && conversation.created_by !== currentUserId
                 ? 'Quitter le groupe ?'
                 : conversation.type === 'group'
                 ? 'Supprimer le groupe ?'
-                : 'Supprimer la conversation ?'}
+                : 'Supprimer la discussion ?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {conversation.type === 'group' && conversation.created_by !== currentUserId
-                ? `Vous allez quitter le groupe "${convName}". Vous ne pourrez plus voir les messages.`
+                ? `Vous allez quitter "${convName}". Vous ne recevrez plus les nouveaux messages.`
                 : conversation.type === 'group'
-                ? `Le groupe "${convName}" et tous ses messages seront supprimés définitivement.`
-                : `Cette conversation avec ${convName} et tous ses messages seront supprimés définitivement.`}
+                ? `Le groupe "${convName}" et ses messages seront définitivement supprimés.`
+                : `Cette discussion avec ${convName} sera définitivement supprimée.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-red-500 hover:bg-red-600 text-white rounded-full"
               onClick={async () => {
                 setConfirmDelete(false);
                 await onDeleteConversation?.(conversation.id);

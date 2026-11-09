@@ -40,19 +40,19 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const senderName = message.sender?.full_name ?? 'Utilisateur';
   const colorClass = avatarColor(message.sender_id);
 
-  // Messenger-style bubble radius
+  // Facebook Messenger exact bubble rounding logic
   const bubbleRadius = isOwn
     ? cn(
         'rounded-[18px]',
-        isFirst && !isLast && 'rounded-tr-[4px]',
+        isFirst && !isLast && 'rounded-br-[4px]',
         !isFirst && !isLast && 'rounded-tr-[4px] rounded-br-[4px]',
-        !isFirst && isLast && 'rounded-br-[4px]',
+        !isFirst && isLast && 'rounded-tr-[4px]'
       )
     : cn(
         'rounded-[18px]',
-        isFirst && !isLast && 'rounded-tl-[4px]',
+        isFirst && !isLast && 'rounded-bl-[4px]',
         !isFirst && !isLast && 'rounded-tl-[4px] rounded-bl-[4px]',
-        !isFirst && isLast && 'rounded-bl-[4px]',
+        !isFirst && isLast && 'rounded-tl-[4px]'
       );
 
   const isActionsVisible = hovered || showReactionPicker;
@@ -69,10 +69,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {onReact && (
         <button
           type="button"
-          className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
-            setShowReactionPicker(v => !v);
+            setShowReactionPicker((v) => !v);
           }}
           title="Réagir"
         >
@@ -82,7 +82,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {isOwn && onDelete && (
         <button
           type="button"
-          className="h-7 w-7 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+          className="h-7 w-7 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(message.id);
@@ -98,20 +98,23 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div
       className={cn(
-        'flex w-full gap-2',
+        'flex w-full gap-2 relative group',
         isOwn ? 'flex-row-reverse' : 'flex-row',
-        isFirst ? 'mt-3' : 'mt-0.5'
+        isFirst ? 'mt-2.5' : 'mt-0.5'
       )}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setShowReactionPicker(false); }}
-      onClick={() => setHovered(v => !v)}
+      onMouseLeave={() => {
+        setHovered(false);
+        setShowReactionPicker(false);
+      }}
+      onClick={() => setHovered((v) => !v)}
     >
-      {/* Avatar — only for other users */}
+      {/* Avatar — only on other messages on the LAST message of the group */}
       {!isOwn && (
-        <div className="shrink-0 w-8 self-end mb-0.5">
+        <div className="shrink-0 w-7 self-end mb-0.5">
           {isLast ? (
-            <Avatar className={cn('h-8 w-8', colorClass)}>
-              <AvatarFallback className={cn('text-white text-xs font-semibold', colorClass)}>
+            <Avatar className={cn('h-7 w-7', colorClass)}>
+              <AvatarFallback className={cn('text-white text-[11px] font-semibold', colorClass)}>
                 {getInitials(senderName)}
               </AvatarFallback>
             </Avatar>
@@ -119,32 +122,39 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         </div>
       )}
 
-      {/* Content column */}
-      <div className={cn('flex flex-col max-w-[85%] sm:max-w-[480px]', isOwn ? 'items-end' : 'items-start')}>
-        {/* Sender name for groups — only on first message */}
+      {/* Content Column */}
+      <div
+        className={cn(
+          'flex flex-col max-w-[85%] sm:max-w-[480px]',
+          isOwn ? 'items-end' : 'items-start'
+        )}
+      >
+        {/* Sender name for group chats */}
         {!isOwn && isFirst && (
-          <span className="text-[11px] font-semibold text-gray-500 mb-1 ml-1">
+          <span className="text-[11px] font-medium text-gray-500 mb-0.5 ml-3">
             {senderName}
           </span>
         )}
 
-        {/* Bubble row */}
-        <div className="flex items-center gap-1.5">
+        {/* Bubble Row with floating actions */}
+        <div className="flex items-center gap-1.5 relative">
           {isOwn && actionsNode}
 
-          {/* Bubble */}
-          <div className={cn(
-            'relative px-3.5 py-2.5 text-sm',
-            bubbleRadius,
-            isOwn
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-100 text-gray-900'
-          )}>
+          {/* Messenger Bubble */}
+          <div
+            className={cn(
+              'relative px-3.5 py-2 text-[15px] sm:text-sm leading-relaxed transition-colors',
+              bubbleRadius,
+              isOwn
+                ? 'bg-[#0084FF] text-white shadow-xs'
+                : 'bg-[#F0F2F5] dark:bg-[#3A3B3C] text-[#050505] dark:text-[#E4E6EB]'
+            )}
+          >
             {message.image_url && (
               <img
                 src={message.image_url}
-                alt="Image"
-                className="max-w-[220px] sm:max-w-xs rounded-xl mb-1.5 object-cover cursor-zoom-in"
+                alt="Image partagée"
+                className="max-w-[220px] sm:max-w-xs rounded-xl mb-1 object-cover cursor-zoom-in"
                 onClick={(e) => {
                   e.stopPropagation();
                   window.open(message.image_url!, '_blank');
@@ -152,38 +162,38 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               />
             )}
             {message.content && (
-              <p className="whitespace-pre-wrap break-words leading-relaxed">{message.content}</p>
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
             )}
           </div>
 
           {!isOwn && actionsNode}
         </div>
 
-        {/* Timestamp — only on last in group, visible on hover */}
+        {/* Attached Reaction Badge */}
+        {onReact && (
+          <MessageReactionBar
+            messageId={message.id}
+            reactions={reactions}
+            onReact={(id, emoji) => {
+              onReact(id, emoji);
+              setShowReactionPicker(false);
+            }}
+            visible={showReactionPicker}
+            isOwn={isOwn}
+          />
+        )}
+
+        {/* Timestamp on hover or on last */}
         {isLast && (
-          <span className={cn(
-            'text-[10px] text-gray-400 mt-1 px-1 transition-opacity duration-100',
-            isActionsVisible ? 'opacity-100' : 'opacity-0'
-          )}>
+          <span
+            className={cn(
+              'text-[10px] text-gray-400 mt-0.5 px-1 transition-opacity duration-150',
+              isActionsVisible ? 'opacity-100' : 'opacity-0'
+            )}
+          >
             {format(new Date(message.created_at), 'HH:mm')}
             {message.is_edited && ' · modifié'}
           </span>
-        )}
-
-        {/* Reactions */}
-        {onReact && (
-          <div className="mt-0.5">
-            <MessageReactionBar
-              messageId={message.id}
-              reactions={reactions}
-              onReact={(id, emoji) => {
-                onReact(id, emoji);
-                setShowReactionPicker(false);
-              }}
-              visible={showReactionPicker}
-              isOwn={isOwn}
-            />
-          </div>
         )}
       </div>
     </div>

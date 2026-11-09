@@ -10,7 +10,11 @@ interface MessageInputProps {
 
 const MAX_SIZE_MB = 5;
 
-export const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyping, draftMessage }) => {
+export const MessageInput: React.FC<MessageInputProps> = ({
+  onSendMessage,
+  onTyping,
+  draftMessage,
+}) => {
   const [content, setContent] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -62,6 +66,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyp
     }
   };
 
+  const handleSendLike = async () => {
+    if (isSending) return;
+    setIsSending(true);
+    try {
+      await onSendMessage('👍', null);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -72,19 +86,23 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyp
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     onTyping?.();
-    // Auto-resize
     e.target.style.height = 'auto';
     e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
   };
 
   return (
-    <div className="px-3 py-2.5">
+    <div className="px-3 py-2 bg-white dark:bg-[#242526]">
       {/* Image preview */}
       {previewUrl && (
         <div className="mb-2 ml-10">
-          <div className="relative inline-flex rounded-2xl overflow-hidden border border-gray-200">
-            <img src={previewUrl} alt="Preview" className="h-20 w-auto max-w-[180px] object-cover" />
+          <div className="relative inline-flex rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+            <img
+              src={previewUrl}
+              alt="Preview"
+              className="h-20 w-auto max-w-[180px] object-cover"
+            />
             <button
+              type="button"
               className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
               onClick={clearFile}
             >
@@ -94,11 +112,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyp
         </div>
       )}
 
-      <div className="flex items-end gap-2">
-        {/* Image button */}
+      <div className="flex items-end gap-1.5 sm:gap-2">
+        {/* Messenger Photo Attachment Button */}
         <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="h-9 w-9 rounded-full hover:bg-gray-100 flex items-center justify-center shrink-0 text-blue-500 transition-colors"
+          className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center shrink-0 text-[#0084FF] transition-colors"
           title="Joindre une image"
         >
           <ImageIcon className="h-5 w-5" />
@@ -107,46 +126,58 @@ export const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, onTyp
         <input
           type="file"
           ref={fileInputRef}
-          onChange={e => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+          onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
           accept="image/png,image/jpeg,image/webp"
           className="hidden"
         />
 
-        {/* Text input */}
-        <div className="flex-1 flex items-end bg-gray-100 rounded-[22px] px-4 py-2 gap-2">
+        {/* Messenger Pill Text Input */}
+        <div className="flex-1 flex items-end bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-4 py-2 gap-2 min-h-[38px] transition-colors">
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Écrivez un message…"
-            className="flex-1 resize-none bg-transparent border-0 outline-none text-sm leading-relaxed text-gray-900 placeholder:text-gray-400 min-h-[22px] max-h-[120px] self-center"
+            className="flex-1 resize-none bg-transparent border-0 outline-none text-[15px] leading-relaxed text-[#050505] dark:text-[#E4E6EB] placeholder:text-[#8A8D91] min-h-[22px] max-h-[120px] self-center py-0"
             rows={1}
           />
           <button
-            className="shrink-0 text-blue-400 hover:text-blue-500 transition-colors self-end mb-0.5"
-            title="Emoji (bientôt)"
+            type="button"
+            className="shrink-0 text-[#0084FF] hover:text-[#0073E6] transition-colors self-end mb-0.5"
+            onClick={() => setContent((prev) => prev + ' 😊')}
+            title="Emoji"
           >
             <Smile className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Send button */}
-        <button
-          onClick={handleSend}
-          disabled={!hasContent || isSending}
-          className={cn(
-            'h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-150 active:scale-90',
-            hasContent
-              ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-sm'
-              : 'bg-gray-100 text-gray-400 cursor-default'
-          )}
-        >
-          {isSending
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <Send className="h-4 w-4 ml-0.5" />
-          }
-        </button>
+        {/* Messenger Send Button OR Quick Thumbs-Up 👍 */}
+        {hasContent ? (
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={isSending}
+            className="h-9 w-9 rounded-full bg-[#0084FF] hover:bg-[#0073E6] text-white flex items-center justify-center shrink-0 shadow-xs active:scale-90 transition-all duration-150"
+            title="Envoyer"
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 ml-0.5" />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSendLike}
+            disabled={isSending}
+            className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-[#0084FF] hover:bg-[#F0F2F5] dark:hover:bg-gray-800 hover:scale-115 active:scale-90 transition-all cursor-pointer"
+            title="Envoyer un pouce"
+          >
+            <span className="text-xl select-none leading-none">👍</span>
+          </button>
+        )}
       </div>
     </div>
   );

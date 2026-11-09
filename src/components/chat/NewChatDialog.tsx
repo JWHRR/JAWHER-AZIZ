@@ -56,15 +56,15 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
   }, [open, currentUserId]);
 
   const filtered = profiles.filter(
-    p =>
+    (p) =>
       p.full_name.toLowerCase().includes(search.toLowerCase()) ||
       p.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const toggleUser = (profile: Profile) => {
-    setSelectedUsers(prev =>
-      prev.find(u => u.user_id === profile.user_id)
-        ? prev.filter(u => u.user_id !== profile.user_id)
+    setSelectedUsers((prev) =>
+      prev.find((u) => u.user_id === profile.user_id)
+        ? prev.filter((u) => u.user_id !== profile.user_id)
         : [...prev, profile]
     );
   };
@@ -82,7 +82,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
   const handleCreateGroup = async () => {
     if (!groupName.trim() || selectedUsers.length < 1) return;
     setLoading(true);
-    const id = await createGroupConversation(groupName.trim(), selectedUsers.map(u => u.user_id));
+    const id = await createGroupConversation(groupName.trim(), selectedUsers.map((u) => u.user_id));
     setLoading(false);
     if (id) {
       onConversationCreated(id);
@@ -92,23 +92,25 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-lg font-semibold">Nouvelle conversation</DialogTitle>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 rounded-2xl border-none shadow-2xl">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E4E6EB] dark:border-gray-800">
+          <DialogTitle className="text-lg font-bold text-[#050505] dark:text-white">
+            Nouveau message
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="private" className="w-full">
-          <TabsList className="w-full rounded-none border-b bg-transparent h-auto p-0">
+          <TabsList className="w-full rounded-none border-b border-[#E4E6EB] dark:border-gray-800 bg-transparent h-auto p-0">
             <TabsTrigger
               value="private"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-sm font-medium"
+              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-[#0084FF] data-[state=active]:text-[#0084FF] data-[state=active]:bg-transparent py-3 text-sm font-semibold text-gray-500"
             >
               <MessageSquare className="h-4 w-4 mr-2" />
               Message privé
             </TabsTrigger>
             <TabsTrigger
               value="group"
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3 text-sm font-medium"
+              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-[#0084FF] data-[state=active]:text-[#0084FF] data-[state=active]:bg-transparent py-3 text-sm font-semibold text-gray-500"
             >
               <Users className="h-4 w-4 mr-2" />
               Groupe
@@ -117,66 +119,83 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
 
           {/* Private Tab */}
           <TabsContent value="private" className="mt-0">
-            <div className="px-4 pt-4 pb-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un utilisateur..."
-                  className="pl-9 rounded-full bg-secondary/40 border-none"
+            <div className="px-4 pt-3.5 pb-2">
+              <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-3 py-1.5">
+                <span className="text-xs font-semibold text-[#65676B] dark:text-gray-400 mr-2">À :</span>
+                <Search className="h-4 w-4 text-[#8A8D91] mr-1.5 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Rechercher une personne..."
+                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] dark:text-white placeholder:text-[#8A8D91]"
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
             </div>
-            <ScrollArea className="h-64 px-2 pb-4">
-              {filtered.map(profile => (
+
+            <ScrollArea className="h-72 px-2 pb-3">
+              {filtered.map((profile) => (
                 <button
                   key={profile.user_id}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-secondary/60 transition-colors text-left"
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F2F2F2] dark:hover:bg-gray-800 transition-colors text-left"
                   onClick={() => handlePrivateChat(profile)}
                   disabled={loading}
                 >
-                  <Avatar className="h-10 w-10 bg-primary/10">
-                    <AvatarFallback className="text-primary font-medium">
+                  <Avatar className="h-10 w-10 bg-blue-500">
+                    <AvatarFallback className="text-white text-xs font-bold bg-blue-500">
                       {profile.full_name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{profile.full_name}</p>
-                    <p className="text-xs text-muted-foreground">{profile.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm text-[#050505] dark:text-white truncate">
+                      {profile.full_name}
+                    </p>
+                    <p className="text-xs text-[#65676B] dark:text-gray-400 truncate">{profile.email}</p>
                   </div>
                 </button>
               ))}
               {filtered.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-8">Aucun utilisateur trouvé</p>
+                <p className="text-center text-sm text-[#8A8D91] py-10">Aucun contact trouvé</p>
               )}
             </ScrollArea>
           </TabsContent>
 
           {/* Group Tab */}
           <TabsContent value="group" className="mt-0">
-            <div className="px-4 pt-4 space-y-3">
+            <div className="px-4 pt-3 space-y-2.5">
               <Input
                 placeholder="Nom du groupe..."
-                className="rounded-full bg-secondary/40 border-none"
+                className="rounded-full bg-[#F0F2F5] dark:bg-[#3A3B3C] border-none text-sm text-[#050505] dark:text-white placeholder:text-[#8A8D91] h-9"
                 value={groupName}
-                onChange={e => setGroupName(e.target.value)}
+                onChange={(e) => setGroupName(e.target.value)}
               />
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
+              <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-3 py-1.5">
+                <span className="text-xs font-semibold text-[#65676B] dark:text-gray-400 mr-2">À :</span>
+                <Search className="h-4 w-4 text-[#8A8D91] mr-1.5 shrink-0" />
+                <input
+                  type="text"
                   placeholder="Ajouter des membres..."
-                  className="pl-9 rounded-full bg-secondary/40 border-none"
+                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] dark:text-white placeholder:text-[#8A8D91]"
                   value={search}
-                  onChange={e => setSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+
               {selectedUsers.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {selectedUsers.map(u => (
-                    <Badge key={u.user_id} variant="secondary" className="flex items-center gap-1 pr-1.5 rounded-full">
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {selectedUsers.map((u) => (
+                    <Badge
+                      key={u.user_id}
+                      variant="secondary"
+                      className="bg-blue-50 text-[#0084FF] hover:bg-blue-100 flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full text-xs font-medium border border-blue-200"
+                    >
                       {u.full_name.split(' ')[0]}
-                      <button onClick={() => toggleUser(u)} className="ml-1 hover:text-destructive">
+                      <button
+                        type="button"
+                        onClick={() => toggleUser(u)}
+                        className="h-4 w-4 rounded-full hover:bg-blue-200 flex items-center justify-center transition-colors"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </Badge>
@@ -184,36 +203,50 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                 </div>
               )}
             </div>
-            <ScrollArea className="h-48 px-2 pb-2">
-              {filtered.map(profile => {
-                const isSelected = selectedUsers.some(u => u.user_id === profile.user_id);
+
+            <ScrollArea className="h-52 px-2 pb-2 mt-2">
+              {filtered.map((profile) => {
+                const isSelected = selectedUsers.some((u) => u.user_id === profile.user_id);
                 return (
                   <button
                     key={profile.user_id}
+                    type="button"
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors text-left",
-                      isSelected ? "bg-primary/10" : "hover:bg-secondary/60"
+                      'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-left',
+                      isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'hover:bg-[#F2F2F2] dark:hover:bg-gray-800'
                     )}
                     onClick={() => toggleUser(profile)}
                   >
-                    <Avatar className="h-9 w-9 bg-primary/10">
-                      <AvatarFallback className="text-primary text-xs font-medium">
+                    <Avatar className="h-9 w-9 bg-blue-500">
+                      <AvatarFallback className="text-white text-xs font-bold bg-blue-500">
                         {profile.full_name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 text-sm font-medium">{profile.full_name}</span>
-                    {isSelected && <Check className="h-4 w-4 text-primary" />}
+                    <span className="flex-1 text-sm font-semibold text-[#050505] dark:text-white truncate">
+                      {profile.full_name}
+                    </span>
+                    <div
+                      className={cn(
+                        'h-5 w-5 rounded-full border flex items-center justify-center transition-all',
+                        isSelected
+                          ? 'bg-[#0084FF] border-[#0084FF] text-white'
+                          : 'border-gray-300 dark:border-gray-600'
+                      )}
+                    >
+                      {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                    </div>
                   </button>
                 );
               })}
             </ScrollArea>
-            <div className="px-4 pb-4 pt-2 border-t">
+
+            <div className="px-4 pb-4 pt-2.5 border-t border-[#E4E6EB] dark:border-gray-800">
               <Button
-                className="w-full rounded-full"
+                className="w-full rounded-full bg-[#0084FF] hover:bg-[#0073E6] text-white font-semibold h-10 shadow-xs"
                 disabled={!groupName.trim() || selectedUsers.length < 1 || loading}
                 onClick={handleCreateGroup}
               >
-                Créer le groupe ({selectedUsers.length} membres)
+                Créer le groupe ({selectedUsers.length} membre{selectedUsers.length > 1 ? 's' : ''})
               </Button>
             </div>
           </TabsContent>

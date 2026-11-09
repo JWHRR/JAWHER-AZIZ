@@ -92,15 +92,15 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 rounded-2xl border-none shadow-2xl">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E4E6EB] dark:border-gray-800">
-          <DialogTitle className="text-lg font-bold text-[#050505] dark:text-white">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 rounded-2xl border border-gray-200 shadow-2xl bg-white">
+        <DialogHeader className="px-5 pt-5 pb-3 border-b border-[#E4E6EB]">
+          <DialogTitle className="text-lg font-bold text-[#050505]">
             Nouveau message
           </DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="private" className="w-full">
-          <TabsList className="w-full rounded-none border-b border-[#E4E6EB] dark:border-gray-800 bg-transparent h-auto p-0">
+          <TabsList className="w-full rounded-none border-b border-[#E4E6EB] bg-transparent h-auto p-0">
             <TabsTrigger
               value="private"
               className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-[#0084FF] data-[state=active]:text-[#0084FF] data-[state=active]:bg-transparent py-3 text-sm font-semibold text-gray-500"
@@ -120,13 +120,13 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
           {/* Private Tab */}
           <TabsContent value="private" className="mt-0">
             <div className="px-4 pt-3.5 pb-2">
-              <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-3 py-1.5">
-                <span className="text-xs font-semibold text-[#65676B] dark:text-gray-400 mr-2">À :</span>
+              <div className="relative flex items-center bg-[#F0F2F5] rounded-full px-3 py-1.5">
+                <span className="text-xs font-semibold text-[#65676B] mr-2">À :</span>
                 <Search className="h-4 w-4 text-[#8A8D91] mr-1.5 shrink-0" />
                 <input
                   type="text"
                   placeholder="Rechercher une personne..."
-                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] dark:text-white placeholder:text-[#8A8D91]"
+                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] placeholder:text-[#8A8D91]"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -138,7 +138,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                 <button
                   key={profile.user_id}
                   type="button"
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F2F2F2] dark:hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[#F2F2F2] transition-colors text-left"
                   onClick={() => handlePrivateChat(profile)}
                   disabled={loading}
                 >
@@ -148,10 +148,10 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-sm text-[#050505] dark:text-white truncate">
+                    <p className="font-semibold text-sm text-[#050505] truncate">
                       {profile.full_name}
                     </p>
-                    <p className="text-xs text-[#65676B] dark:text-gray-400 truncate">{profile.email}</p>
+                    <p className="text-xs text-[#65676B] truncate">{profile.email}</p>
                   </div>
                 </button>
               ))}
@@ -166,17 +166,17 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
             <div className="px-4 pt-3 space-y-2.5">
               <Input
                 placeholder="Nom du groupe..."
-                className="rounded-full bg-[#F0F2F5] dark:bg-[#3A3B3C] border-none text-sm text-[#050505] dark:text-white placeholder:text-[#8A8D91] h-9"
+                className="rounded-full bg-[#F0F2F5] border-none text-sm text-[#050505] placeholder:text-[#8A8D91] h-9"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
               />
-              <div className="relative flex items-center bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-3 py-1.5">
-                <span className="text-xs font-semibold text-[#65676B] dark:text-gray-400 mr-2">À :</span>
+              <div className="relative flex items-center bg-[#F0F2F5] rounded-full px-3 py-1.5">
+                <span className="text-xs font-semibold text-[#65676B] mr-2">À :</span>
                 <Search className="h-4 w-4 text-[#8A8D91] mr-1.5 shrink-0" />
                 <input
                   type="text"
                   placeholder="Ajouter des membres..."
-                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] dark:text-white placeholder:text-[#8A8D91]"
+                  className="bg-transparent border-none outline-none text-sm flex-1 text-[#050505] placeholder:text-[#8A8D91]"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -213,7 +213,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                     type="button"
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-left',
-                      isSelected ? 'bg-blue-50/80 dark:bg-blue-950/40' : 'hover:bg-[#F2F2F2] dark:hover:bg-gray-800'
+                      isSelected ? 'bg-blue-50' : 'hover:bg-[#F2F2F2]'
                     )}
                     onClick={() => toggleUser(profile)}
                   >
@@ -222,7 +222,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                         {profile.full_name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="flex-1 text-sm font-semibold text-[#050505] dark:text-white truncate">
+                    <span className="flex-1 text-sm font-semibold text-[#050505] truncate">
                       {profile.full_name}
                     </span>
                     <div
@@ -230,7 +230,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
                         'h-5 w-5 rounded-full border flex items-center justify-center transition-all',
                         isSelected
                           ? 'bg-[#0084FF] border-[#0084FF] text-white'
-                          : 'border-gray-300 dark:border-gray-600'
+                          : 'border-gray-300'
                       )}
                     >
                       {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
@@ -240,7 +240,7 @@ export const NewChatDialog: React.FC<NewChatDialogProps> = ({
               })}
             </ScrollArea>
 
-            <div className="px-4 pb-4 pt-2.5 border-t border-[#E4E6EB] dark:border-gray-800">
+            <div className="px-4 pb-4 pt-2.5 border-t border-[#E4E6EB]">
               <Button
                 className="w-full rounded-full bg-[#0084FF] hover:bg-[#0073E6] text-white font-semibold h-10 shadow-xs"
                 disabled={!groupName.trim() || selectedUsers.length < 1 || loading}

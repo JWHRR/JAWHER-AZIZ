@@ -18,12 +18,12 @@ interface MessageItemProps {
 }
 
 const AVATAR_COLORS = [
-  'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500',
-  'bg-pink-500', 'bg-teal-500', 'bg-red-500', 'bg-indigo-500',
+  'bg-blue-500', 'bg-purple-500', 'bg-emerald-500', 'bg-orange-500',
+  'bg-pink-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500',
 ];
 const avatarColor = (id: string) => AVATAR_COLORS[id.charCodeAt(0) % AVATAR_COLORS.length];
 const getInitials = (name: string) =>
-  name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
 export const MessageItem: React.FC<MessageItemProps> = ({
   message,
@@ -69,7 +69,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {onReact && (
         <button
           type="button"
-          className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+          className="h-7 w-7 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             setShowReactionPicker((v) => !v);
@@ -82,7 +82,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       {isOwn && onDelete && (
         <button
           type="button"
-          className="h-7 w-7 rounded-full hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
+          className="h-7 w-7 rounded-full hover:bg-red-50 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(message.id);
@@ -147,7 +147,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               bubbleRadius,
               isOwn
                 ? 'bg-[#0084FF] text-white shadow-xs'
-                : 'bg-[#F0F2F5] dark:bg-[#3A3B3C] text-[#050505] dark:text-[#E4E6EB]'
+                : 'bg-[#F0F2F5] text-[#050505]'
             )}
           >
             {message.image_url && (

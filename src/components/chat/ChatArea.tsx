@@ -129,12 +129,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   if (!conversation) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-[#F0F2F5]/40 dark:bg-[#18191A] p-6 text-center select-none">
-        <div className="h-20 w-20 bg-blue-50 dark:bg-blue-950/50 rounded-full flex items-center justify-center mb-4 shadow-xs">
+      <div className="flex-1 flex flex-col items-center justify-center bg-[#F0F2F5]/40 p-6 text-center select-none">
+        <div className="h-20 w-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 shadow-xs">
           <MessageSquare className="h-10 w-10 text-[#0084FF]" />
         </div>
-        <h3 className="text-2xl font-bold text-[#050505] dark:text-white mb-2">Discussions</h3>
-        <p className="text-sm text-[#65676B] dark:text-gray-400 max-w-sm mb-6">
+        <h3 className="text-2xl font-bold text-[#050505] mb-2">Discussions</h3>
+        <p className="text-sm text-[#65676B] max-w-sm mb-6">
           Sélectionnez une discussion ou commencez une nouvelle conversation.
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
@@ -172,16 +172,16 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const grouped = groupByDate(displayMessages);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-white dark:bg-[#242526] overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-full bg-white overflow-hidden relative">
       {/* Messenger Top Navigation Bar */}
-      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-[#E4E6EB] dark:border-gray-800 bg-white dark:bg-[#242526] sticky top-0 z-30 shadow-xs">
+      <div className="h-[60px] shrink-0 px-4 flex items-center justify-between border-b border-[#E4E6EB] bg-white sticky top-0 z-30 shadow-xs">
         {showSearch ? (
           <div className="flex-1 flex items-center gap-2">
             <Search className="h-4 w-4 text-[#8A8D91] shrink-0" />
             <Input
               autoFocus
               placeholder="Rechercher dans la discussion..."
-              className="border-none bg-transparent focus-visible:ring-0 text-sm flex-1 h-9 p-0"
+              className="border-none bg-transparent focus-visible:ring-0 text-sm flex-1 h-9 p-0 text-[#050505] placeholder:text-[#8A8D91]"
               value={searchQuery}
               onChange={(e) => search(e.target.value)}
             />
@@ -193,7 +193,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             )}
             <button
               type="button"
-              className="h-8 w-8 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors"
+              className="h-8 w-8 rounded-full hover:bg-[#F0F2F5] flex items-center justify-center transition-colors"
               onClick={() => setShowSearch(false)}
             >
               <X className="h-4 w-4 text-gray-500" />
@@ -206,7 +206,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={onOpenSidebar}
-                  className="md:hidden h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-gray-700 dark:text-gray-200 -ml-1 shrink-0"
+                  className="md:hidden h-9 w-9 rounded-full hover:bg-[#F0F2F5] flex items-center justify-center transition-colors text-gray-700 -ml-1 shrink-0"
                   title="Retour aux discussions"
                 >
                   <ArrowLeft className="h-5 w-5" />
@@ -219,14 +219,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   </AvatarFallback>
                 </Avatar>
                 {conversation.type === 'private' && isOnline && (
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#31A24C] border-2 border-white dark:border-[#242526]" />
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#31A24C] border-2 border-white" />
                 )}
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-[#050505] dark:text-white text-sm sm:text-[15px] leading-tight truncate">
+                <p className="font-bold text-[#050505] text-sm sm:text-[15px] leading-tight truncate">
                   {convName}
                 </p>
-                <p className="text-[12px] text-[#65676B] dark:text-gray-400 leading-tight truncate mt-0.5">
+                <p className="text-[12px] text-[#65676B] leading-tight truncate mt-0.5">
                   {conversation.type === 'private'
                     ? isOnline
                       ? 'Actif(ve) maintenant'
@@ -239,7 +239,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-[#0084FF]"
+                className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] flex items-center justify-center transition-colors text-[#0084FF]"
                 onClick={() => setShowSearch(true)}
                 title="Rechercher dans la discussion"
               >
@@ -250,13 +250,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center transition-colors text-[#0084FF]"
+                    className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] flex items-center justify-center transition-colors text-[#0084FF]"
                     title="Options"
                   >
                     <MoreVertical className="h-4.5 w-4.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg">
+                <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-lg bg-white border border-[#E4E6EB]">
                   <DropdownMenuItem onClick={() => setShowSearch(true)} className="gap-2.5 cursor-pointer">
                     <Search className="h-4 w-4" />
                     Rechercher
@@ -285,7 +285,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       onClick={() => setConfirmDelete(true)}
                     >
                       <Trash2 className="h-4 w-4" />
-                      {conversation.type === 'group' ? 'Supprimer le groupe' : 'Supprimer la conversation'}
+                      {conversation.type === 'group' ? 'Supprimer le groupe' : 'Supprimer la discussion'}
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuContent>
@@ -296,7 +296,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       </div>
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col bg-white dark:bg-[#242526] w-full">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 flex flex-col bg-white w-full">
         {loadingMessages ? (
           <div className="flex flex-col gap-3 mt-auto w-full">
             {[...Array(5)].map((_, i) => (
@@ -316,10 +316,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     {getInitials(convName)}
                   </AvatarFallback>
                 </Avatar>
-                <h4 className="font-bold text-[#050505] dark:text-white text-lg">
+                <h4 className="font-bold text-[#050505] text-lg">
                   {showSearch && searchQuery ? 'Aucun résultat' : convName}
                 </h4>
-                <p className="text-xs text-[#65676B] dark:text-gray-400 mt-1 max-w-xs">
+                <p className="text-xs text-[#65676B] mt-1 max-w-xs">
                   {showSearch && searchQuery
                     ? `Aucun message ne contient "${searchQuery}"`
                     : conversation.type === 'private'
@@ -369,7 +369,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Messenger Input Bottom Bar */}
       {!showSearch && (
-        <div className="shrink-0 border-t border-[#E4E6EB] dark:border-gray-800 bg-white dark:bg-[#242526] sticky bottom-0 z-30">
+        <div className="shrink-0 border-t border-[#E4E6EB] bg-white sticky bottom-0 z-30">
           <MessageInput
             onSendMessage={onSendMessage}
             onTyping={sendTyping}
@@ -380,7 +380,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
       {/* Delete / Leave Dialog */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent className="rounded-2xl max-w-sm">
+        <AlertDialogContent className="rounded-2xl max-w-sm bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {conversation.type === 'group' && conversation.created_by !== currentUserId

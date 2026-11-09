@@ -125,13 +125,13 @@ const Messagerie = () => {
 
   return (
     <div
-      className="flex h-full w-full overflow-hidden bg-white dark:bg-[#242526]"
+      className="flex h-full w-full overflow-hidden bg-white text-[#050505]"
       style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}
     >
       {/* Sidebar: visible on desktop, or on mobile when NO conversation is selected */}
       <div
         className={cn(
-          "h-full w-full md:w-[320px] xl:w-[360px] shrink-0 border-r border-[#E4E6EB] dark:border-gray-800 bg-white dark:bg-[#242526]",
+          "h-full w-full md:w-[320px] xl:w-[360px] shrink-0 border-r border-[#E4E6EB] bg-white",
           activeConversation ? "hidden md:flex" : "flex w-full"
         )}
       >
@@ -141,7 +141,7 @@ const Messagerie = () => {
       {/* Chat area: visible on desktop, or on mobile when a conversation IS selected */}
       <div
         className={cn(
-          "h-full flex-1 bg-white dark:bg-[#242526] overflow-hidden",
+          "h-full flex-1 bg-white overflow-hidden",
           !activeConversation ? "hidden md:flex" : "flex w-full"
         )}
       >

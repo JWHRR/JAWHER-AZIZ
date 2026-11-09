@@ -64,17 +64,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   );
 
   return (
-    <div className="w-full flex flex-col bg-white dark:bg-[#242526] h-full select-none">
+    <div className="w-full flex flex-col bg-white h-full select-none">
       {/* Messenger Sidebar Header */}
       <div className="px-4 pt-4 pb-2.5 shrink-0">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#050505] dark:text-white">
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#050505]">
             Discussions
           </h1>
           <button
             type="button"
             onClick={onNewChat}
-            className="h-9 w-9 rounded-full bg-[#F0F2F5] dark:bg-gray-800 hover:bg-[#E4E6EB] dark:hover:bg-gray-700 flex items-center justify-center transition-colors text-[#050505] dark:text-gray-200"
+            className="h-9 w-9 rounded-full bg-[#F0F2F5] hover:bg-[#E4E6EB] flex items-center justify-center transition-colors text-[#050505]"
             title="Nouveau message"
           >
             <SquarePen className="h-4.5 w-4.5" />
@@ -86,7 +86,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#8A8D91]" />
           <Input
             placeholder="Rechercher dans Messenger"
-            className="pl-9 h-9 bg-[#F0F2F5] dark:bg-[#3A3B3C] border-none rounded-full text-sm focus-visible:ring-0 placeholder:text-[#8A8D91] text-[#050505] dark:text-white"
+            className="pl-9 h-9 bg-[#F0F2F5] border-none rounded-full text-sm focus-visible:ring-0 placeholder:text-[#8A8D91] text-[#050505]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -123,8 +123,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     className={cn(
                       'w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-colors relative',
                       isActive
-                        ? 'bg-[#EBF5FF] dark:bg-[#2D3F55]'
-                        : 'hover:bg-[#F2F2F2] dark:hover:bg-gray-800/60'
+                        ? 'bg-[#EBF5FF]'
+                        : 'hover:bg-[#F2F2F2]'
                     )}
                   >
                     {/* Avatar with Online Presence Dot */}
@@ -135,7 +135,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         </AvatarFallback>
                       </Avatar>
                       {conv.type === 'private' && isOnline && (
-                        <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#31A24C] border-2 border-white dark:border-[#242526]" />
+                        <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#31A24C] border-2 border-white" />
                       )}
                     </div>
 
@@ -146,8 +146,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           className={cn(
                             'text-[15px] truncate leading-snug',
                             hasUnread
-                              ? 'font-bold text-[#050505] dark:text-white'
-                              : 'font-semibold text-gray-800 dark:text-gray-200'
+                              ? 'font-bold text-[#050505]'
+                              : 'font-semibold text-gray-800'
                           )}
                         >
                           {name}
@@ -167,8 +167,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                           className={cn(
                             'text-[13px] truncate leading-tight',
                             hasUnread
-                              ? 'text-[#050505] dark:text-white font-bold'
-                              : 'text-[#65676B] dark:text-gray-400'
+                              ? 'text-[#050505] font-bold'
+                              : 'text-[#65676B]'
                           )}
                         >
                           {hasUnread
@@ -176,7 +176,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                             : 'Appuyez pour ouvrir'}
                         </p>
 
-                        {/* Unread dot / badge */}
+                        {/* Unread dot */}
                         {hasUnread && (
                           <span className="h-3 w-3 rounded-full bg-[#0084FF] shrink-0 ml-1.5" />
                         )}

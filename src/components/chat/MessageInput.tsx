@@ -91,11 +91,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="px-3 py-2 bg-white dark:bg-[#242526]">
+    <div className="px-3 py-2 bg-white">
       {/* Image preview */}
       {previewUrl && (
         <div className="mb-2 ml-10">
-          <div className="relative inline-flex rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+          <div className="relative inline-flex rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
             <img
               src={previewUrl}
               alt="Preview"
@@ -117,7 +117,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] dark:hover:bg-gray-800 flex items-center justify-center shrink-0 text-[#0084FF] transition-colors"
+          className="h-9 w-9 rounded-full hover:bg-[#F0F2F5] flex items-center justify-center shrink-0 text-[#0084FF] transition-colors"
           title="Joindre une image"
         >
           <ImageIcon className="h-5 w-5" />
@@ -132,14 +132,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         />
 
         {/* Messenger Pill Text Input */}
-        <div className="flex-1 flex items-end bg-[#F0F2F5] dark:bg-[#3A3B3C] rounded-full px-4 py-2 gap-2 min-h-[38px] transition-colors">
+        <div className="flex-1 flex items-end bg-[#F0F2F5] rounded-full px-4 py-2 gap-2 min-h-[38px] transition-colors">
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder="Écrivez un message…"
-            className="flex-1 resize-none bg-transparent border-0 outline-none text-[15px] leading-relaxed text-[#050505] dark:text-[#E4E6EB] placeholder:text-[#8A8D91] min-h-[22px] max-h-[120px] self-center py-0"
+            className="flex-1 resize-none bg-transparent border-0 outline-none text-[15px] leading-relaxed text-[#050505] placeholder:text-[#8A8D91] min-h-[22px] max-h-[120px] self-center py-0"
             rows={1}
           />
           <button
@@ -172,7 +172,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             type="button"
             onClick={handleSendLike}
             disabled={isSending}
-            className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-[#0084FF] hover:bg-[#F0F2F5] dark:hover:bg-gray-800 hover:scale-115 active:scale-90 transition-all cursor-pointer"
+            className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-[#0084FF] hover:bg-[#F0F2F5] hover:scale-115 active:scale-90 transition-all cursor-pointer"
             title="Envoyer un pouce"
           >
             <span className="text-xl select-none leading-none">👍</span>

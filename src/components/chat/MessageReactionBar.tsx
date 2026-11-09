@@ -29,7 +29,7 @@ export const MessageReactionBar: React.FC<MessageReactionBarProps> = ({
       {visible && (
         <div
           className={cn(
-            'absolute -top-11 z-30 flex items-center gap-1 bg-white dark:bg-[#242526] border border-gray-200/90 dark:border-gray-700 shadow-xl rounded-full px-2 py-1',
+            'absolute -top-11 z-30 flex items-center gap-1 bg-white border border-gray-200/90 shadow-xl rounded-full px-2 py-1',
             'animate-in fade-in zoom-in-95 duration-150',
             isOwn ? 'right-0' : 'left-0'
           )}
@@ -42,8 +42,8 @@ export const MessageReactionBar: React.FC<MessageReactionBarProps> = ({
                 onReact(messageId, emoji);
               }}
               className={cn(
-                'text-lg leading-none p-1.5 rounded-full hover:scale-135 hover:bg-gray-100 dark:hover:bg-gray-800 transition-transform duration-150 active:scale-95 origin-bottom',
-                reactions[emoji]?.byCurrentUser && 'bg-blue-50 dark:bg-blue-900/40 scale-110'
+                'text-lg leading-none p-1.5 rounded-full hover:scale-135 hover:bg-gray-100 transition-transform duration-150 active:scale-95 origin-bottom',
+                reactions[emoji]?.byCurrentUser && 'bg-blue-50 scale-110'
               )}
               title={emoji}
             >
@@ -70,9 +70,9 @@ export const MessageReactionBar: React.FC<MessageReactionBarProps> = ({
                   onReact(messageId, existingEmojis[0].emoji);
                 }}
                 className={cn(
-                  'flex items-center gap-0.5 bg-white dark:bg-[#242526] border border-gray-200 dark:border-gray-700 shadow-xs rounded-full px-1.5 py-0.5 text-[11px] hover:scale-105 active:scale-95 transition-transform',
+                  'flex items-center gap-0.5 bg-white border border-gray-200 shadow-xs rounded-full px-1.5 py-0.5 text-[11px] hover:scale-105 active:scale-95 transition-transform',
                   existingEmojis.some((r) => r.byCurrentUser) &&
-                    'border-blue-400 bg-blue-50/80 dark:bg-blue-950/40 text-[#0084FF]'
+                    'border-blue-400 bg-blue-50/80 text-[#0084FF]'
                 )}
               >
                 {existingEmojis.slice(0, 3).map((r) => (
@@ -81,13 +81,13 @@ export const MessageReactionBar: React.FC<MessageReactionBarProps> = ({
                   </span>
                 ))}
                 {totalReactionCount > 1 && (
-                  <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 ml-0.5">
+                  <span className="text-[10px] font-bold text-gray-700 ml-0.5">
                     {totalReactionCount}
                   </span>
                 )}
               </button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="text-xs">
+            <TooltipContent side="top" className="text-xs bg-gray-900 text-white">
               {existingEmojis.map((r) => `${r.emoji} ${r.count}`).join(' · ')}
             </TooltipContent>
           </Tooltip>

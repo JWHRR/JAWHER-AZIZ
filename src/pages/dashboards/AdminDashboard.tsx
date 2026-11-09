@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Users, BedDouble, ClipboardCheck, Wrench, Utensils, UserX,
-  Calendar as CalIcon, AlertTriangle, CheckCircle2, ChevronDown, Clock, GraduationCap,
+  Calendar as CalIcon, AlertTriangle, CheckCircle2, Clock, GraduationCap,
   MessageSquare, CalendarOff,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { getBusinessDate } from "@/lib/time";
 import { WeekendEffectifCard } from "@/components/WeekendEffectifCard";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
+import { MissingTasksCard } from "@/components/admin/MissingTasksCard";
+import { MissingTasksDialog, type MissingTask } from "@/components/admin/MissingTasksDialog";
 
 interface Stats {
   totalUsers: number;
@@ -25,13 +27,6 @@ interface Stats {
   permanencesAujourdhui: number;
   permanencesLogsAujourdhui: number;
   inspectionsAujourdhui: number;
-}
-
-interface MissingTask {
-  type: "ABSENCE" | "RESTAURANT" | "PERMANENCE" | "INSPECTION";
-  surveillantName: string;
-  surveillant_id: string;
-  detail: string;
 }
 
 const isRedundantSlot = (wd: string, slot: string) => {
@@ -397,49 +392,21 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Collapsible: missing tasks of yesterday */}
-      {missingYesterday.length > 0 && (
-        <Card
-          className="border-border/60 bg-muted/30 shadow-sm cursor-pointer select-none"
-          onClick={() => setMissingOpen((o) => !o)}
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center justify-between text-muted-foreground font-medium">
-              <span className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-muted-foreground/70" />
-                Tâches manquantes — hier ({format(subDays(getBusinessDate(), 1), "d MMM", { locale: fr })})
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="rounded-full bg-muted text-muted-foreground border border-border px-2.5 py-0.5 text-xs font-medium">
-                  {missingYesterday.length}
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${missingOpen ? "rotate-180" : ""}`}
-                />
-              </span>
-            </CardTitle>
-          </CardHeader>
-          {missingOpen && (
-            <CardContent onClick={(e) => e.stopPropagation()}>
-              <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                {missingYesterday.map((m, i) => (
-                  <li key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-background/60 border border-border/30 transition-all hover:bg-background hover:shadow-sm">
-                    <button
-                      onClick={() => handleContactSurveillant(m.surveillant_id, m.surveillantName)}
-                      className="flex items-center gap-2 font-medium hover:text-primary transition-colors text-left group"
-                      title="Cliquer pour envoyer un message"
-                    >
-                      <Badge variant="outline" className="text-[10px] bg-background text-muted-foreground border-border">{m.type}</Badge>
-                      <span className="group-hover:underline underline-offset-2">{m.surveillantName}</span>
-                    </button>
-                    <span className="text-xs text-muted-foreground">{m.detail}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          )}
-        </Card>
-      )}
+      {/* Rubrique des tâches manquantes d'hier */}
+      <MissingTasksCard
+        tasks={missingYesterday}
+        yesterdayDate={subDays(businessDate, 1)}
+        onClick={() => setMissingOpen(true)}
+      />
+
+      {/* Fenêtre de détails des tâches manquantes */}
+      <MissingTasksDialog
+        open={missingOpen}
+        onOpenChange={setMissingOpen}
+        tasks={missingYesterday}
+        yesterdayFormatted={format(subDays(businessDate, 1), "EEEE d MMMM yyyy", { locale: fr })}
+        onContactSurveillant={handleContactSurveillant}
+      />
 
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">

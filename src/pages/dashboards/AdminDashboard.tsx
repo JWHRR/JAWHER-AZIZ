@@ -373,14 +373,17 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6 max-w-7xl">
       <div className="mb-2">
-        <h1 className="text-4xl font-extrabold tracking-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
           Bonjour Mr <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
-        <p className="text-muted-foreground mt-2 text-lg flex items-center gap-2">
-          {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
-          <span className="text-border mx-1">|</span>
-          <span className="font-mono tabular-nums text-foreground">{displayTime}</span>
-        </p>
+        <div className="text-muted-foreground mt-1.5 text-sm sm:text-base md:text-lg flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="capitalize">{format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}</span>
+          <span className="text-border hidden sm:inline">|</span>
+          <span className="font-mono tabular-nums text-foreground font-semibold inline-flex items-center gap-1.5 bg-muted/70 border border-border/40 px-2 py-0.5 rounded-md text-xs sm:text-sm">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            {displayTime}
+          </span>
+        </div>
       </div>
 
       {/* Rubrique des tâches manquantes d'hier */}

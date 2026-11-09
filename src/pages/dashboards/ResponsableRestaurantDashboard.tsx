@@ -162,11 +162,11 @@ export default function ResponsableRestaurantDashboard() {
     <div className="space-y-6 max-w-5xl">
 
       {/* ── Header ── */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
           Bonjour, {profile?.full_name?.split(" ")[0] || ""}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 text-sm sm:text-base capitalize">
           {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })} — Tableau de bord restaurant
         </p>
       </div>

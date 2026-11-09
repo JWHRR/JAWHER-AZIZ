@@ -64,10 +64,10 @@ export default function TechnicienDashboard() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="mb-2">
-        <h1 className="text-4xl font-extrabold tracking-tight">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
           Bonjour <span className="bg-clip-text text-transparent bg-gradient-primary drop-shadow-sm">{profile?.full_name?.split(" ")[0] || ""}</span> 👋
         </h1>
-        <p className="text-muted-foreground mt-2 text-lg">
+        <p className="text-muted-foreground mt-1.5 text-sm sm:text-base md:text-lg capitalize">
           {format(getBusinessDate(), "EEEE d MMMM yyyy", { locale: fr })}
         </p>
       </div>

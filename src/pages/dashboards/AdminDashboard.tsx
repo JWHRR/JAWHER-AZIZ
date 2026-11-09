@@ -17,7 +17,7 @@ import { getBusinessDate } from "@/lib/time";
 import { WeekendEffectifCard } from "@/components/WeekendEffectifCard";
 import { useUnreadCounts } from "@/hooks/useUnreadCounts";
 import { MissingTasksCard } from "@/components/admin/MissingTasksCard";
-import { MissingTasksDialog, type MissingTask } from "@/components/admin/MissingTasksDialog";
+import type { MissingTask } from "@/lib/missingTasks";
 
 interface Stats {
   totalUsers: number;
@@ -85,7 +85,6 @@ export default function AdminDashboard() {
     }
   });
 
-  const [missingOpen, setMissingOpen] = useState(false);
   const [todayActivity, setTodayActivity] = useState<{ done: MissingTask[]; pending: MissingTask[]; info: MissingTask[] }>(() => {
     try {
       const cached = localStorage.getItem(`admin_today_activity_${today}`);
@@ -340,14 +339,6 @@ export default function AdminDashboard() {
     })();
   }, []);
 
-  const handleContactSurveillant = (surveillantId: string, surveillantName: string) => {
-    const tasks = missingYesterday.filter(m => m.surveillant_id === surveillantId);
-    const date = format(subDays(getBusinessDate(), 1), "d MMMM yyyy", { locale: fr });
-    const lines = tasks.map(t => `• ${t.detail}`).join('\n');
-    const draft = `Bonjour ${surveillantName},\n\nNous avons constaté que les tâches suivantes ne sont pas été effectuées hier (${date}) :\n${lines}\n\nMerci de m'en parler.\n\nCordialement`;
-    navigate('/messagerie', { state: { openWithUserId: surveillantId, draftMessage: draft } });
-  };
-
   const cards = [
     { label: "Absences", icon: UserX, color: "text-warning", bg: "bg-warning-soft", link: "/admin/absences", desc: "Suivi quotidien" },
     { label: "Restaurant", icon: Utensils, color: "text-success", bg: "bg-success-soft", link: "/admin/restaurant", desc: "Effectifs repas" },
@@ -396,16 +387,7 @@ export default function AdminDashboard() {
       <MissingTasksCard
         tasks={missingYesterday}
         yesterdayDate={subDays(businessDate, 1)}
-        onClick={() => setMissingOpen(true)}
-      />
-
-      {/* Fenêtre de détails des tâches manquantes */}
-      <MissingTasksDialog
-        open={missingOpen}
-        onOpenChange={setMissingOpen}
-        tasks={missingYesterday}
-        yesterdayFormatted={format(subDays(businessDate, 1), "EEEE d MMMM yyyy", { locale: fr })}
-        onContactSurveillant={handleContactSurveillant}
+        to="/admin/taches-manquantes"
       />
 
 

@@ -25,13 +25,7 @@ import {
   List,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-export interface MissingTask {
-  type: "ABSENCE" | "RESTAURANT" | "PERMANENCE" | "INSPECTION";
-  surveillantName: string;
-  surveillant_id: string;
-  detail: string;
-}
+import type { MissingTask } from "@/lib/missingTasks";
 
 interface MissingTasksDialogProps {
   open: boolean;

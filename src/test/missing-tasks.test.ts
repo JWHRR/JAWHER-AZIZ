@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { MissingTask } from "@/components/admin/MissingTasksDialog";
+import type { MissingTask } from "@/lib/missingTasks";
 
 describe("Missing Tasks logic", () => {
   const sampleTasks: MissingTask[] = [

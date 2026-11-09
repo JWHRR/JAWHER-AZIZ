@@ -27,6 +27,7 @@ import AdminConsecutiveAbsences from "./pages/dashboards/AdminConsecutiveAbsence
 import AdminInspectionsList from "./pages/dashboards/AdminInspectionsList.tsx";
 import AdminPermanencesList from "./pages/dashboards/AdminPermanencesList.tsx";
 import AdminRestaurantList from "./pages/dashboards/AdminRestaurantList.tsx";
+import AdminMissingTasks from "./pages/dashboards/AdminMissingTasks.tsx";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +176,14 @@ const App = () => (
               element={
                 <ProtectedRoute roles={["ADMIN"]}>
                   <AppLayout><AdminRestaurantList /></AppLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/taches-manquantes"
+              element={
+                <ProtectedRoute roles={["ADMIN"]}>
+                  <AppLayout><AdminMissingTasks /></AppLayout>
                 </ProtectedRoute>
               }
             />

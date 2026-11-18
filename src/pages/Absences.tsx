@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users, Search, ClipboardCheck } from "lucide-react";
+import { Loader2, Plus, Save, Eye, FileDown, CalendarDays, AlertTriangle, History, Users, Search, ClipboardCheck, CheckCircle2 } from "lucide-react";
 import { format, subDays, isThursday, isFriday, isSaturday, isSunday, isMonday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -22,6 +22,12 @@ import { generateTablePdf } from "@/lib/pdf";
 import { WeeklyAbsenceHistory } from "@/components/WeeklyAbsenceHistory";
 import { getBusinessDate, parseLocalDate } from "@/lib/time";
 import Inspections from "./Inspections";
+import {
+  getPreviousCalendarDay,
+  calculateConsecutiveAbsences,
+  persistConsecutiveRecords,
+  ConsecutiveAbsenceRecord,
+} from "@/lib/consecutiveAbsences";
 
 interface DortoirAssign {
   id: string;
@@ -176,24 +182,12 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
     }));
   };
 
-  const getPreviousBusinessDay = (d: Date): Date => {
-    let prev = subDays(d, 1);
-    while (isSaturday(prev) || isSunday(prev)) {
-      prev = subDays(prev, 1);
-    }
-    return prev;
-  };
-
   const checkThreeConsecutiveAbsences = async (dortoir_id: string, currentNames: string[], currentDateStr: string) => {
     if (!currentNames.length) return;
     
-    // Get last two business days
-    const current = new Date(currentDateStr);
-    const prev1Date = getPreviousBusinessDay(current);
-    const prev2Date = getPreviousBusinessDay(prev1Date);
-    
-    const prev1 = format(prev1Date, "yyyy-MM-dd");
-    const prev2 = format(prev2Date, "yyyy-MM-dd");
+    // Get last two consecutive calendar days (no weekend skipping)
+    const prev1 = getPreviousCalendarDay(currentDateStr);
+    const prev2 = getPreviousCalendarDay(prev1);
 
     const { data: pastAbs } = await supabase
       .from("absences")
@@ -254,9 +248,10 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
   };
 
   // Consecutive Absences View State
-  const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<any[]>([]);
+  const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<ConsecutiveAbsenceRecord[]>([]);
   const [consecutiveLoading, setConsecutiveLoading] = useState(false);
   const [consecutiveSearch, setConsecutiveSearch] = useState("");
+  const [consecutiveStatusFilter, setConsecutiveStatusFilter] = useState<"all" | "active" | "completed">("all");
   const view = searchParams.get("view") || defaultView || "daily";
   const [consecutiveModalOpen, setConsecutiveModalOpen] = useState(
     searchParams.get("view") === "consecutive" || defaultView === "consecutive"
@@ -267,65 +262,24 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
       : "absences"
   );
 
+  const activeConsecutiveCount = consecutiveAbsencesList.filter((item) => item.isActive).length;
+  const completedConsecutiveCount = consecutiveAbsencesList.filter((item) => !item.isActive).length;
+
   const filteredConsecutiveAbsences = consecutiveAbsencesList.filter((item) => {
+    const matchesFilter =
+      consecutiveStatusFilter === "all" ||
+      (consecutiveStatusFilter === "active" && item.isActive) ||
+      (consecutiveStatusFilter === "completed" && !item.isActive);
+    if (!matchesFilter) return false;
+
     const query = consecutiveSearch.trim().toLowerCase();
     if (!query) return true;
     return (
       (item.nom_complet || "").toLowerCase().includes(query) ||
-      (item.chambreNumero || "").toLowerCase().includes(query)
+      (item.chambreNumero || "").toLowerCase().includes(query) ||
+      (item.dortoirCode || "").toLowerCase().includes(query)
     );
   });
-
-  const findStreaks = (dates: string[]) => {
-    if (dates.length === 0) return [];
-    
-    // Exclude Saturday (6) and Sunday (0) — weekends don't count as absence days
-    const weekdayDates = dates.filter(d => {
-      const day = new Date(d).getDay();
-      return day !== 0 && day !== 6;
-    });
-
-    if (weekdayDates.length === 0) return [];
-
-    // Sort dates descending
-    const sorted = [...new Set(weekdayDates)].sort((a, b) => b.localeCompare(a));
-    
-    const streaks: { count: number; start: string; end: string }[] = [];
-    let currentStreak: string[] = [];
-    
-    for (let i = 0; i < sorted.length; i++) {
-      const currentDateStr = sorted[i];
-      if (currentStreak.length === 0) {
-        currentStreak.push(currentDateStr);
-      } else {
-        const lastDate = new Date(currentStreak[currentStreak.length - 1]);
-        const expectedPrevDate = format(getPreviousBusinessDay(lastDate), "yyyy-MM-dd");
-        
-        if (currentDateStr === expectedPrevDate) {
-          currentStreak.push(currentDateStr);
-        } else {
-          if (currentStreak.length >= 3) {
-            streaks.push({
-              count: currentStreak.length,
-              start: currentStreak[currentStreak.length - 1], // oldest date
-              end: currentStreak[0] // newest date
-            });
-          }
-          currentStreak = [currentDateStr];
-        }
-      }
-    }
-    
-    if (currentStreak.length >= 3) {
-      streaks.push({
-        count: currentStreak.length,
-        start: currentStreak[currentStreak.length - 1],
-        end: currentStreak[0]
-      });
-    }
-    
-    return streaks;
-  };
 
   const loadConsecutiveAbsences = async () => {
     setConsecutiveLoading(true);
@@ -359,69 +313,11 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
 
       if (!pastAbs) return;
 
-      // Find the latest checklist date for each dortoir to determine active streaks
-      const latestChecklistDateByDortoir: Record<string, string> = {};
-      pastAbs.forEach(a => {
-        if (!latestChecklistDateByDortoir[a.dortoir_id] || a.date > latestChecklistDateByDortoir[a.dortoir_id]) {
-          latestChecklistDateByDortoir[a.dortoir_id] = a.date;
-        }
-      });
-
-      const results: any[] = [];
-
-      students.forEach((stu: any) => {
-        // Skip students who have active absence authorization
-        if (stu.autorisation_absence) return;
-
-        const dortoirId = stu.chambres?.dortoirs?.id;
-        const dortoirCode = stu.chambres?.dortoirs?.code;
-        const chambreNum = stu.chambres?.numero;
-        if (!dortoirId) return;
-
-        // Check permission:
-        // Surveillant can only see their assigned dortoirs
-        const isMyDortoir = myDortoirs.some(d => d.dortoir_id === dortoirId);
-        if (!isAdmin && !isMyDortoir) return;
-
-        const latestChecklistDate = latestChecklistDateByDortoir[dortoirId];
-        if (!latestChecklistDate) return;
-
-        // Find all dates where this student was absent
-        const studentAbsenceDates = pastAbs
-          .filter(a => a.dortoir_id === dortoirId)
-          .filter(a => {
-            const namesList = (a.noms_absents || "")
-              .split("\n")
-              .map((n: string) => n.trim().toLowerCase());
-            return namesList.includes(stu.nom_complet.trim().toLowerCase());
-          })
-          .map(a => a.date);
-
-        const streaks = findStreaks(studentAbsenceDates);
-
-        streaks.forEach(streak => {
-          // A streak is active only if it ends exactly on the latest checklist date for that dortoir
-          // If the student was present on a newer checklist date, their streak is broken!
-          if (streak.end !== latestChecklistDate) return;
-
-          results.push({
-            studentId: stu.id,
-            nom_complet: stu.nom_complet,
-            telephone: stu.telephone,
-            dortoirId,
-            dortoirCode,
-            chambreNumero: chambreNum,
-            count: streak.count,
-            start: streak.start,
-            end: streak.end
-          });
-        });
-      });
-
-      // Sort by streak end date descending (newest streaks first)
-      results.sort((a, b) => b.end.localeCompare(a.end));
+      const allowedDortoirIds = isAdmin ? null : myDortoirs.map((d) => d.dortoir_id);
+      const results = calculateConsecutiveAbsences(students, pastAbs, allowedDortoirIds);
 
       setConsecutiveAbsencesList(results);
+      persistConsecutiveRecords(results);
     } catch (err: any) {
       toast.error("Erreur de chargement: " + err.message);
     } finally {
@@ -563,11 +459,24 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
             onClick={() => setConsecutiveModalOpen(true)}
             className="h-8 text-xs font-medium gap-1.5"
           >
-            <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground" />
+            <AlertTriangle
+              className={`h-3.5 w-3.5 ${
+                activeConsecutiveCount > 0 ? "text-amber-500 animate-pulse" : "text-muted-foreground"
+              }`}
+            />
             <span>3+ nuits consécutives</span>
             {consecutiveAbsencesList.length > 0 && (
-              <Badge variant="secondary" className="h-4.5 px-1.5 text-[10px] font-semibold">
-                {consecutiveAbsencesList.length}
+              <Badge
+                variant={activeConsecutiveCount > 0 ? "default" : "secondary"}
+                className={`h-4.5 px-1.5 text-[10px] font-semibold ${
+                  activeConsecutiveCount > 0
+                    ? "bg-amber-600 text-white hover:bg-amber-600"
+                    : ""
+                }`}
+              >
+                {activeConsecutiveCount > 0
+                  ? `${activeConsecutiveCount} active${activeConsecutiveCount > 1 ? "s" : ""}`
+                  : consecutiveAbsencesList.length}
               </Badge>
             )}
           </Button>
@@ -720,23 +629,51 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-              Absences Consécutives (3+ nuits)
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Registre des Absences Consécutives (3+ nuits)
             </DialogTitle>
             <DialogDescription>
-              Étudiants absents depuis 3 nuits consécutives ou plus (hors week-ends).
+              Historique complet et alertes des étudiants absents 3 nuits consécutives ou plus (tous les jours inclus).
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 pt-2">
-            <div className="relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9 text-sm"
-                placeholder="Rechercher un étudiant par nom ou numéro de chambre..."
-                value={consecutiveSearch}
-                onChange={(e) => setConsecutiveSearch(e.target.value)}
-              />
+            <div className="flex flex-col sm:flex-row gap-2.5 items-start sm:items-center justify-between">
+              <div className="relative flex-1 w-full">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9 text-sm"
+                  placeholder="Rechercher par étudiant, numéro de chambre ou dortoir..."
+                  value={consecutiveSearch}
+                  onChange={(e) => setConsecutiveSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg shrink-0">
+                <Button
+                  size="sm"
+                  variant={consecutiveStatusFilter === "all" ? "default" : "ghost"}
+                  className="text-xs h-7 px-2.5"
+                  onClick={() => setConsecutiveStatusFilter("all")}
+                >
+                  Tous ({consecutiveAbsencesList.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={consecutiveStatusFilter === "active" ? "default" : "ghost"}
+                  className="text-xs h-7 px-2.5"
+                  onClick={() => setConsecutiveStatusFilter("active")}
+                >
+                  En cours ({activeConsecutiveCount})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={consecutiveStatusFilter === "completed" ? "default" : "ghost"}
+                  className="text-xs h-7 px-2.5"
+                  onClick={() => setConsecutiveStatusFilter("completed")}
+                >
+                  Historique ({completedConsecutiveCount})
+                </Button>
+              </div>
             </div>
 
             {consecutiveLoading ? (
@@ -746,9 +683,9 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
             ) : filteredConsecutiveAbsences.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center border rounded-lg border-dashed">
                 <AlertTriangle className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                <h4 className="font-semibold text-sm">Aucune alerte active</h4>
+                <h4 className="font-semibold text-sm">Aucun enregistrement</h4>
                 <p className="text-xs text-muted-foreground max-w-sm mt-0.5">
-                  Aucun étudiant n'a été absent plus de 3 nuits consécutives dans vos dortoirs d'affectation.
+                  Aucun enregistrement d'absence consécutive correspondant dans vos dortoirs d'affectation.
                 </p>
               </div>
             ) : isAdmin ? (
@@ -769,7 +706,7 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                           <span className="flex items-center gap-2">
                             <CalendarDays className="h-4 w-4 text-primary" /> Dortoir {code}
                           </span>
-                          <span className="text-xs font-normal text-muted-foreground">{list.length} alerte(s)</span>
+                          <span className="text-xs font-normal text-muted-foreground">{list.length} enregistrement(s)</span>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-0">
@@ -782,6 +719,7 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                                 <TableHead>Chambre</TableHead>
                                 <TableHead>Nuits</TableHead>
                                 <TableHead>Période</TableHead>
+                                <TableHead>Statut</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody className="text-xs">
@@ -791,12 +729,29 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                                   <TableCell className="py-2.5">{item.telephone || "—"}</TableCell>
                                   <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
                                   <TableCell className="py-2.5">
-                                    <Badge variant="secondary" className="gap-1 text-xs">
-                                      <AlertTriangle className="h-3 w-3 text-muted-foreground" /> {item.count} nuits
+                                    <Badge
+                                      variant={item.isActive ? "default" : "secondary"}
+                                      className={`gap-1 text-xs ${
+                                        item.isActive ? "bg-amber-600 text-white" : ""
+                                      }`}
+                                    >
+                                      {item.isActive && <AlertTriangle className="h-3 w-3" />}
+                                      {item.count} nuits
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
                                     Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}
+                                  </TableCell>
+                                  <TableCell className="py-2.5">
+                                    {item.isActive ? (
+                                      <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 text-[11px]">
+                                        <AlertTriangle className="h-2.5 w-2.5" /> En cours
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px]">
+                                        <CheckCircle2 className="h-2.5 w-2.5" /> Archivée
+                                      </Badge>
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -818,6 +773,7 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                       <TableHead>Chambre</TableHead>
                       <TableHead>Nuits</TableHead>
                       <TableHead>Période</TableHead>
+                      <TableHead>Statut</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-xs">
@@ -828,12 +784,29 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                         <TableCell className="py-2.5">Dortoir {item.dortoirCode}</TableCell>
                         <TableCell className="py-2.5">Ch. {item.chambreNumero}</TableCell>
                         <TableCell className="py-2.5">
-                          <Badge variant="secondary" className="gap-1 text-xs">
-                            <AlertTriangle className="h-3 w-3 text-muted-foreground" /> {item.count} nuits
+                          <Badge
+                            variant={item.isActive ? "default" : "secondary"}
+                            className={`gap-1 text-xs ${
+                              item.isActive ? "bg-amber-600 text-white" : ""
+                            }`}
+                          >
+                            {item.isActive && <AlertTriangle className="h-3 w-3" />}
+                            {item.count} nuits
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-[11px] py-2.5 text-muted-foreground">
                           Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}
+                        </TableCell>
+                        <TableCell className="py-2.5">
+                          {item.isActive ? (
+                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 text-[11px]">
+                              <AlertTriangle className="h-2.5 w-2.5" /> En cours
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px]">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Archivée
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

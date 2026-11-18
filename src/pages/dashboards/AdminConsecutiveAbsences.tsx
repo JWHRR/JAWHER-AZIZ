@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   FileDown,
   Phone,
+  Calendar,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -32,6 +34,20 @@ export default function AdminConsecutiveAbsences() {
   const [search, setSearch] = useState("");
   // Default filter is 'active' (En cours)
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("active");
+  // Expandable items state for mobile space saving
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -265,64 +281,101 @@ export default function AdminConsecutiveAbsences() {
                   </CardHeader>
 
                   <CardContent className="p-0">
-                    {/* Mobile View: Spacious, easy-to-read list items */}
+                    {/* Mobile View: Space-saving click-to-expand list */}
                     <div className="divide-y divide-border md:hidden">
-                      {groupList.map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-4 space-y-2.5 transition-colors ${
-                            item.isActive ? "bg-amber-500/5" : "hover:bg-muted/30"
-                          }`}
-                        >
-                          {/* Student name & Status */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <h3 className="text-base font-bold text-foreground leading-snug">
-                                {item.nom_complet}
-                              </h3>
-                              <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground font-mono">
-                                Chambre {item.chambreNumero}
-                              </span>
-                            </div>
+                      {groupList.map((item, idx) => {
+                        const itemKey = `${item.studentId}-${item.start}-${item.end}`;
+                        const isExpanded = expandedIds.has(itemKey);
 
-                            {item.isActive ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0">
-                                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                                En cours
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border shrink-0">
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                Terminée
-                              </span>
+                        return (
+                          <div
+                            key={idx}
+                            className={`transition-colors ${
+                              item.isActive ? "bg-amber-500/5" : ""
+                            }`}
+                          >
+                            {/* Clickable compact row */}
+                            <button
+                              type="button"
+                              onClick={() => toggleExpand(itemKey)}
+                              className="w-full text-left p-3.5 flex items-center justify-between gap-3 hover:bg-muted/40 transition-colors focus:outline-hidden"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-bold text-foreground">
+                                    {item.nom_complet}
+                                  </span>
+                                  <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-semibold">
+                                    Ch. {item.chambreNumero}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                  {isExpanded ? "Masquer les détails" : "Toucher pour voir les dates & téléphone"}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${
+                                    item.isActive
+                                      ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700"
+                                      : "bg-muted text-muted-foreground"
+                                  }`}
+                                >
+                                  {item.isActive && <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />}
+                                  {item.count} nuits
+                                </span>
+
+                                <ChevronDown
+                                  className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                                    isExpanded ? "rotate-180 text-foreground" : ""
+                                  }`}
+                                />
+                              </div>
+                            </button>
+
+                            {/* Expanded Details: Dates & Phone */}
+                            {isExpanded && (
+                              <div className="px-3.5 pb-3.5 pt-1 border-t border-dashed border-border/80 bg-muted/20 space-y-2 text-xs">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Calendar className="h-4 w-4 text-primary shrink-0" />
+                                  <span className="font-medium text-foreground">Période d'absence :</span>
+                                  <span className="font-mono text-foreground font-semibold">
+                                    Du {format(new Date(item.start), "dd/MM/yyyy")} au {format(new Date(item.end), "dd/MM/yyyy")}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-primary shrink-0" />
+                                  <span className="font-medium text-foreground">Téléphone :</span>
+                                  {item.telephone ? (
+                                    <a
+                                      href={`tel:${item.telephone}`}
+                                      className="font-semibold text-primary hover:underline inline-flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-md text-xs"
+                                    >
+                                      Appeler {item.telephone}
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground italic text-xs">Aucun numéro enregistré</span>
+                                  )}
+                                </div>
+
+                                <div className="pt-0.5">
+                                  {item.isActive ? (
+                                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 text-[11px]">
+                                      <AlertTriangle className="h-2.5 w-2.5" /> Alerte active : absent jusqu'au dernier pointage
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px]">
+                                      <CheckCircle2 className="h-2.5 w-2.5" /> Absence archivée
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             )}
                           </div>
-
-                          {/* Duration & Period */}
-                          <div className="flex items-center justify-between gap-2 text-xs sm:text-sm pt-1 border-t border-border/50">
-                            <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                              {item.count} nuits consécutives
-                            </span>
-                            <span className="font-mono text-muted-foreground text-xs">
-                              Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM/yyyy")}
-                            </span>
-                          </div>
-
-                          {/* Phone link */}
-                          {item.telephone && (
-                            <div className="pt-0.5">
-                              <a
-                                href={`tel:${item.telephone}`}
-                                className="inline-flex items-center gap-2 text-xs font-medium text-primary hover:underline bg-primary/5 px-2.5 py-1 rounded-md"
-                              >
-                                <Phone className="h-3.5 w-3.5 shrink-0" />
-                                <span>{item.telephone}</span>
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Desktop View: Clean, spacious table */}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import {
   ArrowLeft,
   Loader2,
   AlertTriangle,
-  CalendarDays,
+  BedDouble,
   Search,
   CheckCircle2,
   FileDown,
@@ -30,6 +30,7 @@ export default function AdminConsecutiveAbsences() {
   const [list, setList] = useState<ConsecutiveAbsenceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  // Default filter is 'active' (En cours)
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "completed">("active");
 
   const loadData = async () => {
@@ -128,18 +129,18 @@ export default function AdminConsecutiveAbsences() {
   };
 
   return (
-    <div className="space-y-3.5 max-w-4xl mx-auto px-1 sm:px-0">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-        <div className="flex items-center gap-2.5">
-          <Button variant="outline" size="icon" className="h-8 w-8 shrink-0" asChild>
+    <div className="space-y-6 max-w-5xl mx-auto px-2 sm:px-4">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" asChild>
             <Link to="/admin/absences"><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               Absences Consécutives
             </h1>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
               Étudiants absents 3 jours consécutifs ou plus
             </p>
           </div>
@@ -150,220 +151,250 @@ export default function AdminConsecutiveAbsences() {
           size="sm"
           onClick={exportPDF}
           disabled={loading || filtered.length === 0}
-          className="h-8 text-xs gap-1.5 self-start sm:self-auto shrink-0"
+          className="h-9 text-xs sm:text-sm gap-2 self-start sm:self-auto shrink-0 font-medium"
         >
-          <FileDown className="h-3.5 w-3.5" /> Exporter PDF
+          <FileDown className="h-4 w-4" /> Exporter PDF
         </Button>
       </div>
 
-      {/* Compact Search & Segmented Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-2">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="relative flex-1">
-          <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="pl-8.5 h-8 text-xs"
-            placeholder="Rechercher étudiant, chambre, dortoir..."
+            className="pl-10 h-10 text-sm"
+            placeholder="Rechercher par étudiant, chambre, dortoir..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-muted/60 p-0.5 rounded-md shrink-0 border">
-          <button
-            type="button"
-            className={`px-2.5 py-1 text-xs rounded transition-all font-medium flex items-center justify-center gap-1.5 ${
-              statusFilter === "active"
-                ? "bg-background text-amber-600 dark:text-amber-400 shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
+        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 bg-muted/80 p-1 rounded-lg border shrink-0">
+          <Button
+            size="sm"
+            variant={statusFilter === "active" ? "default" : "ghost"}
+            className={`text-xs sm:text-sm h-8 px-3 font-medium transition-all ${
+              statusFilter === "active" ? "bg-amber-600 hover:bg-amber-700 text-white shadow-xs" : ""
             }`}
             onClick={() => setStatusFilter("active")}
           >
-            <span>En cours</span>
-            <span
-              className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                statusFilter === "active"
-                  ? "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {activeCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`px-2.5 py-1 text-xs rounded transition-all font-medium flex items-center justify-center gap-1.5 ${
-              statusFilter === "completed"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            En cours ({activeCount})
+          </Button>
+          <Button
+            size="sm"
+            variant={statusFilter === "completed" ? "default" : "ghost"}
+            className="text-xs sm:text-sm h-8 px-3 font-medium"
             onClick={() => setStatusFilter("completed")}
           >
-            <span>Historique</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted text-muted-foreground font-bold">
-              {completedCount}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className={`px-2.5 py-1 text-xs rounded transition-all font-medium flex items-center justify-center gap-1.5 ${
-              statusFilter === "all"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            Historique ({completedCount})
+          </Button>
+          <Button
+            size="sm"
+            variant={statusFilter === "all" ? "default" : "ghost"}
+            className="text-xs sm:text-sm h-8 px-3 font-medium"
             onClick={() => setStatusFilter("all")}
           >
-            <span>Tous</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted text-muted-foreground font-bold">
-              {totalCount}
-            </span>
-          </button>
+            Tous ({totalCount})
+          </Button>
         </div>
       </div>
 
       {/* List / Groups */}
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-16">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 px-4 text-center border rounded-lg bg-card text-muted-foreground text-xs">
-          <AlertTriangle className="h-6 w-6 text-muted-foreground/40 mb-1.5" />
-          <p className="font-semibold text-foreground text-sm">
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center border rounded-xl bg-card text-muted-foreground">
+          <AlertTriangle className="h-10 w-10 text-muted-foreground/30 mb-3" />
+          <p className="font-semibold text-foreground text-base">
             {statusFilter === "active" ? "Aucune alerte en cours" : "Aucun enregistrement trouvé"}
           </p>
-          <p className="text-[11px] text-muted-foreground mt-0.5 max-w-xs">
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
             {statusFilter === "active"
-              ? "Aucun étudiant n'est actuellement absent depuis 3 nuits consécutives ou plus."
-              : "Aucune absence ne correspond à vos critères."}
+              ? "Aucun étudiant n'est actuellement en situation d'absence de 3 nuits consécutives ou plus."
+              : "Aucune absence ne correspond à vos critères de recherche."}
           </p>
           {statusFilter === "active" && totalCount > 0 && (
             <Button
               variant="outline"
               size="sm"
-              className="mt-2.5 text-xs h-7"
+              className="mt-4 text-xs font-medium"
               onClick={() => setStatusFilter("all")}
             >
-              Voir l'historique ({totalCount})
+              Consulter l'historique ({totalCount})
             </Button>
           )}
         </div>
       ) : (
-        Object.entries(grouped)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([code, groupList]) => (
-            <Card key={code} className="border shadow-2xs overflow-hidden">
-              <CardHeader className="py-2 px-3 sm:px-4 bg-muted/30 border-b flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-1.5">
-                  <CalendarDays className="h-3.5 w-3.5 text-primary" /> Dortoir {code}
-                </CardTitle>
-                <span className="text-[11px] text-muted-foreground">
-                  {groupList.length} cas
-                </span>
-              </CardHeader>
+        <div className="space-y-6">
+          {Object.entries(grouped)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([code, groupList]) => {
+              const activeInGroup = groupList.filter((g) => g.isActive).length;
 
-              <CardContent className="p-0">
-                {/* Mobile View: Clean compact list rows */}
-                <div className="divide-y md:hidden">
-                  {groupList.map((item, idx) => (
-                    <div key={idx} className="p-2.5 flex items-center justify-between gap-2.5 text-xs">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-semibold text-foreground text-sm truncate">{item.nom_complet}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono">Ch. {item.chambreNumero}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
-                          <span>Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM")}</span>
-                          {item.telephone && (
-                            <>
-                              <span>·</span>
-                              <a href={`tel:${item.telephone}`} className="text-primary hover:underline inline-flex items-center gap-0.5">
-                                <Phone className="h-2.5 w-2.5" /> {item.telephone}
-                              </a>
-                            </>
-                          )}
-                        </div>
+              return (
+                <Card key={code} className="border shadow-sm overflow-hidden">
+                  {/* Big, Clear Dortoir Header */}
+                  <CardHeader className="py-4 px-4 sm:px-6 bg-muted/40 border-b flex flex-row items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <BedDouble className="h-5 w-5" />
                       </div>
-
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        <span
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold ${
-                            item.isActive
-                              ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {item.isActive && <AlertTriangle className="h-2.5 w-2.5 text-amber-500" />}
-                          {item.count} nuits
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {item.isActive ? "En cours" : "Archivée"}
-                        </span>
+                      <div>
+                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                          Dortoir {code}
+                        </h2>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                          {groupList.length} enregistrement{groupList.length > 1 ? "s" : ""}
+                          {activeInGroup > 0 && (
+                            <span className="text-amber-600 dark:text-amber-400 font-semibold ml-1.5">
+                              · {activeInGroup} alerte{activeInGroup > 1 ? "s" : ""} en cours
+                            </span>
+                          )}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
 
-                {/* Desktop View: Compact Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/40 text-xs">
-                      <TableRow>
-                        <TableHead className="py-2">Étudiant</TableHead>
-                        <TableHead className="py-2">Téléphone</TableHead>
-                        <TableHead className="py-2">Chambre</TableHead>
-                        <TableHead className="py-2">Nuits</TableHead>
-                        <TableHead className="py-2">Période</TableHead>
-                        <TableHead className="py-2">Statut</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody className="text-xs">
+                    {activeInGroup > 0 && (
+                      <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1.5 text-xs py-1 px-2.5 font-semibold">
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        {activeInGroup} en cours
+                      </Badge>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="p-0">
+                    {/* Mobile View: Spacious, easy-to-read list items */}
+                    <div className="divide-y divide-border md:hidden">
                       {groupList.map((item, idx) => (
-                        <TableRow key={idx} className="hover:bg-muted/30">
-                          <TableCell className="font-semibold py-2">{item.nom_complet}</TableCell>
-                          <TableCell className="py-2">
-                            {item.telephone ? (
-                              <a href={`tel:${item.telephone}`} className="text-primary hover:underline">
-                                {item.telephone}
-                              </a>
-                            ) : (
-                              <span className="text-muted-foreground italic">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="py-2">Ch. {item.chambreNumero}</TableCell>
-                          <TableCell className="py-2">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
-                                item.isActive
-                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {item.isActive && <AlertTriangle className="h-3 w-3 text-amber-500" />}
-                              {item.count} nuits
-                            </span>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs py-2 text-muted-foreground">
-                            Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
-                          </TableCell>
-                          <TableCell className="py-2">
+                        <div
+                          key={idx}
+                          className={`p-4 space-y-2.5 transition-colors ${
+                            item.isActive ? "bg-amber-500/5" : "hover:bg-muted/30"
+                          }`}
+                        >
+                          {/* Student name & Status */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-base font-bold text-foreground leading-snug">
+                                {item.nom_complet}
+                              </h3>
+                              <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground font-mono">
+                                Chambre {item.chambreNumero}
+                              </span>
+                            </div>
+
                             {item.isActive ? (
-                              <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1 text-[11px] py-0">
-                                <AlertTriangle className="h-2.5 w-2.5" /> En cours
-                              </Badge>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                En cours
+                              </span>
                             ) : (
-                              <Badge variant="outline" className="text-muted-foreground gap-1 text-[11px] py-0">
-                                <CheckCircle2 className="h-2.5 w-2.5" /> Archivée
-                              </Badge>
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border shrink-0">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Terminée
+                              </span>
                             )}
-                          </TableCell>
-                        </TableRow>
+                          </div>
+
+                          {/* Duration & Period */}
+                          <div className="flex items-center justify-between gap-2 text-xs sm:text-sm pt-1 border-t border-border/50">
+                            <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                              {item.count} nuits consécutives
+                            </span>
+                            <span className="font-mono text-muted-foreground text-xs">
+                              Du {format(new Date(item.start), "dd/MM")} au {format(new Date(item.end), "dd/MM/yyyy")}
+                            </span>
+                          </div>
+
+                          {/* Phone link */}
+                          {item.telephone && (
+                            <div className="pt-0.5">
+                              <a
+                                href={`tel:${item.telephone}`}
+                                className="inline-flex items-center gap-2 text-xs font-medium text-primary hover:underline bg-primary/5 px-2.5 py-1 rounded-md"
+                              >
+                                <Phone className="h-3.5 w-3.5 shrink-0" />
+                                <span>{item.telephone}</span>
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                    </div>
+
+                    {/* Desktop View: Clean, spacious table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Étudiant</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Chambre</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Téléphone</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Nuits</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Période d'absence</TableHead>
+                            <TableHead className="font-bold text-xs uppercase tracking-wider py-3.5 px-4">Statut</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {groupList.map((item, idx) => (
+                            <TableRow key={idx} className="hover:bg-muted/40 transition-colors">
+                              <TableCell className="font-semibold text-sm py-3.5 px-4 text-foreground">
+                                {item.nom_complet}
+                              </TableCell>
+                              <TableCell className="py-3.5 px-4 font-medium text-sm">
+                                <span className="px-2 py-0.5 bg-muted rounded font-mono text-xs">
+                                  Ch. {item.chambreNumero}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3.5 px-4 text-sm">
+                                {item.telephone ? (
+                                  <a href={`tel:${item.telephone}`} className="text-primary hover:underline inline-flex items-center gap-1.5 font-medium">
+                                    <Phone className="h-3 w-3" />
+                                    {item.telephone}
+                                  </a>
+                                ) : (
+                                  <span className="text-muted-foreground italic text-xs">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-3.5 px-4">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                    item.isActive
+                                      ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                                      : "bg-muted text-muted-foreground border-border"
+                                  }`}
+                                >
+                                  {item.isActive && <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />}
+                                  {item.count} nuits
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-3.5 px-4 font-mono text-xs text-muted-foreground">
+                                Du {format(new Date(item.start), "dd-MM-yyyy")} au {format(new Date(item.end), "dd-MM-yyyy")}
+                              </TableCell>
+                              <TableCell className="py-3.5 px-4">
+                                {item.isActive ? (
+                                  <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1.5 text-xs py-1 px-2.5 font-semibold">
+                                    <AlertTriangle className="h-3 w-3" /> En cours
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-muted-foreground gap-1.5 text-xs py-1 px-2.5">
+                                    <CheckCircle2 className="h-3 w-3" /> Terminée
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </div>
       )}
     </div>
   );

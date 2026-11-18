@@ -251,7 +251,7 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
   const [consecutiveAbsencesList, setConsecutiveAbsencesList] = useState<ConsecutiveAbsenceRecord[]>([]);
   const [consecutiveLoading, setConsecutiveLoading] = useState(false);
   const [consecutiveSearch, setConsecutiveSearch] = useState("");
-  const [consecutiveStatusFilter, setConsecutiveStatusFilter] = useState<"all" | "active" | "completed">("all");
+  const [consecutiveStatusFilter, setConsecutiveStatusFilter] = useState<"all" | "active" | "completed">("active");
   const view = searchParams.get("view") || defaultView || "daily";
   const [consecutiveModalOpen, setConsecutiveModalOpen] = useState(
     searchParams.get("view") === "consecutive" || defaultView === "consecutive"
@@ -648,19 +648,11 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                   onChange={(e) => setConsecutiveSearch(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg shrink-0">
-                <Button
-                  size="sm"
-                  variant={consecutiveStatusFilter === "all" ? "default" : "ghost"}
-                  className="text-xs h-7 px-2.5"
-                  onClick={() => setConsecutiveStatusFilter("all")}
-                >
-                  Tous ({consecutiveAbsencesList.length})
-                </Button>
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-muted p-1 rounded-lg w-full sm:w-auto shrink-0">
                 <Button
                   size="sm"
                   variant={consecutiveStatusFilter === "active" ? "default" : "ghost"}
-                  className="text-xs h-7 px-2.5"
+                  className="text-xs h-7 px-2 font-medium"
                   onClick={() => setConsecutiveStatusFilter("active")}
                 >
                   En cours ({activeConsecutiveCount})
@@ -668,10 +660,18 @@ export default function Absences({ defaultView }: { defaultView?: string } = {})
                 <Button
                   size="sm"
                   variant={consecutiveStatusFilter === "completed" ? "default" : "ghost"}
-                  className="text-xs h-7 px-2.5"
+                  className="text-xs h-7 px-2 font-medium"
                   onClick={() => setConsecutiveStatusFilter("completed")}
                 >
                   Historique ({completedConsecutiveCount})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={consecutiveStatusFilter === "all" ? "default" : "ghost"}
+                  className="text-xs h-7 px-2 font-medium"
+                  onClick={() => setConsecutiveStatusFilter("all")}
+                >
+                  Tous ({consecutiveAbsencesList.length})
                 </Button>
               </div>
             </div>
